@@ -15,644 +15,360 @@
             --white: #FFFFFF;
             --light-bg: #F8FAFC;
         }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--light-bg);
-            color: var(--talendro-slate);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Header */
-        .header {
-            background: var(--white);
-            border-bottom: 1px solid #E2E8F0;
-            padding: 16px 24px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .logo {
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 700;
-            font-size: 24px;
-            color: var(--talendro-blue);
-        }
-
-        .logo span {
-            color: var(--talendro-slate);
-        }
-
-        .session-badge {
-            background: var(--vibrant-aqua);
-            color: var(--white);
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        /* Main Container */
-        .main-container {
-            flex: 1;
-            display: flex;
-            max-width: 1400px;
-            margin: 0 auto;
-            width: 100%;
-            padding: 24px;
-            gap: 24px;
-        }
-
-        /* Sidebar - Document Upload */
-        .sidebar {
-            width: 320px;
-            flex-shrink: 0;
-        }
-
-        .sidebar-card {
-            background: var(--white);
-            border-radius: 16px;
-            padding: 24px;
-            border: 1px solid #E2E8F0;
-            margin-bottom: 16px;
-        }
-
-        .sidebar-card h3 {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--talendro-blue);
-            margin-bottom: 16px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .form-group {
-            margin-bottom: 16px;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--talendro-slate);
-            margin-bottom: 6px;
-        }
-
-        .form-group textarea,
-        .form-group input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #E2E8F0;
-            border-radius: 8px;
-            font-family: 'Inter', sans-serif;
-            font-size: 14px;
-            transition: border-color 0.2s;
-        }
-
-        .form-group textarea:focus,
-        .form-group input:focus {
-            outline: none;
-            border-color: var(--talendro-blue);
-        }
-
-        .form-group textarea {
-            min-height: 120px;
-            resize: vertical;
-        }
-
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 12px;
-            color: var(--warm-gray);
-            margin-top: 4px;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--warm-gray);
-        }
-
-        .status-dot.ready {
-            background: var(--vibrant-aqua);
-        }
-
-        .btn {
-            display: inline-block;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-family: 'Inter', sans-serif;
-            font-weight: 500;
-            font-size: 14px;
-            text-decoration: none;
-            border: none;
-            cursor: pointer;
-            transition: all 0.2s;
-            width: 100%;
-            text-align: center;
-        }
-
-        .btn-primary {
-            background: var(--talendro-blue);
-            color: var(--white);
-        }
-
-        .btn-primary:hover {
-            background: #1E5AD8;
-        }
-
-        .btn-primary:disabled {
-            background: var(--warm-gray);
-            cursor: not-allowed;
-        }
-
-        /* Chat Area */
-        .chat-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: var(--white);
-            border-radius: 16px;
-            border: 1px solid #E2E8F0;
-            overflow: hidden;
-        }
-
-        .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 24px;
-        }
-
-        .message {
-            margin-bottom: 24px;
-            display: flex;
-            gap: 12px;
-        }
-
-        .message.user {
-            flex-direction: row-reverse;
-        }
-
-        .message-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 14px;
-            flex-shrink: 0;
-        }
-
-        .message.assistant .message-avatar {
-            background: linear-gradient(135deg, var(--talendro-blue), var(--vibrant-aqua));
-            color: var(--white);
-        }
-
-        .message.user .message-avatar {
-            background: var(--talendro-slate);
-            color: var(--white);
-        }
-
-        .message-content {
-            max-width: 70%;
-            padding: 16px;
-            border-radius: 16px;
-            line-height: 1.6;
-        }
-
-        .message.assistant .message-content {
-            background: var(--light-bg);
-            border-bottom-left-radius: 4px;
-        }
-
-        .message.user .message-content {
-            background: var(--talendro-blue);
-            color: var(--white);
-            border-bottom-right-radius: 4px;
-        }
-
-        .message-content p {
-            margin-bottom: 12px;
-        }
-
-        .message-content p:last-child {
-            margin-bottom: 0;
-        }
-
-        .message-content ul,
-        .message-content ol {
-            margin: 12px 0;
-            padding-left: 24px;
-        }
-
-        .message-content li {
-            margin-bottom: 8px;
-        }
-
-        .message-content strong {
-            font-weight: 600;
-        }
-
-        .message-content h1,
-        .message-content h2,
-        .message-content h3 {
-            font-family: 'Montserrat', sans-serif;
-            color: var(--talendro-blue);
-            margin: 16px 0 8px 0;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--light-bg); color: var(--talendro-slate); min-height: 100vh; display: flex; flex-direction: column; }
+        .header { background: var(--white); border-bottom: 1px solid #E2E8F0; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+        .logo { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 24px; color: var(--talendro-blue); }
+        .logo span { color: var(--talendro-slate); }
+        .session-badge { background: var(--vibrant-aqua); color: var(--white); padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+        .main-container { flex: 1; display: flex; max-width: 1400px; margin: 0 auto; width: 100%; padding: 24px; gap: 24px; }
+        .sidebar { width: 320px; flex-shrink: 0; }
+        .sidebar-card { background: var(--white); border-radius: 16px; padding: 24px; border: 1px solid #E2E8F0; margin-bottom: 16px; }
+        .sidebar-card h3 { font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 600; color: var(--talendro-blue); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 500; color: var(--talendro-slate); margin-bottom: 6px; }
+        .form-group textarea, .form-group input { width: 100%; padding: 12px; border: 1px solid #E2E8F0; border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 14px; transition: border-color 0.2s; }
+        .form-group textarea:focus, .form-group input:focus { outline: none; border-color: var(--talendro-blue); }
+        .form-group textarea { min-height: 120px; resize: vertical; }
+        .status-indicator { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--warm-gray); margin-top: 4px; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warm-gray); }
+        .status-dot.ready { background: var(--vibrant-aqua); }
+        .btn { display: inline-block; padding: 12px 24px; border-radius: 8px; font-family: 'Inter', sans-serif; font-weight: 500; font-size: 14px; text-decoration: none; border: none; cursor: pointer; transition: all 0.2s; width: 100%; text-align: center; }
+        .btn-primary { background: var(--talendro-blue); color: var(--white); }
+        .btn-primary:hover { background: #1E5AD8; }
+        .btn-primary:disabled { background: var(--warm-gray); cursor: not-allowed; }
+        .chat-container { flex: 1; display: flex; flex-direction: column; background: var(--white); border-radius: 16px; border: 1px solid #E2E8F0; overflow: hidden; }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 24px; }
+        .message { margin-bottom: 24px; display: flex; gap: 12px; }
+        .message.user { flex-direction: row-reverse; }
+        .message-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; flex-shrink: 0; }
+        .message.assistant .message-avatar { background: linear-gradient(135deg, var(--talendro-blue), var(--vibrant-aqua)); color: var(--white); }
+        .message.user .message-avatar { background: var(--talendro-slate); color: var(--white); }
+        .message-content { max-width: 70%; padding: 16px; border-radius: 16px; line-height: 1.6; }
+        .message.assistant .message-content { background: var(--light-bg); border-bottom-left-radius: 4px; }
+        .message.user .message-content { background: var(--talendro-blue); color: var(--white); border-bottom-right-radius: 4px; }
+        .message-content p { margin-bottom: 12px; }
+        .message-content p:last-child { margin-bottom: 0; }
+        .message-content ul, .message-content ol { margin: 12px 0; padding-left: 24px; }
+        .message-content li { margin-bottom: 8px; }
+        .message-content strong { font-weight: 600; }
+        .message-content h1, .message-content h2, .message-content h3 { font-family: 'Montserrat', sans-serif; color: var(--talendro-blue); margin: 16px 0 8px 0; }
         .message-content h1 { font-size: 20px; }
         .message-content h2 { font-size: 18px; }
         .message-content h3 { font-size: 16px; }
-
-        /* Chat Input */
-        .chat-input-container {
-            padding: 16px 24px;
-            border-top: 1px solid #E2E8F0;
-            display: flex;
-            gap: 12px;
-        }
-
-        .chat-input {
-            flex: 1;
-            padding: 14px 18px;
-            border: 1px solid #E2E8F0;
-            border-radius: 12px;
-            font-family: 'Inter', sans-serif;
-            font-size: 15px;
-            resize: none;
-            min-height: 52px;
-            max-height: 150px;
-        }
-
-        .chat-input:focus {
-            outline: none;
-            border-color: var(--talendro-blue);
-        }
-
-        .send-btn {
-            padding: 14px 24px;
-            background: var(--talendro-blue);
-            color: var(--white);
-            border: none;
-            border-radius: 12px;
-            font-family: 'Inter', sans-serif;
-            font-weight: 500;
-            font-size: 15px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .send-btn:hover {
-            background: #1E5AD8;
-        }
-
-        .send-btn:disabled {
-            background: var(--warm-gray);
-            cursor: not-allowed;
-        }
-
-        /* Loading indicator */
-        .typing-indicator {
-            display: flex;
-            gap: 4px;
-            padding: 16px;
-        }
-
-        .typing-indicator span {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--warm-gray);
-            animation: bounce 1.4s infinite ease-in-out;
-        }
-
+        .chat-input-container { padding: 16px 24px; border-top: 1px solid #E2E8F0; display: flex; gap: 12px; }
+        .chat-input { flex: 1; padding: 14px 18px; border: 1px solid #E2E8F0; border-radius: 12px; font-family: 'Inter', sans-serif; font-size: 15px; resize: none; min-height: 52px; max-height: 150px; }
+        .chat-input:focus { outline: none; border-color: var(--talendro-blue); }
+        .chat-input:disabled { background: #F5F5F5; cursor: not-allowed; }
+        .send-btn { padding: 14px 24px; background: var(--talendro-blue); color: var(--white); border: none; border-radius: 12px; font-family: 'Inter', sans-serif; font-weight: 500; font-size: 15px; cursor: pointer; transition: background 0.2s; }
+        .send-btn:hover { background: #1E5AD8; }
+        .send-btn:disabled { background: var(--warm-gray); cursor: not-allowed; }
+        .typing-indicator { display: flex; gap: 4px; padding: 16px; }
+        .typing-indicator span { width: 8px; height: 8px; border-radius: 50%; background: var(--warm-gray); animation: bounce 1.4s infinite ease-in-out; }
         .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
         .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
-
-        @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1); }
-        }
-
-        /* Welcome message */
-        .welcome-message {
-            text-align: center;
-            padding: 60px 40px;
-        }
-
-        .welcome-message h2 {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 24px;
-            color: var(--talendro-blue);
-            margin-bottom: 12px;
-        }
-
-        .welcome-message p {
-            color: var(--warm-gray);
-            font-size: 15px;
-            max-width: 400px;
-            margin: 0 auto;
-        }
-
-        /* Responsive */
-        @media (max-width: 900px) {
-            .main-container {
-                flex-direction: column;
-            }
-            .sidebar {
-                width: 100%;
-            }
-        }
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+        .welcome-message { text-align: center; padding: 60px 40px; }
+        .welcome-message h2 { font-family: 'Montserrat', sans-serif; font-size: 24px; color: var(--talendro-blue); margin-bottom: 12px; }
+        .welcome-message p { color: var(--warm-gray); font-size: 15px; max-width: 400px; margin: 0 auto; }
+        .session-type-display { padding: 12px; background: #F0F7FF; border-radius: 8px; font-weight: 500; color: var(--talendro-blue); text-align: center; }
+        .session-type-display a { color: var(--talendro-blue); text-decoration: none; }
+        .session-type-display a:hover { text-decoration: underline; }
+        @media (max-width: 900px) { .main-container { flex-direction: column; } .sidebar { width: 100%; } }
     </style>
 </head>
 <body>
     <header class="header">
-        <div class="logo">Talendro™ <span>Interview Coach</span></div>
-        <div class="session-badge" id="sessionBadge">Quick Prep</div>
+        <div class="logo">Talendro<sup style="font-size: 12px;">™</sup> <span>Interview Coach</span></div>
+        <div class="session-badge" id="sessionBadge">SESSION</div>
     </header>
-
     <main class="main-container">
         <aside class="sidebar">
             <div class="sidebar-card">
                 <h3>Your Documents</h3>
-                
                 <div class="form-group">
                     <label for="resume">Résumé</label>
                     <textarea id="resume" placeholder="Paste your résumé content here..."></textarea>
-                    <div class="status-indicator">
-                        <span class="status-dot" id="resumeStatus"></span>
-                        <span id="resumeStatusText">Not provided</span>
-                    </div>
+                    <div class="status-indicator"><span class="status-dot" id="resumeStatus"></span><span id="resumeStatusText">Not provided</span></div>
                 </div>
-
                 <div class="form-group">
                     <label for="jobDescription">Job Description</label>
                     <textarea id="jobDescription" placeholder="Paste the job description here..."></textarea>
-                    <div class="status-indicator">
-                        <span class="status-dot" id="jdStatus"></span>
-                        <span id="jdStatusText">Not provided</span>
-                    </div>
+                    <div class="status-indicator"><span class="status-dot" id="jdStatus"></span><span id="jdStatusText">Not provided</span></div>
                 </div>
-
                 <div class="form-group">
                     <label for="companyUrl">Company Website URL</label>
                     <input type="url" id="companyUrl" placeholder="https://company.com">
-                    <div class="status-indicator">
-                        <span class="status-dot" id="urlStatus"></span>
-                        <span id="urlStatusText">Not provided</span>
-                    </div>
+                    <div class="status-indicator"><span class="status-dot" id="urlStatus"></span><span id="urlStatusText">Not provided</span></div>
                 </div>
-
                 <button class="btn btn-primary" id="saveDocsBtn">Save Documents</button>
             </div>
-
-            <div class="sidebar-card">
-                <h3>Session Type</h3>
-                <select id="sessionType" style="width: 100%; padding: 12px; border: 1px solid #E2E8F0; border-radius: 8px; font-family: inherit; font-size: 14px;">
-                    <option value="quick_prep">Quick Prep ($12)</option>
-                    <option value="full_mock">Full Mock Interview ($29)</option>
-                    <option value="audio_mock">Premium Audio Mock ($49)</option>
-                </select>
+            <div class="sidebar-card" id="sessionTypeCard">
+                <h3>Your Session</h3>
+                <div class="session-type-display" id="sessionTypeDisplay">Loading...</div>
             </div>
         </aside>
-
         <section class="chat-container">
             <div class="chat-messages" id="chatMessages">
-                <div class="welcome-message">
+                <div class="welcome-message" id="welcomeMessage">
                     <h2>Welcome to Interview Coach</h2>
                     <p>Upload your résumé, job description, and company URL in the sidebar, then start your personalized interview prep session.</p>
                 </div>
             </div>
-
             <div class="chat-input-container">
                 <textarea class="chat-input" id="chatInput" placeholder="Type your message..." rows="1"></textarea>
                 <button class="send-btn" id="sendBtn">Send</button>
             </div>
         </section>
     </main>
-
     <script>
-        // Generate unique session ID
         const sessionId = 'session_' + Math.random().toString(36).substr(2, 9);
-        
-        // DOM Elements
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlSessionType = urlParams.get('session_type');
+        const customerEmail = urlParams.get('email');
+        const validSessionTypes = ['quick_prep', 'full_mock', 'audio_mock', 'pro'];
+        const sessionTypeLabels = { 'quick_prep': 'Quick Prep', 'full_mock': 'Full Mock Interview', 'audio_mock': 'Premium Audio Mock', 'pro': 'Interview Coach Pro' };
         const chatMessages = document.getElementById('chatMessages');
         const chatInput = document.getElementById('chatInput');
         const sendBtn = document.getElementById('sendBtn');
         const saveDocsBtn = document.getElementById('saveDocsBtn');
-        const sessionType = document.getElementById('sessionType');
         const sessionBadge = document.getElementById('sessionBadge');
-        
-        // Document inputs
+        const sessionTypeDisplay = document.getElementById('sessionTypeDisplay');
+        const welcomeMessage = document.getElementById('welcomeMessage');
         const resumeInput = document.getElementById('resume');
         const jdInput = document.getElementById('jobDescription');
         const urlInput = document.getElementById('companyUrl');
-        
-        // Status indicators
         const resumeStatus = document.getElementById('resumeStatus');
         const resumeStatusText = document.getElementById('resumeStatusText');
         const jdStatus = document.getElementById('jdStatus');
         const jdStatusText = document.getElementById('jdStatusText');
         const urlStatus = document.getElementById('urlStatus');
         const urlStatusText = document.getElementById('urlStatusText');
-
-        // State
         let documents = {};
         let isLoading = false;
-
-        // Update session badge
-        sessionType.addEventListener('change', () => {
-            const labels = {
-                'quick_prep': 'Quick Prep',
-                'full_mock': 'Full Mock',
-                'audio_mock': 'Audio Mock'
-            };
-            sessionBadge.textContent = labels[sessionType.value];
-        });
-
-        // Update status indicators
-        function updateStatus(input, statusDot, statusText) {
-            if (input.value.trim()) {
-                statusDot.classList.add('ready');
-                statusText.textContent = 'Ready';
+        let currentSessionType = null;
+        function initializeSession() {
+            if (urlSessionType && validSessionTypes.includes(urlSessionType)) {
+                currentSessionType = urlSessionType;
+                sessionTypeDisplay.textContent = sessionTypeLabels[urlSessionType];
+                sessionBadge.textContent = sessionTypeLabels[urlSessionType].toUpperCase();
+                sendBtn.disabled = false;
+                chatInput.disabled = false;
+                chatInput.placeholder = 'Type your message...';
+                welcomeMessage.innerHTML = '<h2>Welcome to ' + sessionTypeLabels[urlSessionType] + '</h2><p>Upload your résumé, job description, and company URL in the sidebar, then start your personalized interview prep session.</p>';
             } else {
-                statusDot.classList.remove('ready');
-                statusText.textContent = 'Not provided';
+                currentSessionType = null;
+                sessionTypeDisplay.innerHTML = '<a href="https://talendro.com/interview-coach">Purchase a session to begin →</a>';
+                sessionBadge.textContent = 'NO SESSION';
+                sessionBadge.style.background = '#9FA6B2';
+                sendBtn.disabled = true;
+                chatInput.disabled = true;
+                chatInput.placeholder = 'Purchase a session to start chatting...';
+                welcomeMessage.innerHTML = '<h2>Get Started with Interview Coach</h2><p>Choose your interview preparation package to begin your personalized coaching session.</p><a href="https://talendro.com/interview-coach" class="btn btn-primary" style="max-width:300px;margin:24px auto 0;display:block;">View Packages</a>';
             }
         }
-
-        resumeInput.addEventListener('input', () => updateStatus(resumeInput, resumeStatus, resumeStatusText));
-        jdInput.addEventListener('input', () => updateStatus(jdInput, jdStatus, jdStatusText));
-        urlInput.addEventListener('input', () => updateStatus(urlInput, urlStatus, urlStatusText));
-
-        // Save documents
-        saveDocsBtn.addEventListener('click', () => {
-            documents = {
-                resume: resumeInput.value.trim(),
-                jobDescription: jdInput.value.trim(),
-                companyUrl: urlInput.value.trim()
-            };
-            
-            saveDocsBtn.textContent = 'Saved ✓';
-            setTimeout(() => {
-                saveDocsBtn.textContent = 'Save Documents';
-            }, 2000);
-        });
-
-        // Format message content (basic markdown support)
-        function formatMessage(text) {
-            // Convert headers
-            text = text.replace(/^### (.*$)/gm, '<h3>$1</h3>');
-            text = text.replace(/^## (.*$)/gm, '<h2>$1</h2>');
-            text = text.replace(/^# (.*$)/gm, '<h1>$1</h1>');
-            
-            // Convert bold
-            text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            
-            // Convert line breaks to paragraphs
-            const paragraphs = text.split('\n\n');
-            text = paragraphs.map(p => {
-                if (p.startsWith('<h') || p.startsWith('<ul') || p.startsWith('<ol')) {
-                    return p;
-                }
-                // Handle bullet points
-                if (p.includes('\n- ') || p.startsWith('- ')) {
-                    const items = p.split('\n').filter(line => line.startsWith('- '));
-                    return '<ul>' + items.map(item => `<li>${item.substring(2)}</li>`).join('') + '</ul>';
-                }
-                // Handle numbered lists
-                if (p.match(/^\d+\./m)) {
-                    const items = p.split('\n').filter(line => line.match(/^\d+\./));
-                    return '<ol>' + items.map(item => `<li>${item.replace(/^\d+\.\s*/, '')}</li>`).join('') + '</ol>';
-                }
-                return `<p>${p.replace(/\n/g, '<br>')}</p>`;
-            }).join('');
-            
-            return text;
-        }
-
-        // Add message to chat
-        function addMessage(content, role) {
-            // Remove welcome message if present
-            const welcome = chatMessages.querySelector('.welcome-message');
-            if (welcome) welcome.remove();
-
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${role}`;
-            
-            const avatar = document.createElement('div');
-            avatar.className = 'message-avatar';
-            avatar.textContent = role === 'assistant' ? 'T' : 'Y';
-            
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'message-content';
-            contentDiv.innerHTML = formatMessage(content);
-            
-            messageDiv.appendChild(avatar);
-            messageDiv.appendChild(contentDiv);
-            chatMessages.appendChild(messageDiv);
-            
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        // Show typing indicator
-        function showTyping() {
-            const typingDiv = document.createElement('div');
-            typingDiv.className = 'message assistant';
-            typingDiv.id = 'typingIndicator';
-            typingDiv.innerHTML = `
-                <div class="message-avatar">T</div>
-                <div class="typing-indicator">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </div>
-            `;
-            chatMessages.appendChild(typingDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        // Hide typing indicator
-        function hideTyping() {
-            const typing = document.getElementById('typingIndicator');
-            if (typing) typing.remove();
-        }
-
-        // Send message
-        async function sendMessage() {
-            const message = chatInput.value.trim();
-            if (!message || isLoading) return;
-
-            isLoading = true;
-            sendBtn.disabled = true;
-            chatInput.value = '';
-
-            addMessage(message, 'user');
-            showTyping();
-
-            try {
-                const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        message,
-                        sessionId,
-                        sessionType: sessionType.value,
-                        documents
-                    })
-                });
-
-                const data = await response.json();
-                hideTyping();
-
-                if (data.error) {
-                    addMessage('Sorry, an error occurred. Please try again.', 'assistant');
-                } else {
-                    addMessage(data.message, 'assistant');
-                }
-            } catch (error) {
-                hideTyping();
-                addMessage('Sorry, there was a connection error. Please try again.', 'assistant');
-            }
-
-            isLoading = false;
-            sendBtn.disabled = false;
-            chatInput.focus();
-        }
-
-        // Event listeners
+        initializeSession();
+        function updateStatus(input, statusDot, statusText) { if (input.value.trim()) { statusDot.classList.add('ready'); statusText.textContent = 'Ready'; } else { statusDot.classList.remove('ready'); statusText.textContent = 'Not provided'; } }
+        resumeInput.addEventListener('input', function() { updateStatus(resumeInput, resumeStatus, resumeStatusText); });
+        jdInput.addEventListener('input', function() { updateStatus(jdInput, jdStatus, jdStatusText); });
+        urlInput.addEventListener('input', function() { updateStatus(urlInput, urlStatus, urlStatusText); });
+        saveDocsBtn.addEventListener('click', function() { documents = { resume: resumeInput.value.trim(), jobDescription: jdInput.value.trim(), companyUrl: urlInput.value.trim() }; saveDocsBtn.textContent = 'Saved!'; setTimeout(function() { saveDocsBtn.textContent = 'Save Documents'; }, 2000); });
+        function formatMessage(text) { text = text.replace(/^### (.*$)/gm, '<h3>$1</h3>'); text = text.replace(/^## (.*$)/gm, '<h2>$1</h2>'); text = text.replace(/^# (.*$)/gm, '<h1>$1</h1>'); text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); var paragraphs = text.split('\n\n'); text = paragraphs.map(function(p) { if (p.startsWith('<h') || p.startsWith('<ul') || p.startsWith('<ol')) { return p; } if (p.includes('\n- ') || p.startsWith('- ')) { var items = p.split('\n').filter(function(line) { return line.startsWith('- '); }); return '<ul>' + items.map(function(item) { return '<li>' + item.substring(2) + '</li>'; }).join('') + '</ul>'; } if (p.match(/^\d+\./m)) { var items = p.split('\n').filter(function(line) { return line.match(/^\d+\./); }); return '<ol>' + items.map(function(item) { return '<li>' + item.replace(/^\d+\.\s*/, '') + '</li>'; }).join('') + '</ol>'; } return '<p>' + p.replace(/\n/g, '<br>') + '</p>'; }).join(''); return text; }
+        function addMessage(content, role) { var welcome = chatMessages.querySelector('.welcome-message'); if (welcome) welcome.remove(); var messageDiv = document.createElement('div'); messageDiv.className = 'message ' + role; var avatar = document.createElement('div'); avatar.className = 'message-avatar'; avatar.textContent = role === 'assistant' ? 'T' : 'Y'; var contentDiv = document.createElement('div'); contentDiv.className = 'message-content'; contentDiv.innerHTML = formatMessage(content); messageDiv.appendChild(avatar); messageDiv.appendChild(contentDiv); chatMessages.appendChild(messageDiv); chatMessages.scrollTop = chatMessages.scrollHeight; }
+        function showTyping() { var typingDiv = document.createElement('div'); typingDiv.className = 'message assistant'; typingDiv.id = 'typingIndicator'; typingDiv.innerHTML = '<div class="message-avatar">T</div><div class="typing-indicator"><span></span><span></span><span></span></div>'; chatMessages.appendChild(typingDiv); chatMessages.scrollTop = chatMessages.scrollHeight; }
+        function hideTyping() { var typing = document.getElementById('typingIndicator'); if (typing) typing.remove(); }
+        function sendMessage() { var message = chatInput.value.trim(); if (!message || isLoading || !currentSessionType) return; isLoading = true; sendBtn.disabled = true; chatInput.value = ''; addMessage(message, 'user'); showTyping(); fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: message, sessionId: sessionId, sessionType: currentSessionType, documents: documents, customerEmail: customerEmail }) }).then(function(response) { return response.json(); }).then(function(data) { hideTyping(); if (data.error) { addMessage('Sorry, an error occurred. Please try again.', 'assistant'); } else { addMessage(data.message, 'assistant'); } }).catch(function(error) { hideTyping(); addMessage('Sorry, there was a connection error. Please try again.', 'assistant'); }).finally(function() { isLoading = false; sendBtn.disabled = false; chatInput.focus(); }); }
         sendBtn.addEventListener('click', sendMessage);
-        chatInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-
-        // Auto-resize textarea
-        chatInput.addEventListener('input', () => {
-            chatInput.style.height = 'auto';
-            chatInput.style.height = Math.min(chatInput.scrollHeight, 150) + 'px';
-        });
+        chatInput.addEventListener('keydown', function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+        chatInput.addEventListener('input', function() { chatInput.style.height = 'auto'; chatInput.style.height = Math.min(chatInput.scrollHeight, 150) + 'px'; });
     </script>
 </body>
 </html>
+ENDOFFIL
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Talendro™ Interview Coach</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;500;600&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --talendro-blue: #2F6DF6;
+            --vibrant-aqua: #00C4CC;
+            --bright-lime: #A4F400;
+            --talendro-slate: #2C2F38;
+            --warm-gray: #9FA6B2;
+            --white: #FFFFFF;
+            --light-bg: #F8FAFC;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--light-bg); color: var(--talendro-slate); min-height: 100vh; display: flex; flex-direction: column; }
+        .header { background: var(--white); border-bottom: 1px solid #E2E8F0; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+        .logo { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 24px; color: var(--talendro-blue); }
+        .logo span { color: var(--talendro-slate); }
+        .session-badge { background: var(--vibrant-aqua); color: var(--white); padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+        .main-container { flex: 1; display: flex; max-width: 1400px; margin: 0 auto; width: 100%; padding: 24px; gap: 24px; }
+        .sidebar { width: 320px; flex-shrink: 0; }
+        .sidebar-card { background: var(--white); border-radius: 16px; padding: 24px; border: 1px solid #E2E8F0; margin-bottom: 16px; }
+        .sidebar-card h3 { font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 600; color: var(--talendro-blue); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 500; color: var(--talendro-slate); margin-bottom: 6px; }
+        .form-group textarea, .form-group input { width: 100%; padding: 12px; border: 1px solid #E2E8F0; border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 14px; transition: border-color 0.2s; }
+        .form-group textarea:focus, .form-group input:focus { outline: none; border-color: var(--talendro-blue); }
+        .form-group textarea { min-height: 120px; resize: vertical; }
+        .status-indicator { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--warm-gray); margin-top: 4px; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warm-gray); }
+        .status-dot.ready { background: var(--vibrant-aqua); }
+        .btn { display: inline-block; padding: 12px 24px; border-radius: 8px; font-family: 'Inter', sans-serif; font-weight: 500; font-size: 14px; text-decoration: none; border: none; cursor: pointer; transition: all 0.2s; width: 100%; text-align: center; }
+        .btn-primary { background: var(--talendro-blue); color: var(--white); }
+        .btn-primary:hover { background: #1E5AD8; }
+        .btn-primary:disabled { background: var(--warm-gray); cursor: not-allowed; }
+        .chat-container { flex: 1; display: flex; flex-direction: column; background: var(--white); border-radius: 16px; border: 1px solid #E2E8F0; overflow: hidden; }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 24px; }
+        .message { margin-bottom: 24px; display: flex; gap: 12px; }
+        .message.user { flex-direction: row-reverse; }
+        .message-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; flex-shrink: 0; }
+        .message.assistant .message-avatar { background: linear-gradient(135deg, var(--talendro-blue), var(--vibrant-aqua)); color: var(--white); }
+        .message.user .message-avatar { background: var(--talendro-slate); color: var(--white); }
+        .message-content { max-width: 70%; padding: 16px; border-radius: 16px; line-height: 1.6; }
+        .message.assistant .message-content { background: var(--light-bg); border-bottom-left-radius: 4px; }
+        .message.user .message-content { background: var(--talendro-blue); color: var(--white); border-bottom-right-radius: 4px; }
+        .message-content p { margin-bottom: 12px; }
+        .message-content p:last-child { margin-bottom: 0; }
+        .message-content ul, .message-content ol { margin: 12px 0; padding-left: 24px; }
+        .message-content li { margin-bottom: 8px; }
+        .message-content strong { font-weight: 600; }
+        .message-content h1, .message-content h2, .message-content h3 { font-family: 'Montserrat', sans-serif; color: var(--talendro-blue); margin: 16px 0 8px 0; }
+        .message-content h1 { font-size: 20px; }
+        .message-content h2 { font-size: 18px; }
+        .message-content h3 { font-size: 16px; }
+        .chat-input-container { padding: 16px 24px; border-top: 1px solid #E2E8F0; display: flex; gap: 12px; }
+        .chat-input { flex: 1; padding: 14px 18px; border: 1px solid #E2E8F0; border-radius: 12px; font-family: 'Inter', sans-serif; font-size: 15px; resize: none; min-height: 52px; max-height: 150px; }
+        .chat-input:focus { outline: none; border-color: var(--talendro-blue); }
+        .chat-input:disabled { background: #F5F5F5; cursor: not-allowed; }
+        .send-btn { padding: 14px 24px; background: var(--talendro-blue); color: var(--white); border: none; border-radius: 12px; font-family: 'Inter', sans-serif; font-weight: 500; font-size: 15px; cursor: pointer; transition: background 0.2s; }
+        .send-btn:hover { background: #1E5AD8; }
+        .send-btn:disabled { background: var(--warm-gray); cursor: not-allowed; }
+        .typing-indicator { display: flex; gap: 4px; padding: 16px; }
+        .typing-indicator span { width: 8px; height: 8px; border-radius: 50%; background: var(--warm-gray); animation: bounce 1.4s infinite ease-in-out; }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+        .welcome-message { text-align: center; padding: 60px 40px; }
+        .welcome-message h2 { font-family: 'Montserrat', sans-serif; font-size: 24px; color: var(--talendro-blue); margin-bottom: 12px; }
+        .welcome-message p { color: var(--warm-gray); font-size: 15px; max-width: 400px; margin: 0 auto; }
+        .session-type-display { padding: 12px; background: #F0F7FF; border-radius: 8px; font-weight: 500; color: var(--talendro-blue); text-align: center; }
+        .session-type-display a { color: var(--talendro-blue); text-decoration: none; }
+        .session-type-display a:hover { text-decoration: underline; }
+        @media (max-width: 900px) { .main-container { flex-direction: column; } .sidebar { width: 100%; } }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">Talendro<sup style="font-size: 12px;">™</sup> <span>Interview Coach</span></div>
+        <div class="session-badge" id="sessionBadge">SESSION</div>
+    </header>
+    <main class="main-container">
+        <aside class="sidebar">
+            <div class="sidebar-card">
+                <h3>Your Documents</h3>
+                <div class="form-group">
+                    <label for="resume">Résumé</label>
+                    <textarea id="resume" placeholder="Paste your résumé content here..."></textarea>
+                    <div class="status-indicator"><span class="status-dot" id="resumeStatus"></span><span id="resumeStatusText">Not provided</span></div>
+                </div>
+                <div class="form-group">
+                    <label for="jobDescription">Job Description</label>
+                    <textarea id="jobDescription" placeholder="Paste the job description here..."></textarea>
+                    <div class="status-indicator"><span class="status-dot" id="jdStatus"></span><span id="jdStatusText">Not provided</span></div>
+                </div>
+                <div class="form-group">
+                    <label for="companyUrl">Company Website URL</label>
+                    <input type="url" id="companyUrl" placeholder="https://company.com">
+                    <div class="status-indicator"><span class="status-dot" id="urlStatus"></span><span id="urlStatusText">Not provided</span></div>
+                </div>
+                <button class="btn btn-primary" id="saveDocsBtn">Save Documents</button>
+            </div>
+            <div class="sidebar-card" id="sessionTypeCard">
+                <h3>Your Session</h3>
+                <div class="session-type-display" id="sessionTypeDisplay">Loading...</div>
+            </div>
+        </aside>
+        <section class="chat-container">
+            <div class="chat-messages" id="chatMessages">
+                <div class="welcome-message" id="welcomeMessage">
+                    <h2>Welcome to Interview Coach</h2>
+                    <p>Upload your résumé, job description, and company URL in the sidebar, then start your personalized interview prep session.</p>
+                </div>
+            </div>
+            <div class="chat-input-container">
+                <textarea class="chat-input" id="chatInput" placeholder="Type your message..." rows="1"></textarea>
+                <button class="send-btn" id="sendBtn">Send</button>
+            </div>
+        </section>
+    </main>
+    <script>
+        const sessionId = 'session_' + Math.random().toString(36).substr(2, 9);
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlSessionType = urlParams.get('session_type');
+        const customerEmail = urlParams.get('email');
+        const validSessionTypes = ['quick_prep', 'full_mock', 'audio_mock', 'pro'];
+        const sessionTypeLabels = { 'quick_prep': 'Quick Prep', 'full_mock': 'Full Mock Interview', 'audio_mock': 'Premium Audio Mock', 'pro': 'Interview Coach Pro' };
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const saveDocsBtn = document.getElementById('saveDocsBtn');
+        const sessionBadge = document.getElementById('sessionBadge');
+        const sessionTypeDisplay = document.getElementById('sessionTypeDisplay');
+        const welcomeMessage = document.getElementById('welcomeMessage');
+        const resumeInput = document.getElementById('resume');
+        const jdInput = document.getElementById('jobDescription');
+        const urlInput = document.getElementById('companyUrl');
+        const resumeStatus = document.getElementById('resumeStatus');
+        const resumeStatusText = document.getElementById('resumeStatusText');
+        const jdStatus = document.getElementById('jdStatus');
+        const jdStatusText = document.getElementById('jdStatusText');
+        const urlStatus = document.getElementById('urlStatus');
+        const urlStatusText = document.getElementById('urlStatusText');
+        let documents = {};
+        let isLoading = false;
+        let currentSessionType = null;
+        function initializeSession() {
+            if (urlSessionType && validSessionTypes.includes(urlSessionType)) {
+                currentSessionType = urlSessionType;
+                sessionTypeDisplay.textContent = sessionTypeLabels[urlSessionType];
+                sessionBadge.textContent = sessionTypeLabels[urlSessionType].toUpperCase();
+                sendBtn.disabled = false;
+                chatInput.disabled = false;
+                chatInput.placeholder = 'Type your message...';
+                welcomeMessage.innerHTML = '<h2>Welcome to ' + sessionTypeLabels[urlSessionType] + '</h2><p>Upload your résumé, job description, and company URL in the sidebar, then start your personalized interview prep session.</p>';
+            } else {
+                currentSessionType = null;
+                sessionTypeDisplay.innerHTML = '<a href="https://talendro.com/interview-coach">Purchase a session to begin →</a>';
+                sessionBadge.textContent = 'NO SESSION';
+                sessionBadge.style.background = '#9FA6B2';
+                sendBtn.disabled = true;
+                chatInput.disabled = true;
+                chatInput.placeholder = 'Purchase a session to start chatting...';
+                welcomeMessage.innerHTML = '<h2>Get Started with Interview Coach</h2><p>Choose your interview preparation package to begin your personalized coaching session.</p><a href="https://talendro.com/interview-coach" class="btn btn-primary" style="max-width:300px;margin:24px auto 0;display:block;">View Packages</a>';
+            }
+        }
+        initializeSession();
+        function updateStatus(input, statusDot, statusText) { if (input.value.trim()) { statusDot.classList.add('ready'); statusText.textContent = 'Ready'; } else { statusDot.classList.remove('ready'); statusText.textContent = 'Not provided'; } }
+        resumeInput.addEventListener('input', function() { updateStatus(resumeInput, resumeStatus, resumeStatusText); });
+        jdInput.addEventListener('input', function() { updateStatus(jdInput, jdStatus, jdStatusText); });
+        urlInput.addEventListener('input', function() { updateStatus(urlInput, urlStatus, urlStatusText); });
+        saveDocsBtn.addEventListener('click', function() { documents = { resume: resumeInput.value.trim(), jobDescription: jdInput.value.trim(), companyUrl: urlInput.value.trim() }; saveDocsBtn.textContent = 'Saved!'; setTimeout(function() { saveDocsBtn.textContent = 'Save Documents'; }, 2000); });
+        function formatMessage(text) { text = text.replace(/^### (.*$)/gm, '<h3>$1</h3>'); text = text.replace(/^## (.*$)/gm, '<h2>$1</h2>'); text = text.replace(/^# (.*$)/gm, '<h1>$1</h1>'); text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); var paragraphs = text.split('\n\n'); text = paragraphs.map(function(p) { if (p.startsWith('<h') || p.startsWith('<ul') || p.startsWith('<ol')) { return p; } if (p.includes('\n- ') || p.startsWith('- ')) { var items = p.split('\n').filter(function(line) { return line.startsWith('- '); }); return '<ul>' + items.map(function(item) { return '<li>' + item.substring(2) + '</li>'; }).join('') + '</ul>'; } if (p.match(/^\d+\./m)) { var items = p.split('\n').filter(function(line) { return line.match(/^\d+\./); }); return '<ol>' + items.map(function(item) { return '<li>' + item.replace(/^\d+\.\s*/, '') + '</li>'; }).join('') + '</ol>'; } return '<p>' + p.replace(/\n/g, '<br>') + '</p>'; }).join(''); return text; }
+        function addMessage(content, role) { var welcome = chatMessages.querySelector('.welcome-message'); if (welcome) welcome.remove(); var messageDiv = document.createElement('div'); messageDiv.className = 'message ' + role; var avatar = document.createElement('div'); avatar.className = 'message-avatar'; avatar.textContent = role === 'assistant' ? 'T' : 'Y'; var contentDiv = document.createElement('div'); contentDiv.className = 'message-content'; contentDiv.innerHTML = formatMessage(content); messageDiv.appendChild(avatar); messageDiv.appendChild(contentDiv); chatMessages.appendChild(messageDiv); chatMessages.scrollTop = chatMessages.scrollHeight; }
+        function showTyping() { var typingDiv = document.createElement('div'); typingDiv.className = 'message assistant'; typingDiv.id = 'typingIndicator'; typingDiv.innerHTML = '<div class="message-avatar">T</div><div class="typing-indicator"><span></span><span></span><span></span></div>'; chatMessages.appendChild(typingDiv); chatMessages.scrollTop = chatMessages.scrollHeight; }
+        function hideTyping() { var typing = document.getElementById('typingIndicator'); if (typing) typing.remove(); }
+        function sendMessage() { var message = chatInput.value.trim(); if (!message || isLoading || !currentSessionType) return; isLoading = true; sendBtn.disabled = true; chatInput.value = ''; addMessage(message, 'user'); showTyping(); fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: message, sessionId: sessionId, sessionType: currentSessionType, documents: documents, customerEmail: customerEmail }) }).then(function(response) { return response.json(); }).then(function(data) { hideTyping(); if (data.error) { addMessage('Sorry, an error occurred. Please try again.', 'assistant'); } else { addMessage(data.message, 'assistant'); } }).catch(function(error) { hideTyping(); addMessage('Sorry, there was a connection error. Please try again.', 'assistant'); }).finally(function() { isLoading = false; sendBtn.disabled = false; chatInput.focus(); }); }
+        sendBtn.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keydown', function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+        chatInput.addEventListener('input', function() { chatInput.style.height = 'auto'; chatInput.style.height = Math.min(chatInput.scrollHeight, 150) + 'px'; });
+    </script>
+</body>
+</html>
+endoffile
