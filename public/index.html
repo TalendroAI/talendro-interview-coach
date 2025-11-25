@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Talendro™ Interview Coach</title>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;500;600&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
+    <meta name="description" content="AI-powered interview preparation. Get personalized coaching at a fraction of the cost of traditional interview prep.">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;500;600&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
             --talendro-blue: #2F6DF6;
@@ -26,9 +27,583 @@
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background: var(--light-bg);
             color: var(--talendro-slate);
-            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* ==================== */
+        /* LANDING PAGE STYLES  */
+        /* ==================== */
+        
+        .landing-page {
+            display: none;
+            background: var(--white);
+        }
+
+        .landing-page.active {
+            display: block;
+        }
+
+        /* Header */
+        .landing-header {
+            background: var(--white);
+            border-bottom: 1px solid #E2E8F0;
+            padding: 16px 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .landing-header-content {
+            max-width: 1200px;
+            margin: 0 auto;
             display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .landing-logo {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 24px;
+            color: var(--talendro-blue);
+            text-decoration: none;
+        }
+
+        .landing-logo span {
+            color: var(--talendro-slate);
+        }
+
+        .landing-header-cta {
+            background: var(--talendro-blue);
+            color: var(--white);
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .landing-header-cta:hover {
+            background: #1E5AD8;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #F0F7FF 0%, #E8F4F8 100%);
+            padding: 80px 24px;
+            text-align: center;
+        }
+
+        .hero-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .hero-badge {
+            display: inline-block;
+            background: var(--vibrant-aqua);
+            color: var(--white);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 24px;
+        }
+
+        .hero h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 52px;
+            color: var(--talendro-slate);
+            margin-bottom: 20px;
+            line-height: 1.2;
+        }
+
+        .hero h1 em {
+            color: var(--talendro-blue);
+            font-style: italic;
+        }
+
+        .hero p {
+            font-size: 20px;
+            color: var(--warm-gray);
+            margin-bottom: 32px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-btn {
+            display: inline-block;
+            background: var(--talendro-blue);
+            color: var(--white);
+            padding: 16px 32px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            font-size: 16px;
+            transition: background 0.2s;
+        }
+
+        .hero-btn:hover {
+            background: #1E5AD8;
+        }
+
+        .hero-stats {
+            display: flex;
+            justify-content: center;
+            gap: 48px;
+            margin-top: 48px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 36px;
+            font-weight: 800;
+            color: var(--talendro-blue);
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: var(--warm-gray);
+            margin-top: 4px;
+        }
+
+        /* How It Works */
+        .how-it-works {
+            padding: 80px 24px;
+            background: var(--light-bg);
+        }
+
+        .how-it-works h2 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 36px;
+            color: var(--talendro-slate);
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 32px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .step {
+            text-align: center;
+        }
+
+        .step-number {
+            width: 48px;
+            height: 48px;
+            background: var(--talendro-blue);
+            color: var(--white);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 20px;
+            margin: 0 auto 16px;
+        }
+
+        .step h3 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--talendro-slate);
+            margin-bottom: 8px;
+        }
+
+        .step p {
+            font-size: 14px;
+            color: var(--warm-gray);
+        }
+
+        /* Pricing Section */
+        .pricing {
+            padding: 80px 24px;
+            background: var(--white);
+        }
+
+        .pricing-header {
+            text-align: center;
+            max-width: 600px;
+            margin: 0 auto 48px;
+        }
+
+        .pricing-header h2 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 36px;
+            color: var(--talendro-slate);
+            margin-bottom: 16px;
+        }
+
+        .pricing-header p {
+            color: var(--warm-gray);
+            font-size: 18px;
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .pricing-card {
+            background: var(--white);
+            border: 1px solid #E2E8F0;
+            border-radius: 16px;
+            padding: 32px;
+            position: relative;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+        }
+
+        .pricing-card.featured {
+            border: 2px solid var(--talendro-blue);
+        }
+
+        .pricing-card.featured::before {
+            content: 'MOST POPULAR';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--talendro-blue);
+            color: var(--white);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .pricing-card.pro {
+            background: linear-gradient(135deg, var(--talendro-slate) 0%, #1a1c20 100%);
+            color: var(--white);
+        }
+
+        .pricing-card.pro .card-title,
+        .pricing-card.pro .price,
+        .pricing-card.pro .price-period {
+            color: var(--white);
+        }
+
+        .pricing-card.pro .feature-list li {
+            color: rgba(255,255,255,0.8);
+        }
+
+        .pricing-card.pro .feature-list li::before {
+            color: var(--bright-lime);
+        }
+
+        .card-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--talendro-slate);
+            margin-bottom: 8px;
+        }
+
+        .card-description {
+            font-size: 14px;
+            color: var(--warm-gray);
+            margin-bottom: 20px;
+        }
+
+        .pricing-card.pro .card-description {
+            color: rgba(255,255,255,0.6);
+        }
+
+        .price {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 42px;
+            font-weight: 800;
+            color: var(--talendro-slate);
+        }
+
+        .price-period {
+            font-size: 16px;
+            font-weight: 400;
+            color: var(--warm-gray);
+        }
+
+        .feature-list {
+            list-style: none;
+            margin: 24px 0;
+        }
+
+        .feature-list li {
+            padding: 8px 0;
+            font-size: 14px;
+            color: var(--talendro-slate);
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .feature-list li::before {
+            content: '✓';
+            color: var(--vibrant-aqua);
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .pricing-btn {
+            display: block;
+            width: 100%;
+            padding: 14px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            font-size: 14px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .pricing-btn.primary {
+            background: var(--talendro-blue);
+            color: var(--white);
+        }
+
+        .pricing-btn.primary:hover {
+            background: #1E5AD8;
+        }
+
+        .pricing-btn.secondary {
+            background: var(--light-bg);
+            color: var(--talendro-blue);
+            border: 1px solid var(--talendro-blue);
+        }
+
+        .pricing-btn.secondary:hover {
+            background: rgba(47, 109, 246, 0.05);
+        }
+
+        .pricing-btn.pro-btn {
+            background: var(--bright-lime);
+            color: var(--talendro-slate);
+        }
+
+        .pricing-btn.pro-btn:hover {
+            background: #8FD600;
+        }
+
+        .pro-options {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .pro-options a {
+            flex: 1;
+            padding: 10px;
+            font-size: 12px;
+        }
+
+        /* Comparison */
+        .comparison {
+            padding: 80px 24px;
+            background: var(--light-bg);
+        }
+
+        .comparison h2 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 36px;
+            color: var(--talendro-slate);
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .comparison-table {
+            max-width: 800px;
+            margin: 0 auto;
+            border-collapse: collapse;
+            width: 100%;
+            background: var(--white);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 16px 20px;
+            text-align: left;
+            border-bottom: 1px solid #E2E8F0;
+        }
+
+        .comparison-table th {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--warm-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: var(--light-bg);
+        }
+
+        .comparison-table td {
+            font-size: 15px;
+        }
+
+        .comparison-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .comparison-table .highlight {
+            color: var(--talendro-blue);
+            font-weight: 600;
+        }
+
+        .comparison-table .muted {
+            color: var(--warm-gray);
+        }
+
+        /* CTA Section */
+        .cta {
+            padding: 80px 24px;
+            background: linear-gradient(135deg, var(--talendro-blue) 0%, #1E5AD8 100%);
+            text-align: center;
+        }
+
+        .cta h2 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 36px;
+            color: var(--white);
+            margin-bottom: 16px;
+        }
+
+        .cta p {
+            font-size: 18px;
+            color: rgba(255,255,255,0.8);
+            margin-bottom: 32px;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cta-btn {
+            display: inline-block;
+            background: var(--white);
+            color: var(--talendro-blue);
+            padding: 16px 32px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 16px;
+            transition: transform 0.2s;
+        }
+
+        .cta-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Footer */
+        .landing-footer {
+            background: var(--talendro-slate);
+            color: rgba(255,255,255,0.6);
+            padding: 40px 24px;
+            text-align: center;
+        }
+
+        .footer-logo {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 20px;
+            color: var(--white);
+            margin-bottom: 8px;
+        }
+
+        .footer-tagline {
+            font-family: 'DM Serif Display', serif;
+            font-style: italic;
+            color: rgba(255,255,255,0.8);
+            margin-bottom: 24px;
+        }
+
+        .footer-badges {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .footer-badges span {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: rgba(255,255,255,0.9);
+        }
+
+        /* Responsive for landing */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 36px;
+            }
+
+            .hero-stats {
+                flex-direction: column;
+                gap: 24px;
+            }
+
+            .pricing-grid {
+                grid-template-columns: 1fr;
+                max-width: 400px;
+            }
+
+            .pro-options {
+                flex-direction: column;
+            }
+
+            .comparison-table {
+                font-size: 14px;
+            }
+
+            .comparison-table th,
+            .comparison-table td {
+                padding: 12px;
+            }
+
+            .footer-badges {
+                flex-direction: column;
+                gap: 12px;
+            }
+        }
+
+        /* ==================== */
+        /* CHAT APP STYLES      */
+        /* ==================== */
+
+        .chat-app {
+            display: none;
+            min-height: 100vh;
             flex-direction: column;
+        }
+
+        .chat-app.active {
+            display: flex;
         }
 
         .header {
@@ -182,16 +757,6 @@
 
         .btn-primary:hover {
             background: #1E5AD8;
-        }
-
-        .btn-secondary {
-            background: var(--light-bg);
-            color: var(--talendro-blue);
-            border: 1px solid var(--talendro-blue);
-        }
-
-        .btn-secondary:hover {
-            background: rgba(47, 109, 246, 0.05);
         }
 
         .chat-container {
@@ -382,32 +947,6 @@
             color: var(--talendro-blue);
         }
 
-        .session-type-display a {
-            color: var(--talendro-blue);
-            text-decoration: none;
-        }
-
-        .session-type-display a:hover {
-            text-decoration: underline;
-        }
-
-        .purchase-prompt {
-            text-align: center;
-            padding: 40px;
-        }
-
-        .purchase-prompt h3 {
-            font-family: 'DM Serif Display', serif;
-            font-size: 22px;
-            margin-bottom: 12px;
-            color: var(--talendro-slate);
-        }
-
-        .purchase-prompt p {
-            color: var(--warm-gray);
-            margin-bottom: 20px;
-        }
-
         @media (max-width: 900px) {
             .main-container {
                 flex-direction: column;
@@ -419,77 +958,267 @@
     </style>
 </head>
 <body>
-    <header class="header">
-        <div class="logo">Talendro<span>™</span> Interview Coach</div>
-        <div class="session-badge" id="sessionBadge">QUICK PREP</div>
-    </header>
+    <!-- ==================== -->
+    <!-- LANDING PAGE         -->
+    <!-- ==================== -->
+    <div class="landing-page" id="landingPage">
+        <header class="landing-header">
+            <div class="landing-header-content">
+                <a href="https://talendro.com" class="landing-logo">Talendro<span>™</span></a>
+                <a href="#pricing" class="landing-header-cta">Get Started</a>
+            </div>
+        </header>
 
-    <main class="main-container">
-        <aside class="sidebar">
-            <div class="sidebar-card">
-                <h3>Your Documents</h3>
+        <section class="hero">
+            <div class="hero-content">
+                <span class="hero-badge">AI-Powered Interview Prep</span>
+                <h1>Ace Your Interview with <em>Confidence</em></h1>
+                <p>Personalized interview coaching powered by AI. Get the preparation you need at a fraction of traditional coaching costs.</p>
+                <a href="#pricing" class="hero-btn">View Packages</a>
                 
-                <div class="form-group">
-                    <label for="resume">Résumé</label>
-                    <textarea id="resume" placeholder="Paste your résumé here..."></textarea>
-                    <div class="status-indicator">
-                        <span class="status-dot" id="resumeStatus"></span>
-                        <span id="resumeStatusText">Not provided</span>
+                <div class="hero-stats">
+                    <div class="stat">
+                        <div class="stat-number">80%</div>
+                        <div class="stat-label">Less than human coaches</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number">24/7</div>
+                        <div class="stat-label">Available anytime</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number">∞</div>
+                        <div class="stat-label">Personalized responses</div>
                     </div>
                 </div>
-
-                <div class="form-group">
-                    <label for="jobDescription">Job Description</label>
-                    <textarea id="jobDescription" placeholder="Paste the job description here..."></textarea>
-                    <div class="status-indicator">
-                        <span class="status-dot" id="jdStatus"></span>
-                        <span id="jdStatusText">Not provided</span>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="companyUrl">Company Website URL</label>
-                    <input type="url" id="companyUrl" placeholder="https://company.com">
-                    <div class="status-indicator">
-                        <span class="status-dot" id="urlStatus"></span>
-                        <span id="urlStatusText">Not provided</span>
-                    </div>
-                </div>
-
-                <button class="btn btn-primary" id="saveDocsBtn">Save Documents</button>
-            </div>
-
-            <div class="sidebar-card" id="sessionTypeCard">
-                <h3>Your Session</h3>
-                <div class="session-type-display" id="sessionTypeDisplay">Loading...</div>
-                <select id="sessionType" style="display: none;">
-                    <option value="quick_prep">Quick Prep ($12)</option>
-                    <option value="full_mock">Full Mock Interview ($29)</option>
-                    <option value="audio_mock">Premium Audio Mock ($49)</option>
-                    <option value="pro">Interview Coach Pro</option>
-                </select>
-            </div>
-        </aside>
-
-        <section class="chat-container">
-            <div class="chat-messages" id="chatMessages">
-                <div class="welcome-message" id="welcomeMessage">
-                    <h2>Welcome to Interview Coach</h2>
-                    <p>Upload your résumé, job description, and company URL in the sidebar, then start your personalized interview prep session.</p>
-                </div>
-            </div>
-
-            <div class="chat-input-container">
-                <textarea class="chat-input" id="chatInput" placeholder="Type your message..." rows="1"></textarea>
-                <button class="send-btn" id="sendBtn">Send</button>
             </div>
         </section>
-    </main>
+
+        <section class="how-it-works">
+            <h2>How It Works</h2>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>Choose Your Package</h3>
+                    <p>Select the prep level that matches your needs — from quick refreshers to full mock interviews.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>Upload Your Materials</h3>
+                    <p>Share your résumé, job description, and company details for personalized preparation.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>Start Practicing</h3>
+                    <p>Get targeted questions, expert feedback, and actionable tips to nail your interview.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="pricing" id="pricing">
+            <div class="pricing-header">
+                <h2>Choose Your Prep Level</h2>
+                <p>From quick refreshers to comprehensive coaching — find the right fit for your interview timeline.</p>
+            </div>
+
+            <div class="pricing-grid">
+                <!-- Quick Prep -->
+                <div class="pricing-card">
+                    <div class="card-title">Quick Prep</div>
+                    <div class="card-description">Perfect for last-minute preparation</div>
+                    <div class="price">$12</div>
+                    <ul class="feature-list">
+                        <li>5 targeted interview questions</li>
+                        <li>Company-specific insights</li>
+                        <li>Key talking points</li>
+                        <li>30-minute session</li>
+                    </ul>
+                    <a href="https://buy.stripe.com/cNi3cu7jh6ZA81jbYXcV203" class="pricing-btn secondary">Get Quick Prep</a>
+                </div>
+
+                <!-- Full Mock -->
+                <div class="pricing-card featured">
+                    <div class="card-title">Full Mock Interview</div>
+                    <div class="card-description">Complete interview simulation</div>
+                    <div class="price">$29</div>
+                    <ul class="feature-list">
+                        <li>Full mock interview experience</li>
+                        <li>Behavioral & technical questions</li>
+                        <li>Detailed answer feedback</li>
+                        <li>Performance scorecard</li>
+                        <li>Improvement recommendations</li>
+                    </ul>
+                    <a href="https://buy.stripe.com/28E8wO6fdcjUbdv0gfcV204" class="pricing-btn primary">Start Mock Interview</a>
+                </div>
+
+                <!-- Premium Audio -->
+                <div class="pricing-card">
+                    <div class="card-title">Premium Audio Mock</div>
+                    <div class="card-description">Realistic voice-based practice</div>
+                    <div class="price">$49</div>
+                    <ul class="feature-list">
+                        <li>Everything in Full Mock</li>
+                        <li>Voice-to-voice interaction</li>
+                        <li>Real-time verbal feedback</li>
+                        <li>Pace & clarity coaching</li>
+                        <li>Confidence building exercises</li>
+                    </ul>
+                    <a href="https://buy.stripe.com/8x29AS1YX6ZA1CVfb9cV205" class="pricing-btn secondary">Try Audio Mock</a>
+                </div>
+
+                <!-- Pro Subscription -->
+                <div class="pricing-card pro">
+                    <div class="card-title">Interview Coach Pro</div>
+                    <div class="card-description">Unlimited prep for serious job seekers</div>
+                    <div class="price">$79<span class="price-period">/month</span></div>
+                    <ul class="feature-list">
+                        <li>Unlimited Quick Prep sessions</li>
+                        <li>6 Full Mock Interviews/month</li>
+                        <li>2 Audio Mock sessions/month</li>
+                        <li>Interview Dashboard & Analytics</li>
+                        <li>Intel Briefs on companies</li>
+                        <li>Answer Vault (save best responses)</li>
+                        <li>Question Banks by industry</li>
+                        <li>Round 2 Ready prep</li>
+                    </ul>
+                    <a href="https://buy.stripe.com/dRm8wO7jh4Rs95n0gfcV206" class="pricing-btn pro-btn">Go Pro — Monthly</a>
+                    <div class="pro-options">
+                        <a href="https://buy.stripe.com/14AdR87jh6ZA5TbaUTcV207" class="pricing-btn secondary" style="background: transparent; border-color: rgba(255,255,255,0.3); color: var(--white);">$199/quarter (save 16%)</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="comparison">
+            <h2>Why Talendro Interview Coach?</h2>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>Traditional Coaching</th>
+                        <th>Talendro</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Price per session</td>
+                        <td class="muted">$150 - $500</td>
+                        <td class="highlight">$12 - $49</td>
+                    </tr>
+                    <tr>
+                        <td>Availability</td>
+                        <td class="muted">By appointment</td>
+                        <td class="highlight">24/7 instant access</td>
+                    </tr>
+                    <tr>
+                        <td>Personalization</td>
+                        <td class="muted">Varies by coach</td>
+                        <td class="highlight">Always tailored to your role</td>
+                    </tr>
+                    <tr>
+                        <td>Practice sessions</td>
+                        <td class="muted">Limited by budget</td>
+                        <td class="highlight">Unlimited with Pro</td>
+                    </tr>
+                    <tr>
+                        <td>Feedback speed</td>
+                        <td class="muted">After session ends</td>
+                        <td class="highlight">Real-time</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="cta">
+            <h2>Ready to Ace Your Interview?</h2>
+            <p>Join thousands of job seekers who've landed their dream roles with Talendro Interview Coach.</p>
+            <a href="#pricing" class="cta-btn">Get Started Now</a>
+        </section>
+
+        <footer class="landing-footer">
+            <div class="footer-logo">Talendro™</div>
+            <p class="footer-tagline">Precision Matches. Faster Results.</p>
+            <div class="footer-badges">
+                <span>🇺🇸 American-Built</span>
+                <span>🎖️ Veteran-Led</span>
+                <span>✓ Recruiter-Tested</span>
+            </div>
+            <p>© 2024 Talendro. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <!-- ==================== -->
+    <!-- CHAT APPLICATION     -->
+    <!-- ==================== -->
+    <div class="chat-app" id="chatApp">
+        <header class="header">
+            <div class="logo">Talendro<span>™</span> Interview Coach</div>
+            <div class="session-badge" id="sessionBadge">QUICK PREP</div>
+        </header>
+
+        <main class="main-container">
+            <aside class="sidebar">
+                <div class="sidebar-card">
+                    <h3>Your Documents</h3>
+                    
+                    <div class="form-group">
+                        <label for="resume">Résumé</label>
+                        <textarea id="resume" placeholder="Paste your résumé here..."></textarea>
+                        <div class="status-indicator">
+                            <span class="status-dot" id="resumeStatus"></span>
+                            <span id="resumeStatusText">Not provided</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="jobDescription">Job Description</label>
+                        <textarea id="jobDescription" placeholder="Paste the job description here..."></textarea>
+                        <div class="status-indicator">
+                            <span class="status-dot" id="jdStatus"></span>
+                            <span id="jdStatusText">Not provided</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="companyUrl">Company Website URL</label>
+                        <input type="url" id="companyUrl" placeholder="https://company.com">
+                        <div class="status-indicator">
+                            <span class="status-dot" id="urlStatus"></span>
+                            <span id="urlStatusText">Not provided</span>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" id="saveDocsBtn">Save Documents</button>
+                </div>
+
+                <div class="sidebar-card" id="sessionTypeCard">
+                    <h3>Your Session</h3>
+                    <div class="session-type-display" id="sessionTypeDisplay">Loading...</div>
+                    <select id="sessionType" style="display: none;">
+                        <option value="quick_prep">Quick Prep ($12)</option>
+                        <option value="full_mock">Full Mock Interview ($29)</option>
+                        <option value="audio_mock">Premium Audio Mock ($49)</option>
+                        <option value="pro">Interview Coach Pro</option>
+                    </select>
+                </div>
+            </aside>
+
+            <section class="chat-container">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="welcome-message" id="welcomeMessage">
+                        <h2>Welcome to Interview Coach</h2>
+                        <p>Upload your résumé, job description, and company URL in the sidebar, then start your personalized interview prep session.</p>
+                    </div>
+                </div>
+
+                <div class="chat-input-container">
+                    <textarea class="chat-input" id="chatInput" placeholder="Type your message..." rows="1"></textarea>
+                    <button class="send-btn" id="sendBtn">Send</button>
+                </div>
+            </section>
+        </main>
+    </div>
 
     <script>
-        // Generate unique session ID
-        const sessionId = 'session_' + Math.random().toString(36).substr(2, 9);
-        
         // Read session type from URL parameter (set by Stripe payment link)
         const urlParams = new URLSearchParams(window.location.search);
         const urlSessionType = urlParams.get('session_type');
@@ -506,195 +1235,192 @@
             'pro': 'Interview Coach Pro'
         };
         
-        // DOM Elements
-        const chatMessages = document.getElementById('chatMessages');
-        const chatInput = document.getElementById('chatInput');
-        const sendBtn = document.getElementById('sendBtn');
-        const saveDocsBtn = document.getElementById('saveDocsBtn');
-        const sessionType = document.getElementById('sessionType');
-        const sessionBadge = document.getElementById('sessionBadge');
-        const sessionTypeDisplay = document.getElementById('sessionTypeDisplay');
-        const welcomeMessage = document.getElementById('welcomeMessage');
+        // Determine which view to show
+        const landingPage = document.getElementById('landingPage');
+        const chatApp = document.getElementById('chatApp');
         
-        // Document inputs
-        const resumeInput = document.getElementById('resume');
-        const jdInput = document.getElementById('jobDescription');
-        const urlInput = document.getElementById('companyUrl');
-        
-        // Status indicators
-        const resumeStatus = document.getElementById('resumeStatus');
-        const resumeStatusText = document.getElementById('resumeStatusText');
-        const jdStatus = document.getElementById('jdStatus');
-        const jdStatusText = document.getElementById('jdStatusText');
-        const urlStatus = document.getElementById('urlStatus');
-        const urlStatusText = document.getElementById('urlStatusText');
-        
-        // State
-        let documents = { resume: '', jobDescription: '', companyUrl: '' };
-        let isLoading = false;
-        let hasValidSession = false;
-        
-        // Set session type from URL or show purchase prompt
         if (urlSessionType && validSessionTypes.includes(urlSessionType)) {
+            // Valid session - show chat app
+            landingPage.classList.remove('active');
+            chatApp.classList.add('active');
+            initializeChatApp();
+        } else {
+            // No session - show landing page
+            landingPage.classList.add('active');
+            chatApp.classList.remove('active');
+        }
+        
+        function initializeChatApp() {
+            // Generate unique session ID
+            const sessionId = 'session_' + Math.random().toString(36).substr(2, 9);
+            
+            // DOM Elements
+            const chatMessages = document.getElementById('chatMessages');
+            const chatInput = document.getElementById('chatInput');
+            const sendBtn = document.getElementById('sendBtn');
+            const saveDocsBtn = document.getElementById('saveDocsBtn');
+            const sessionType = document.getElementById('sessionType');
+            const sessionBadge = document.getElementById('sessionBadge');
+            const sessionTypeDisplay = document.getElementById('sessionTypeDisplay');
+            
+            // Document inputs
+            const resumeInput = document.getElementById('resume');
+            const jdInput = document.getElementById('jobDescription');
+            const urlInput = document.getElementById('companyUrl');
+            
+            // Status indicators
+            const resumeStatus = document.getElementById('resumeStatus');
+            const resumeStatusText = document.getElementById('resumeStatusText');
+            const jdStatus = document.getElementById('jdStatus');
+            const jdStatusText = document.getElementById('jdStatusText');
+            const urlStatus = document.getElementById('urlStatus');
+            const urlStatusText = document.getElementById('urlStatusText');
+            
+            // State
+            let documents = { resume: '', jobDescription: '', companyUrl: '' };
+            let isLoading = false;
+            
+            // Set session type from URL
             sessionType.value = urlSessionType;
             sessionTypeDisplay.textContent = sessionTypeLabels[urlSessionType];
             sessionBadge.textContent = sessionTypeLabels[urlSessionType].toUpperCase();
-            sessionBadge.classList.remove('no-session');
-            hasValidSession = true;
-        } else {
-            sessionTypeDisplay.innerHTML = '<a href="https://talendro.com/interview-coach">Purchase a session to begin →</a>';
-            sessionBadge.textContent = 'NO SESSION';
-            sessionBadge.classList.add('no-session');
-            sendBtn.disabled = true;
-            chatInput.disabled = true;
-            chatInput.placeholder = 'Purchase a session to start chatting...';
-            hasValidSession = false;
             
-            // Update welcome message for non-paying visitors
-            welcomeMessage.innerHTML = `
-                <h2>Welcome to Interview Coach</h2>
-                <p>Get personalized interview preparation powered by AI.</p>
-                <p style="margin-top: 20px;">
-                    <a href="https://talendro.com/interview-coach" class="btn btn-primary" style="display: inline-block; text-decoration: none; max-width: 200px;">View Packages</a>
-                </p>
-            `;
-        }
-        
-        // Save documents
-        saveDocsBtn.addEventListener('click', function() {
-            documents.resume = resumeInput.value.trim();
-            documents.jobDescription = jdInput.value.trim();
-            documents.companyUrl = urlInput.value.trim();
-            
-            // Update status indicators
-            if (documents.resume) {
-                resumeStatus.classList.add('active');
-                resumeStatusText.textContent = 'Saved';
-            }
-            if (documents.jobDescription) {
-                jdStatus.classList.add('active');
-                jdStatusText.textContent = 'Saved';
-            }
-            if (documents.companyUrl) {
-                urlStatus.classList.add('active');
-                urlStatusText.textContent = 'Saved';
-            }
-            
-            // Visual feedback
-            saveDocsBtn.textContent = 'Saved!';
-            saveDocsBtn.style.background = '#00C4CC';
-            setTimeout(() => {
-                saveDocsBtn.textContent = 'Save Documents';
-                saveDocsBtn.style.background = '';
-            }, 2000);
-        });
-        
-        // Add message to chat
-        function addMessage(content, role) {
-            // Remove welcome message if present
-            const welcome = document.querySelector('.welcome-message');
-            if (welcome) welcome.remove();
-            
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${role}`;
-            
-            // Parse markdown-like formatting for assistant messages
-            if (role === 'assistant') {
-                content = content
-                    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-                    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-                    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-                    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-                    .replace(/^- (.+)$/gm, '<li>$1</li>')
-                    .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
-                    .replace(/\n\n/g, '</p><p>')
-                    .replace(/\n/g, '<br>');
-                messageDiv.innerHTML = '<p>' + content + '</p>';
-            } else {
-                messageDiv.textContent = content;
-            }
-            
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-        
-        // Show typing indicator
-        function showTyping() {
-            const typing = document.createElement('div');
-            typing.className = 'typing-indicator';
-            typing.id = 'typingIndicator';
-            typing.innerHTML = '<span></span><span></span><span></span>';
-            chatMessages.appendChild(typing);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-        
-        // Hide typing indicator
-        function hideTyping() {
-            const typing = document.getElementById('typingIndicator');
-            if (typing) typing.remove();
-        }
-        
-        // Send message
-        async function sendMessage() {
-            const message = chatInput.value.trim();
-            if (!message || isLoading || !hasValidSession) return;
-            
-            isLoading = true;
-            sendBtn.disabled = true;
-            chatInput.value = '';
-            chatInput.style.height = 'auto';
-            
-            addMessage(message, 'user');
-            showTyping();
-            
-            fetch('/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    message: message,
-                    sessionId: sessionId,
-                    sessionType: sessionType.value,
-                    documents: documents,
-                    customerEmail: customerEmail
-                })
-            })
-            .then(function(response) {
-                return response.json();
-            })
-            .then(function(data) {
-                hideTyping();
-                if (data.error) {
-                    addMessage('Sorry, there was an error processing your request. Please try again.', 'assistant');
-                } else {
-                    addMessage(data.message, 'assistant');
+            // Save documents
+            saveDocsBtn.addEventListener('click', function() {
+                documents.resume = resumeInput.value.trim();
+                documents.jobDescription = jdInput.value.trim();
+                documents.companyUrl = urlInput.value.trim();
+                
+                // Update status indicators
+                if (documents.resume) {
+                    resumeStatus.classList.add('active');
+                    resumeStatusText.textContent = 'Saved';
                 }
-            })
-            .catch(function(error) {
-                hideTyping();
-                addMessage('Sorry, there was a connection error. Please try again.', 'assistant');
-            })
-            .finally(function() {
-                isLoading = false;
-                sendBtn.disabled = false;
-                chatInput.focus();
+                if (documents.jobDescription) {
+                    jdStatus.classList.add('active');
+                    jdStatusText.textContent = 'Saved';
+                }
+                if (documents.companyUrl) {
+                    urlStatus.classList.add('active');
+                    urlStatusText.textContent = 'Saved';
+                }
+                
+                // Visual feedback
+                saveDocsBtn.textContent = 'Saved!';
+                saveDocsBtn.style.background = '#00C4CC';
+                setTimeout(() => {
+                    saveDocsBtn.textContent = 'Save Documents';
+                    saveDocsBtn.style.background = '';
+                }, 2000);
+            });
+            
+            // Add message to chat
+            function addMessage(content, role) {
+                // Remove welcome message if present
+                const welcome = document.querySelector('.welcome-message');
+                if (welcome) welcome.remove();
+                
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${role}`;
+                
+                // Parse markdown-like formatting for assistant messages
+                if (role === 'assistant') {
+                    content = content
+                        .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+                        .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+                        .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+                        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                        .replace(/^- (.+)$/gm, '<li>$1</li>')
+                        .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+                        .replace(/\n\n/g, '</p><p>')
+                        .replace(/\n/g, '<br>');
+                    messageDiv.innerHTML = '<p>' + content + '</p>';
+                } else {
+                    messageDiv.textContent = content;
+                }
+                
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+            
+            // Show typing indicator
+            function showTyping() {
+                const typing = document.createElement('div');
+                typing.className = 'typing-indicator';
+                typing.id = 'typingIndicator';
+                typing.innerHTML = '<span></span><span></span><span></span>';
+                chatMessages.appendChild(typing);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+            
+            // Hide typing indicator
+            function hideTyping() {
+                const typing = document.getElementById('typingIndicator');
+                if (typing) typing.remove();
+            }
+            
+            // Send message
+            async function sendMessage() {
+                const message = chatInput.value.trim();
+                if (!message || isLoading) return;
+                
+                isLoading = true;
+                sendBtn.disabled = true;
+                chatInput.value = '';
+                chatInput.style.height = 'auto';
+                
+                addMessage(message, 'user');
+                showTyping();
+                
+                fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: message,
+                        sessionId: sessionId,
+                        sessionType: sessionType.value,
+                        documents: documents,
+                        customerEmail: customerEmail
+                    })
+                })
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(data) {
+                    hideTyping();
+                    if (data.error) {
+                        addMessage('Sorry, there was an error processing your request. Please try again.', 'assistant');
+                    } else {
+                        addMessage(data.message, 'assistant');
+                    }
+                })
+                .catch(function(error) {
+                    hideTyping();
+                    addMessage('Sorry, there was a connection error. Please try again.', 'assistant');
+                })
+                .finally(function() {
+                    isLoading = false;
+                    sendBtn.disabled = false;
+                    chatInput.focus();
+                });
+            }
+            
+            // Event listeners
+            sendBtn.addEventListener('click', sendMessage);
+            
+            chatInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+            
+            chatInput.addEventListener('input', function() {
+                chatInput.style.height = 'auto';
+                chatInput.style.height = Math.min(chatInput.scrollHeight, 150) + 'px';
             });
         }
-        
-        // Event listeners
-        sendBtn.addEventListener('click', sendMessage);
-        
-        chatInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-        
-        chatInput.addEventListener('input', function() {
-            chatInput.style.height = 'auto';
-            chatInput.style.height = Math.min(chatInput.scrollHeight, 150) + 'px';
-        });
     </script>
 </body>
 </html>
