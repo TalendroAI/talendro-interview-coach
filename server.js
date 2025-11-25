@@ -11,7 +11,8 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-const ZAPIER_WEBHOOK_URL = 'https://hooks.zapier.com/hooks/catch/9843127/uznyfxr/';
+// Webhook for session tracking (fires when session STARTS)
+const SESSION_TRACKING_WEBHOOK = 'https://hooks.zapier.com/hooks/catch/9843127/uznyfxr/';
 
 const sessions = new Map();
 
@@ -65,12 +66,17 @@ app.post('/api/chat', async (req, res) => {
     const { message, sessionId, sessionType, documents, customerEmail } = req.body;
     
     let session = sessions.get(sessionId);
+    let isNewSession = false;
+    
     if (!session) {
+      isNewSession = true;
       session = {
         messages: [],
         sessionType: sessionType || 'quick_prep',
         documents: documents || {},
-        createdAt: new Date()
+        customerEmail: customerEmail,
+        createdAt: new Date(),
+        webhookSent: false
       };
       sessions.set(sessionId, session);
     }
@@ -116,19 +122,25 @@ app.post('/api/chat', async (req, res) => {
       content: assistantMessage
     });
 
-    if (customerEmail) {
+    // Fire webhook ONLY on first message of session (session start)
+    // This increments the appropriate "Used" column in Google Sheets
+    if (isNewSession && customerEmail && !session.webhookSent) {
+      session.webhookSent = true;
       try {
-        await fetch(ZAPIER_WEBHOOK_URL, {
+        await fetch(SESSION_TRACKING_WEBHOOK, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            event: 'session_started',
             email: customerEmail,
             sessionType: session.sessionType,
+            sessionId: sessionId,
             timestamp: new Date().toISOString()
           })
         });
+        console.log(`Session tracking webhook sent for ${customerEmail} - ${session.sessionType}`);
       } catch (webhookError) {
-        console.error('Webhook error:', webhookError);
+        console.error('Session tracking webhook error:', webhookError);
       }
     }
 
