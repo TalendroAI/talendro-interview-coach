@@ -780,7 +780,7 @@
 
         .welcome-message {
             text-align: center;
-            padding: 60px 40px;
+            padding: 40px;
             color: var(--warm-gray);
         }
 
@@ -788,12 +788,51 @@
             font-family: 'DM Serif Display', serif;
             font-size: 28px;
             color: var(--talendro-slate);
-            margin-bottom: 12px;
+            margin-bottom: 24px;
         }
 
-        .welcome-message p {
+        .welcome-steps {
+            text-align: left;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .welcome-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 16px;
             font-size: 15px;
-            line-height: 1.6;
+            color: var(--talendro-slate);
+        }
+
+        .welcome-step-number {
+            width: 28px;
+            height: 28px;
+            background: var(--talendro-blue);
+            color: var(--white);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .welcome-step-text {
+            padding-top: 3px;
+        }
+
+        .welcome-step-text code {
+            background: #F0F7FF;
+            color: var(--talendro-blue);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            font-size: 13px;
         }
 
         .message {
@@ -1206,7 +1245,28 @@
                 <div class="chat-messages" id="chatMessages">
                     <div class="welcome-message" id="welcomeMessage">
                         <h2>Welcome to Interview Coach</h2>
-                        <p>Upload your résumé, job description, and company URL in the sidebar, then start your personalized interview prep session.</p>
+                        <div class="welcome-steps">
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">1</span>
+                                <span class="welcome-step-text">Paste your <strong>résumé</strong> in the sidebar</span>
+                            </div>
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">2</span>
+                                <span class="welcome-step-text">Paste the <strong>job description</strong></span>
+                            </div>
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">3</span>
+                                <span class="welcome-step-text">Add the <strong>company website URL</strong></span>
+                            </div>
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">4</span>
+                                <span class="welcome-step-text">Click <strong>"Save Documents"</strong></span>
+                            </div>
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">5</span>
+                                <span class="welcome-step-text">Type <code>Start my interview prep</code> below and hit Send</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

@@ -1,1 +1,1 @@
-{"name":"talendro-interview-coach","version":"1.0.0","description":"Talendro Interview Coach","main":"server.js","scripts":{"start":"node server.js"},"dependencies":{"@anthropic-ai/sdk":"^0.52.0","dotenv":"^16.3.1","express":"^4.18.2"},"engines":{"node":">=18.0.0"}}
+{"name":"talendro-interview-coach","version":"1.0.0","description":"Talendro Interview Coach","main":"server.js","scripts":{"start":"node server.js"},"dependencies":{"@anthropic-ai/sdk":"^0.52.0","dotenv":"^16.3.1","express":"^4.18.2","googleapis":"^166.0.0"},"engines":{"node":">=18.0.0"}}

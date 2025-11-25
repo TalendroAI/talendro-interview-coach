@@ -11,10 +11,10 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-// Store sessions in memory (replace with database in production)
+const ZAPIER_WEBHOOK_URL = 'https://hooks.zapier.com/hooks/catch/9843127/uznyfxr/';
+
 const sessions = new Map();
 
-// System prompt
 const SYSTEM_PROMPT = `You are TALENDRO™ INTERVIEW COACH, a premium, paid interview-preparation product in the Talendro™ Autonomous Job Search & Apply Agent Suite.
 
 Your mission: Deliver high-value, personalized interview coaching that helps job seekers walk into interviews prepared, confident, and positioned to win.
@@ -60,12 +60,10 @@ ABSOLUTE RULES:
 - Always deliver premium-quality, actionable content
 - Be encouraging — they're preparing for something stressful`;
 
-// API endpoint for chat
 app.post('/api/chat', async (req, res) => {
   try {
-    const { message, sessionId, sessionType, documents } = req.body;
+    const { message, sessionId, sessionType, documents, customerEmail } = req.body;
     
-    // Get or create session
     let session = sessions.get(sessionId);
     if (!session) {
       session = {
@@ -77,12 +75,10 @@ app.post('/api/chat', async (req, res) => {
       sessions.set(sessionId, session);
     }
     
-    // Update documents if provided
     if (documents) {
       session.documents = { ...session.documents, ...documents };
     }
     
-    // Build context message
     let contextMessage = `SESSION CONTEXT:
 - Session Type: ${session.sessionType}
 - Resume: ${session.documents.resume ? 'Provided' : 'Not provided'}
@@ -99,7 +95,6 @@ app.post('/api/chat', async (req, res) => {
       contextMessage += `\n\nTARGET COMPANY URL: ${session.documents.companyUrl}`;
     }
 
-    // Add user message to history
     session.messages.push({
       role: 'user',
       content: session.messages.length === 0 
@@ -107,7 +102,6 @@ app.post('/api/chat', async (req, res) => {
         : message
     });
 
-    // Call Claude API
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 8096,
@@ -117,11 +111,26 @@ app.post('/api/chat', async (req, res) => {
 
     const assistantMessage = response.content[0].text;
     
-    // Add assistant response to history
     session.messages.push({
       role: 'assistant',
       content: assistantMessage
     });
+
+    if (customerEmail) {
+      try {
+        await fetch(ZAPIER_WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: customerEmail,
+            sessionType: session.sessionType,
+            timestamp: new Date().toISOString()
+          })
+        });
+      } catch (webhookError) {
+        console.error('Webhook error:', webhookError);
+      }
+    }
 
     res.json({ 
       message: assistantMessage,
@@ -134,7 +143,6 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
-// Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
