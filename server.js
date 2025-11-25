@@ -12,7 +12,7 @@ const anthropic = new Anthropic({
 });
 
 // Webhook for session tracking (fires when session STARTS)
-const SESSION_TRACKING_WEBHOOK = 'https://hooks.zapier.com/hooks/catch/9843127/uznyfxr/';
+const SESSION_TRACKING_WEBHOOK = 'https://hooks.zapier.com/hooks/catch/9843127/ukyuydr/';
 
 const sessions = new Map();
 
