@@ -1449,27 +1449,27 @@
                         <div class="welcome-steps">
                             <div class="welcome-step">
                                 <span class="welcome-step-number">1</span>
-                                <span class="welcome-step-text">Click <strong>"🎤 Start Interview"</strong> below</span>
+                                <span class="welcome-step-text">Paste your <strong>résumé</strong>, <strong>job description</strong>, and <strong>company URL</strong> in the sidebar</span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">2</span>
-                                <span class="welcome-step-text">Allow microphone access when prompted</span>
+                                <span class="welcome-step-text">Click <strong>"Save Documents"</strong></span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">3</span>
-                                <span class="welcome-step-text"><strong>Speak naturally</strong> — the coach listens and responds in real-time</span>
+                                <span class="welcome-step-text">Click <strong>"📞 Start a call"</strong> in the bottom right corner</span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">4</span>
-                                <span class="welcome-step-text">You can <strong>interrupt</strong> or ask for clarification anytime</span>
+                                <span class="welcome-step-text">Allow microphone access when prompted</span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">5</span>
-                                <span class="welcome-step-text">Click <strong>"🛑 End Interview"</strong> when finished</span>
+                                <span class="welcome-step-text"><strong>Speak naturally</strong> — the coach listens and responds in real-time. You can interrupt, ask for clarification, request examples, or have questions repeated anytime.</span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">6</span>
-                                <span class="welcome-step-text">Click <strong>"Complete Session"</strong> to receive your results via email</span>
+                                <span class="welcome-step-text">When finished, click <strong>"Complete Session"</strong> to receive your results via email</span>
                             </div>
                         </div>
                         <p style="margin-top: 20px; color: #666; font-size: 14px;">
@@ -1722,17 +1722,9 @@
                 widget.setAttribute('agent-id', 'agent_1901kb0ray8kfph9x9bh4w97bbe4');
                 document.body.appendChild(widget);
                 
-                // Replace chat input container with instructions
+                // Replace chat input container - just hide it for audio sessions
                 const chatInputContainer = document.querySelector('.chat-input-container');
-                chatInputContainer.innerHTML = `
-                    <div class="audio-instructions">
-                        <h3>🎙️ Voice Interview Ready</h3>
-                        <p>Click the <strong>"Start a call"</strong> button in the bottom right</p>
-                        <p>Speak naturally - the coach listens and responds in real-time</p>
-                        <p>You can interrupt or ask for clarification anytime</p>
-                        <p style="margin-top: 20px; font-size: 32px;">👉</p>
-                    </div>
-                `;
+                chatInputContainer.style.display = 'none';
             } else {
                 // Non-audio sessions - hide mic button
                 micBtn.style.display = 'none';
