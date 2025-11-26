@@ -759,6 +759,22 @@
             background: #1E5AD8;
         }
 
+        .btn-complete {
+            background: var(--bright-lime);
+            color: var(--talendro-slate);
+            margin-top: 12px;
+        }
+
+        .btn-complete:hover {
+            background: #8FD600;
+        }
+
+        .btn-complete:disabled {
+            background: var(--warm-gray);
+            color: var(--white);
+            cursor: not-allowed;
+        }
+
         .chat-container {
             flex: 1;
             background: var(--white);
@@ -1238,6 +1254,7 @@
                         <option value="audio_mock">Premium Audio Mock ($49)</option>
                         <option value="pro">Interview Coach Pro</option>
                     </select>
+                    <button class="btn btn-complete" id="completeSessionBtn">Complete Session</button>
                 </div>
             </aside>
 
@@ -1265,6 +1282,10 @@
                             <div class="welcome-step">
                                 <span class="welcome-step-number">5</span>
                                 <span class="welcome-step-text">Type <code>Start my interview prep</code> below and hit Send</span>
+                            </div>
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">6</span>
+                                <span class="welcome-step-text">When finished, click <strong>"Complete Session"</strong> to receive your results via email</span>
                             </div>
                         </div>
                     </div>
@@ -1322,6 +1343,7 @@
             const sessionType = document.getElementById('sessionType');
             const sessionBadge = document.getElementById('sessionBadge');
             const sessionTypeDisplay = document.getElementById('sessionTypeDisplay');
+            const completeSessionBtn = document.getElementById('completeSessionBtn');
             
             // Document inputs
             const resumeInput = document.getElementById('resume');
@@ -1339,6 +1361,7 @@
             // State
             let documents = { resume: '', jobDescription: '', companyUrl: '' };
             let isLoading = false;
+            let conversationHistory = [];
             
             // Set session type from URL
             sessionType.value = urlSessionType;
@@ -1380,6 +1403,9 @@
                 const welcome = document.querySelector('.welcome-message');
                 if (welcome) welcome.remove();
                 
+                // Track conversation history
+                conversationHistory.push({ role: role, content: content });
+                
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `message ${role}`;
                 
@@ -1403,6 +1429,53 @@
                 chatMessages.appendChild(messageDiv);
                 chatMessages.scrollTop = chatMessages.scrollHeight;
             }
+            
+            // Complete session
+            async function completeSession() {
+                if (conversationHistory.length === 0) {
+                    alert('No session to complete. Start your interview prep first.');
+                    return;
+                }
+                
+                completeSessionBtn.disabled = true;
+                completeSessionBtn.textContent = 'Completing...';
+                
+                try {
+                    const response = await fetch('/api/complete', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email: customerEmail,
+                            sessionType: sessionType.value,
+                            sessionId: sessionId,
+                            transcript: conversationHistory,
+                            documents: documents
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        completeSessionBtn.textContent = 'Session Complete!';
+                        completeSessionBtn.style.background = '#00C4CC';
+                        addMessage('Your session is complete! You will receive an email shortly with your interview prep materials. Thank you for using Talendro Interview Coach!', 'assistant');
+                        
+                        // Disable inputs
+                        chatInput.disabled = true;
+                        sendBtn.disabled = true;
+                    } else {
+                        throw new Error(data.error || 'Failed to complete session');
+                    }
+                } catch (error) {
+                    console.error('Complete session error:', error);
+                    completeSessionBtn.disabled = false;
+                    completeSessionBtn.textContent = 'Complete Session';
+                    alert('Error completing session. Please try again.');
+                }
+            }
+            
+            // Complete session button listener
+            completeSessionBtn.addEventListener('click', completeSession);
             
             // Show typing indicator
             function showTyping() {

@@ -11,8 +11,8 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-// Webhook for session tracking (fires when session STARTS)
-const SESSION_TRACKING_WEBHOOK = 'https://hooks.zapier.com/hooks/catch/9843127/ukyuydr/';
+// Webhook for session completion (fires when user clicks Complete Session)
+const SESSION_COMPLETE_WEBHOOK = 'https://hooks.zapier.com/hooks/catch/9843127/ukyuydr/';
 
 const sessions = new Map();
 
@@ -66,17 +66,14 @@ app.post('/api/chat', async (req, res) => {
     const { message, sessionId, sessionType, documents, customerEmail } = req.body;
     
     let session = sessions.get(sessionId);
-    let isNewSession = false;
     
     if (!session) {
-      isNewSession = true;
       session = {
         messages: [],
         sessionType: sessionType || 'quick_prep',
         documents: documents || {},
         customerEmail: customerEmail,
-        createdAt: new Date(),
-        webhookSent: false
+        createdAt: new Date()
       };
       sessions.set(sessionId, session);
     }
@@ -122,28 +119,6 @@ app.post('/api/chat', async (req, res) => {
       content: assistantMessage
     });
 
-    // Fire webhook ONLY on first message of session (session start)
-    // This increments the appropriate "Used" column in Google Sheets
-    if (isNewSession && customerEmail && !session.webhookSent) {
-      session.webhookSent = true;
-      try {
-        await fetch(SESSION_TRACKING_WEBHOOK, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            event: 'session_started',
-            email: customerEmail,
-            sessionType: session.sessionType,
-            sessionId: sessionId,
-            timestamp: new Date().toISOString()
-          })
-        });
-        console.log(`Session tracking webhook sent for ${customerEmail} - ${session.sessionType}`);
-      } catch (webhookError) {
-        console.error('Session tracking webhook error:', webhookError);
-      }
-    }
-
     res.json({ 
       message: assistantMessage,
       sessionId: sessionId
@@ -157,6 +132,50 @@ app.post('/api/chat', async (req, res) => {
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
+});
+
+// Session completion endpoint
+app.post('/api/complete', async (req, res) => {
+  try {
+    const { email, sessionType, sessionId, transcript, documents } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ success: false, error: 'Email is required' });
+    }
+    
+    // Format transcript for email
+    const formattedTranscript = transcript.map(msg => 
+      `${msg.role === 'user' ? 'YOU' : 'COACH'}: ${msg.content}`
+    ).join('\n\n---\n\n');
+    
+    // Fire webhook to Zapier
+    try {
+      await fetch(SESSION_COMPLETE_WEBHOOK, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: 'session_completed',
+          email: email,
+          sessionType: sessionType,
+          sessionId: sessionId,
+          transcript: formattedTranscript,
+          resumeProvided: documents?.resume ? 'Yes' : 'No',
+          jobDescriptionProvided: documents?.jobDescription ? 'Yes' : 'No',
+          companyUrl: documents?.companyUrl || 'Not provided',
+          timestamp: new Date().toISOString()
+        })
+      });
+      console.log(`Session complete webhook sent for ${email} - ${sessionType}`);
+    } catch (webhookError) {
+      console.error('Session complete webhook error:', webhookError);
+    }
+    
+    res.json({ success: true, message: 'Session completed successfully' });
+    
+  } catch (error) {
+    console.error('Complete session error:', error);
+    res.status(500).json({ success: false, error: 'Failed to complete session' });
+  }
 });
 
 const PORT = process.env.PORT || 3000;
