@@ -15,10 +15,6 @@ const anthropic = new Anthropic({
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || 'sk_940cb8e44bfafd5d355e7f4874e4087ed55d4c2decd78164';
 const ELEVENLABS_VOICE_ID = 'EXAVITQu4vr4xnSDxMaL'; // Sarah - professional female voice
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
 // Webhook for session completion (fires when user clicks Complete Session)
 const SESSION_COMPLETE_WEBHOOK = 'https://hooks.zapier.com/hooks/catch/9843127/uko6xa9/';
 
