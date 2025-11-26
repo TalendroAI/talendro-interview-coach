@@ -4,8 +4,16 @@ const path = require('path');
 require('dotenv').config();
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static('public'));
+
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
+
+// ElevenLabs API
+const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || 'sk_940cb8e44bfafd5d355e7f4874e4087ed55d4c2decd78164';
+const ELEVENLABS_VOICE_ID = 'EXAVITQu4vr4xnSDxMaL'; // Sarah - professional female voice
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -134,6 +142,72 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+// Text-to-Speech endpoint using ElevenLabs
+app.post('/api/tts', async (req, res) => {
+  try {
+    const { text } = req.body;
+    
+    if (!text) {
+      return res.status(400).json({ error: 'Text is required' });
+    }
+    
+    // Clean text for speech (remove markdown)
+    const cleanText = text
+      .replace(/#{1,3}\s?/g, '')
+      .replace(/\*\*/g, '')
+      .replace(/\*/g, '')
+      .replace(/^- /gm, '')
+      .replace(/\n+/g, ' ')
+      .trim()
+      .substring(0, 5000); // Limit to 5000 chars
+    
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'audio/mpeg',
+        'Content-Type': 'application/json',
+        'xi-api-key': ELEVENLABS_API_KEY
+      },
+      body: JSON.stringify({
+        text: cleanText,
+        model_id: 'eleven_monolingual_v1',
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75
+        }
+      })
+    });
+    
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('ElevenLabs error:', error);
+      return res.status(500).json({ error: 'TTS failed' });
+    }
+    
+    const audioBuffer = await response.arrayBuffer();
+    res.set('Content-Type', 'audio/mpeg');
+    res.send(Buffer.from(audioBuffer));
+    
+  } catch (error) {
+    console.error('TTS error:', error);
+    res.status(500).json({ error: 'TTS failed' });
+  }
+});
+
+// Convert markdown to HTML
+function markdownToHtml(text) {
+  return text
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br>');
+}
+
 // Session completion endpoint
 app.post('/api/complete', async (req, res) => {
   try {
@@ -143,10 +217,49 @@ app.post('/api/complete', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Email is required' });
     }
     
-    // Format transcript for email
-    const formattedTranscript = transcript.map(msg => 
-      `${msg.role === 'user' ? 'YOU' : 'COACH'}: ${msg.content}`
-    ).join('\n\n---\n\n');
+    // Format transcript for email with HTML
+    const sessionTypeLabels = {
+      'quick_prep': 'Quick Prep',
+      'full_mock': 'Full Mock Interview',
+      'audio_mock': 'Premium Audio Mock',
+      'pro': 'Interview Coach Pro'
+    };
+    
+    const formattedTranscript = `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+    h1 { color: #2F6DF6; border-bottom: 2px solid #2F6DF6; padding-bottom: 10px; }
+    h2 { color: #2C2F38; margin-top: 30px; }
+    h3 { color: #2F6DF6; }
+    .user-msg { background: #f0f7ff; padding: 15px; border-radius: 8px; margin: 15px 0; }
+    .coach-msg { background: #f8fafc; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #2F6DF6; }
+    .label { font-weight: bold; color: #2F6DF6; margin-bottom: 10px; }
+    ul { padding-left: 20px; }
+    li { margin: 8px 0; }
+    strong { color: #2C2F38; }
+    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>🎯 Talendro™ Interview Coach</h1>
+  <p><strong>Session Type:</strong> ${sessionTypeLabels[sessionType] || sessionType}</p>
+  <hr>
+  ${transcript.map(msg => {
+    if (msg.role === 'user') {
+      return `<div class="user-msg"><div class="label">YOU:</div>${msg.content}</div>`;
+    } else {
+      return `<div class="coach-msg"><div class="label">COACH:</div>${markdownToHtml(msg.content)}</div>`;
+    }
+  }).join('')}
+  <div class="footer">
+    <p>Thank you for using Talendro™ Interview Coach!</p>
+    <p>Questions? Contact support@talendro.com</p>
+  </div>
+</body>
+</html>`;
     
     // Fire webhook to Zapier
     try {
