@@ -994,6 +994,77 @@
             cursor: not-allowed;
         }
 
+        .mic-btn {
+            background: var(--vibrant-aqua);
+            color: var(--white);
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s, transform 0.2s;
+            flex-shrink: 0;
+            font-size: 20px;
+        }
+
+        .mic-btn:hover:not(:disabled) {
+            background: #00A8B0;
+        }
+
+        .mic-btn:disabled {
+            background: var(--warm-gray);
+            cursor: not-allowed;
+        }
+
+        .mic-btn.recording {
+            background: #EF4444;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .audio-controls {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            background: #F0F7FF;
+            border-radius: 8px;
+            margin-top: 8px;
+        }
+
+        .audio-controls.active {
+            display: flex;
+        }
+
+        .speaker-btn {
+            background: var(--talendro-blue);
+            color: var(--white);
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .speaker-btn:hover {
+            background: #1E5AD8;
+        }
+
+        .speaker-btn.speaking {
+            background: var(--bright-lime);
+            color: var(--talendro-slate);
+        }
+
         .session-type-display {
             padding: 12px;
             background: #F0F7FF;
@@ -1293,6 +1364,7 @@
 
                 <div class="chat-input-container">
                     <textarea class="chat-input" id="chatInput" placeholder="Type your message..." rows="1"></textarea>
+                    <button class="mic-btn" id="micBtn" title="Click to speak">🎤</button>
                     <button class="send-btn" id="sendBtn">Send</button>
                 </div>
             </section>
@@ -1553,6 +1625,146 @@
                 chatInput.style.height = 'auto';
                 chatInput.style.height = Math.min(chatInput.scrollHeight, 150) + 'px';
             });
+            
+            // ==================== AUDIO FUNCTIONALITY ====================
+            const micBtn = document.getElementById('micBtn');
+            const isAudioSession = urlSessionType === 'audio_mock';
+            
+            // Text-to-Speech
+            let synth = window.speechSynthesis;
+            let isSpeaking = false;
+            
+            function speakText(text) {
+                if (!isAudioSession) return;
+                
+                // Cancel any ongoing speech
+                synth.cancel();
+                
+                // Clean text for speech (remove markdown)
+                const cleanText = text
+                    .replace(/#{1,3}\s?/g, '')
+                    .replace(/\*\*/g, '')
+                    .replace(/\*/g, '')
+                    .replace(/^- /gm, '')
+                    .replace(/\n/g, ' ');
+                
+                const utterance = new SpeechSynthesisUtterance(cleanText);
+                utterance.rate = 0.95;
+                utterance.pitch = 1;
+                
+                // Try to get a good voice
+                const voices = synth.getVoices();
+                const preferredVoice = voices.find(v => v.name.includes('Samantha')) ||
+                                       voices.find(v => v.name.includes('Google') && v.lang.startsWith('en')) ||
+                                       voices.find(v => v.lang.startsWith('en-US')) ||
+                                       voices[0];
+                if (preferredVoice) utterance.voice = preferredVoice;
+                
+                utterance.onstart = () => { isSpeaking = true; };
+                utterance.onend = () => { isSpeaking = false; };
+                utterance.onerror = () => { isSpeaking = false; };
+                
+                synth.speak(utterance);
+            }
+            
+            // Speech Recognition
+            let recognition = null;
+            let isRecording = false;
+            
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = 'en-US';
+                
+                let finalTranscript = '';
+                
+                recognition.onstart = function() {
+                    isRecording = true;
+                    micBtn.classList.add('recording');
+                    micBtn.title = 'Recording... Click to stop';
+                    finalTranscript = '';
+                };
+                
+                recognition.onresult = function(event) {
+                    let interimTranscript = '';
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        if (event.results[i].isFinal) {
+                            finalTranscript += event.results[i][0].transcript + ' ';
+                        } else {
+                            interimTranscript += event.results[i][0].transcript;
+                        }
+                    }
+                    chatInput.value = finalTranscript + interimTranscript;
+                    chatInput.style.height = 'auto';
+                    chatInput.style.height = Math.min(chatInput.scrollHeight, 150) + 'px';
+                };
+                
+                recognition.onend = function() {
+                    isRecording = false;
+                    micBtn.classList.remove('recording');
+                    micBtn.title = 'Click to speak';
+                    
+                    // Auto-send if we have content
+                    if (chatInput.value.trim()) {
+                        sendMessage();
+                    }
+                };
+                
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error:', event.error);
+                    isRecording = false;
+                    micBtn.classList.remove('recording');
+                    micBtn.title = 'Click to speak';
+                    
+                    if (event.error === 'not-allowed') {
+                        alert('Microphone access denied. Please allow microphone access in your browser settings.');
+                    }
+                };
+            } else {
+                // Browser doesn't support speech recognition
+                micBtn.style.display = 'none';
+            }
+            
+            // Mic button click handler
+            micBtn.addEventListener('click', function() {
+                if (!recognition) {
+                    alert('Speech recognition is not supported in your browser. Please use Chrome, Edge, or Safari.');
+                    return;
+                }
+                
+                // Stop any ongoing speech
+                if (isSpeaking) {
+                    synth.cancel();
+                }
+                
+                if (isRecording) {
+                    recognition.stop();
+                } else {
+                    recognition.start();
+                }
+            });
+            
+            // Show/hide mic button based on session type
+            if (!isAudioSession) {
+                micBtn.style.display = 'none';
+            }
+            
+            // Auto-speak assistant messages for audio sessions
+            const originalAddMessage = addMessage;
+            addMessage = function(content, role) {
+                originalAddMessage(content, role);
+                if (role === 'assistant' && isAudioSession) {
+                    // Small delay to let the message render
+                    setTimeout(() => speakText(content), 100);
+                }
+            };
+            
+            // Load voices (needed for some browsers)
+            if (synth.onvoiceschanged !== undefined) {
+                synth.onvoiceschanged = () => synth.getVoices();
+            }
         }
     </script>
 </body>
