@@ -1440,6 +1440,45 @@
             sessionTypeDisplay.textContent = sessionTypeLabels[urlSessionType];
             sessionBadge.textContent = sessionTypeLabels[urlSessionType].toUpperCase();
             
+            // Update welcome message for audio sessions
+            if (urlSessionType === 'audio_mock') {
+                const welcomeMessage = document.getElementById('welcomeMessage');
+                if (welcomeMessage) {
+                    welcomeMessage.innerHTML = `
+                        <h2>🎙️ Premium Audio Mock Interview</h2>
+                        <div class="welcome-steps">
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">1</span>
+                                <span class="welcome-step-text">Click <strong>"🎤 Start Interview"</strong> below</span>
+                            </div>
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">2</span>
+                                <span class="welcome-step-text">Allow microphone access when prompted</span>
+                            </div>
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">3</span>
+                                <span class="welcome-step-text"><strong>Speak naturally</strong> — the coach listens and responds in real-time</span>
+                            </div>
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">4</span>
+                                <span class="welcome-step-text">You can <strong>interrupt</strong> or ask for clarification anytime</span>
+                            </div>
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">5</span>
+                                <span class="welcome-step-text">Click <strong>"🛑 End Interview"</strong> when finished</span>
+                            </div>
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">6</span>
+                                <span class="welcome-step-text">Click <strong>"Complete Session"</strong> to receive your results via email</span>
+                            </div>
+                        </div>
+                        <p style="margin-top: 20px; color: #666; font-size: 14px;">
+                            💡 <em>Tip: Use headphones for the best experience</em>
+                        </p>
+                    `;
+                }
+            }
+            
             // Save documents
             saveDocsBtn.addEventListener('click', function() {
                 documents.resume = resumeInput.value.trim();
@@ -1626,157 +1665,42 @@
                 chatInput.style.height = Math.min(chatInput.scrollHeight, 150) + 'px';
             });
             
-            // ==================== AUDIO FUNCTIONALITY ====================
+            // ==================== AUDIO FUNCTIONALITY (ElevenLabs Conversational AI) ====================
             const micBtn = document.getElementById('micBtn');
             const isAudioSession = urlSessionType === 'audio_mock';
             
-            // Text-to-Speech using ElevenLabs
-            let isSpeaking = false;
-            let currentAudio = null;
-            
-            async function speakText(text) {
-                if (!isAudioSession) return;
+            // For audio sessions, embed ElevenLabs widget
+            if (isAudioSession) {
+                // Hide the normal chat input for audio sessions
+                chatInput.style.display = 'none';
+                sendBtn.style.display = 'none';
+                micBtn.style.display = 'none';
                 
-                // Stop any current audio
-                if (currentAudio) {
-                    currentAudio.pause();
-                    currentAudio = null;
-                }
+                // Create container for the widget
+                const widgetContainer = document.createElement('div');
+                widgetContainer.id = 'elevenlabs-widget-container';
+                widgetContainer.style.cssText = 'display: flex; justify-content: center; padding: 20px;';
                 
-                isSpeaking = true;
-                micBtn.disabled = true;
+                // Add the ElevenLabs widget
+                widgetContainer.innerHTML = '<elevenlabs-convai agent-id="agent_1901kb0ray8kfph9x9bh4w97bbe4"></elevenlabs-convai>';
                 
-                try {
-                    const response = await fetch('/api/tts', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ text: text })
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error('TTS request failed');
-                    }
-                    
-                    const audioBlob = await response.blob();
-                    const audioUrl = URL.createObjectURL(audioBlob);
-                    currentAudio = new Audio(audioUrl);
-                    
-                    currentAudio.onended = () => {
-                        isSpeaking = false;
-                        micBtn.disabled = false;
-                        URL.revokeObjectURL(audioUrl);
-                    };
-                    
-                    currentAudio.onerror = () => {
-                        isSpeaking = false;
-                        micBtn.disabled = false;
-                        console.error('Audio playback error');
-                    };
-                    
-                    await currentAudio.play();
-                    
-                } catch (error) {
-                    console.error('TTS error:', error);
-                    isSpeaking = false;
-                    micBtn.disabled = false;
-                }
-            }
-            
-            // Speech Recognition
-            let recognition = null;
-            let isRecording = false;
-            
-            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                recognition = new SpeechRecognition();
-                recognition.continuous = true;
-                recognition.interimResults = true;
-                recognition.lang = 'en-US';
+                // Insert widget into chat input container
+                const chatInputContainer = document.querySelector('.chat-input-container');
+                chatInputContainer.innerHTML = '';
+                chatInputContainer.appendChild(widgetContainer);
                 
-                let finalTranscript = '';
+                // Load the widget script
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/@elevenlabs/convai-widget-embed';
+                script.async = true;
+                document.head.appendChild(script);
                 
-                recognition.onstart = function() {
-                    isRecording = true;
-                    micBtn.classList.add('recording');
-                    micBtn.title = 'Recording... Click to stop';
-                    finalTranscript = '';
-                };
-                
-                recognition.onresult = function(event) {
-                    let interimTranscript = '';
-                    for (let i = event.resultIndex; i < event.results.length; i++) {
-                        if (event.results[i].isFinal) {
-                            finalTranscript += event.results[i][0].transcript + ' ';
-                        } else {
-                            interimTranscript += event.results[i][0].transcript;
-                        }
-                    }
-                    chatInput.value = finalTranscript + interimTranscript;
-                    chatInput.style.height = 'auto';
-                    chatInput.style.height = Math.min(chatInput.scrollHeight, 150) + 'px';
-                };
-                
-                recognition.onend = function() {
-                    isRecording = false;
-                    micBtn.classList.remove('recording');
-                    micBtn.title = 'Click to speak';
-                    
-                    // Auto-send if we have content
-                    if (chatInput.value.trim()) {
-                        sendMessage();
-                    }
-                };
-                
-                recognition.onerror = function(event) {
-                    console.error('Speech recognition error:', event.error);
-                    isRecording = false;
-                    micBtn.classList.remove('recording');
-                    micBtn.title = 'Click to speak';
-                    
-                    if (event.error === 'not-allowed') {
-                        alert('Microphone access denied. Please allow microphone access in your browser settings.');
-                    }
-                };
+                // Update welcome message
+                addMessage('Click the microphone button below to start your voice interview. Speak naturally - the coach will listen and respond in real-time.', 'assistant');
             } else {
-                // Browser doesn't support speech recognition
+                // Non-audio sessions - hide mic button
                 micBtn.style.display = 'none';
             }
-            
-            // Mic button click handler
-            micBtn.addEventListener('click', function() {
-                if (!recognition) {
-                    alert('Speech recognition is not supported in your browser. Please use Chrome, Edge, or Safari.');
-                    return;
-                }
-                
-                // Stop any ongoing audio
-                if (currentAudio) {
-                    currentAudio.pause();
-                    currentAudio = null;
-                    isSpeaking = false;
-                }
-                
-                if (isRecording) {
-                    recognition.stop();
-                } else {
-                    recognition.start();
-                }
-            });
-            
-            // Show/hide mic button based on session type
-            if (!isAudioSession) {
-                micBtn.style.display = 'none';
-            }
-            
-            // Auto-speak assistant messages for audio sessions
-            const originalAddMessage = addMessage;
-            addMessage = function(content, role) {
-                originalAddMessage(content, role);
-                if (role === 'assistant' && isAudioSession) {
-                    // Small delay to let the message render
-                    setTimeout(() => speakText(content), 100);
-                }
-            };
         }
     </script>
 </body>
