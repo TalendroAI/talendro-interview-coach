@@ -1707,11 +1707,12 @@
                         font-size: 48px;
                         animation: bounce 2s infinite;
                         margin-top: 30px;
+                        display: inline-block;
                     }
                     @keyframes bounce {
-                        0%, 20%, 50%, 80%, 100% { transform: translateY(0) rotate(135deg); }
-                        40% { transform: translateY(-15px) rotate(135deg); }
-                        60% { transform: translateY(-7px) rotate(135deg); }
+                        0%, 20%, 50%, 80%, 100% { transform: translateX(0); }
+                        40% { transform: translateX(15px); }
+                        60% { transform: translateX(7px); }
                     }
                 `;
                 document.head.appendChild(style);
@@ -1726,10 +1727,10 @@
                 chatInputContainer.innerHTML = `
                     <div class="audio-instructions">
                         <h3>🎙️ Voice Interview Ready</h3>
-                        <p>Click the <strong>"Start a call"</strong> button in the bottom right →</p>
+                        <p>Click the <strong>"Start a call"</strong> button in the bottom right</p>
                         <p>Speak naturally - the coach listens and responds in real-time</p>
                         <p>You can interrupt or ask for clarification anytime</p>
-                        <div class="audio-arrow">↘</div>
+                        <p style="margin-top: 20px; font-size: 32px;">👉</p>
                     </div>
                 `;
             } else {
