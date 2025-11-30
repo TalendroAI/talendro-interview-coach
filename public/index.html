@@ -1652,13 +1652,22 @@
                     hideTyping();
                     if (data.error) {
                         addMessage('Sorry, there was an error. Please try again.', 'assistant');
+                        // Reset button so they can try again
+                        startPrepBtn.disabled = false;
+                        startPrepBtn.innerHTML = '🚀 Start My Interview Prep';
                     } else {
                         addMessage(data.message, 'assistant');
+                        // Show completion state
+                        startPrepBtn.innerHTML = '✅ Prep Complete';
+                        startPrepBtn.style.background = '#10B981';
                     }
                 })
                 .catch(error => {
                     hideTyping();
                     addMessage('Sorry, there was a connection error. Please try again.', 'assistant');
+                    // Reset button so they can try again
+                    startPrepBtn.disabled = false;
+                    startPrepBtn.innerHTML = '🚀 Start My Interview Prep';
                 })
                 .finally(() => {
                     isLoading = false;
