@@ -1632,7 +1632,8 @@
                 const welcome = document.querySelector('.welcome-message');
                 if (welcome) welcome.remove();
                 
-                addMessage(message, 'user');
+                // Track in history for transcript, but don't display in UI
+                conversationHistory.push({ role: 'user', content: message });
                 showTyping();
                 
                 fetch('/api/chat', {
