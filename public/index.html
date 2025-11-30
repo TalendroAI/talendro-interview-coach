@@ -1572,7 +1572,7 @@
                                 <span class="welcome-step-text">Answer each question, receive feedback, then <strong>"Complete Session"</strong> for your full score</span>
                             </div>
                         </div>
-                        <p style="margin-top: 20px; color: #666; font-size: 14px;">💡 <em>Pro tip: Use your device's voice-to-text to speak your answers naturally — just like a real interview!</em></p>
+                        <p style="margin-top: 20px; color: #666; font-size: 14px;">💡 <em>Pro tip: Type your answers in the chat below, or use your device's voice-to-text to speak naturally — just like a real interview!</em></p>
                     `;
                 }
                 
@@ -1779,19 +1779,50 @@
                 completeSessionBtn.disabled = true;
                 completeSessionBtn.textContent = 'Completing...';
                 
-                const transcriptText = conversationHistory.map(msg => {
-                    const role = msg.role === 'user' ? '[USER]' : '[COACH]';
-                    return `${role}: ${msg.content}`;
-                }).join('\n\n');
-                
                 try {
+                    let transcriptToSave;
+                    
+                    // For Full Mock, generate a polished debrief document
+                    if (sessionType.value === 'full_mock') {
+                        completeSessionBtn.textContent = 'Generating your debrief...';
+                        
+                        const debriefResponse = await fetch('/api/generate-debrief', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                conversationHistory: conversationHistory,
+                                documents: documents
+                            })
+                        });
+                        
+                        const debriefData = await debriefResponse.json();
+                        
+                        if (debriefData.success && debriefData.debrief) {
+                            transcriptToSave = debriefData.debrief;
+                        } else {
+                            // Fallback to raw transcript if debrief generation fails
+                            transcriptToSave = conversationHistory.map(msg => {
+                                const role = msg.role === 'user' ? '[USER]' : '[COACH]';
+                                return `${role}: ${msg.content}`;
+                            }).join('\n\n');
+                        }
+                    } else {
+                        // For other session types, use raw transcript
+                        transcriptToSave = conversationHistory.map(msg => {
+                            const role = msg.role === 'user' ? '[USER]' : '[COACH]';
+                            return `${role}: ${msg.content}`;
+                        }).join('\n\n');
+                    }
+                
+                    completeSessionBtn.textContent = 'Saving...';
+                    
                     await fetch('/api/save-transcript', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             email: customerEmail,
                             sessionType: sessionType.value,
-                            transcript: transcriptText
+                            transcript: transcriptToSave
                         })
                     });
                     
@@ -1812,7 +1843,7 @@
                     if (data.success) {
                         completeSessionBtn.textContent = 'Session Complete!';
                         completeSessionBtn.style.background = '#00C4CC';
-                        addMessage('Your session is complete! You will receive an email shortly with your interview prep materials. You can also access this prep packet anytime by visiting this link again. Thank you for using Talendro Interview Coach!', 'assistant');
+                        addMessage('Your session is complete! You will receive an email shortly with your personalized Interview Debrief Report. Thank you for using Talendro Interview Coach!', 'assistant');
                         chatInput.disabled = true;
                         sendBtn.disabled = true;
                     } else {
