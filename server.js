@@ -546,13 +546,38 @@ app.get('/api/system-prompt/:sessionType', (req, res) => {
 
 app.post('/api/chat', async (req, res) => {
   try {
-    const { systemPrompt, messages } = req.body;
+    const { message, sessionType, documents, customerEmail } = req.body;
     
     const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
     
     if (!anthropicApiKey) {
       return res.status(500).json({ error: 'Anthropic API key not configured' });
     }
+    
+    // Get the system prompt for this session type
+    const systemPrompt = SYSTEM_PROMPTS[sessionType] || SYSTEM_PROMPTS.quick_prep;
+    
+    // Build context from documents
+    let context = '';
+    if (documents) {
+      if (documents.resume) {
+        context += `\n\nCANDIDATE RESUME:\n${documents.resume}`;
+      }
+      if (documents.jobDescription) {
+        context += `\n\nJOB DESCRIPTION:\n${documents.jobDescription}`;
+      }
+      if (documents.companyUrl) {
+        context += `\n\nCOMPANY WEBSITE: ${documents.companyUrl}`;
+      }
+    }
+    
+    // Build the messages array
+    const messages = [
+      {
+        role: 'user',
+        content: context ? `${message}\n\n---\nCONTEXT:${context}` : message
+      }
+    ];
     
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -578,7 +603,7 @@ app.post('/api/chat', async (req, res) => {
     const data = await response.json();
     const assistantMessage = data.content[0].text;
     
-    res.json({ response: assistantMessage });
+    res.json({ message: assistantMessage });
   } catch (error) {
     console.error('Chat error:', error);
     res.status(500).json({ error: 'Failed to get AI response' });
