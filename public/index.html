@@ -43,7 +43,6 @@
             display: block;
         }
 
-        /* Header */
         .landing-header {
             background: var(--white);
             border-bottom: 1px solid #E2E8F0;
@@ -89,7 +88,6 @@
             background: #1E5AD8;
         }
 
-        /* Hero Section */
         .hero {
             background: linear-gradient(135deg, #F0F7FF 0%, #E8F4F8 100%);
             padding: 80px 24px;
@@ -177,7 +175,6 @@
             margin-top: 4px;
         }
 
-        /* How It Works */
         .how-it-works {
             padding: 80px 24px;
             background: var(--light-bg);
@@ -231,7 +228,6 @@
             color: var(--warm-gray);
         }
 
-        /* Pricing Section */
         .pricing {
             padding: 80px 24px;
             background: var(--white);
@@ -420,7 +416,6 @@
             font-size: 12px;
         }
 
-        /* Comparison */
         .comparison {
             padding: 80px 24px;
             background: var(--light-bg);
@@ -479,7 +474,6 @@
             color: var(--warm-gray);
         }
 
-        /* CTA Section */
         .cta {
             padding: 80px 24px;
             background: linear-gradient(135deg, var(--talendro-blue) 0%, #1E5AD8 100%);
@@ -519,7 +513,6 @@
             transform: translateY(-2px);
         }
 
-        /* Footer */
         .landing-footer {
             background: var(--talendro-slate);
             color: rgba(255,255,255,0.6);
@@ -557,39 +550,14 @@
             color: rgba(255,255,255,0.9);
         }
 
-        /* Responsive for landing */
         @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 36px;
-            }
-
-            .hero-stats {
-                flex-direction: column;
-                gap: 24px;
-            }
-
-            .pricing-grid {
-                grid-template-columns: 1fr;
-                max-width: 400px;
-            }
-
-            .pro-options {
-                flex-direction: column;
-            }
-
-            .comparison-table {
-                font-size: 14px;
-            }
-
-            .comparison-table th,
-            .comparison-table td {
-                padding: 12px;
-            }
-
-            .footer-badges {
-                flex-direction: column;
-                gap: 12px;
-            }
+            .hero h1 { font-size: 36px; }
+            .hero-stats { flex-direction: column; gap: 24px; }
+            .pricing-grid { grid-template-columns: 1fr; max-width: 400px; }
+            .pro-options { flex-direction: column; }
+            .comparison-table { font-size: 14px; }
+            .comparison-table th, .comparison-table td { padding: 12px; }
+            .footer-badges { flex-direction: column; gap: 12px; }
         }
 
         /* ==================== */
@@ -634,10 +602,6 @@
             font-size: 12px;
             font-weight: 600;
             text-transform: uppercase;
-        }
-
-        .session-badge.no-session {
-            background: var(--warm-gray);
         }
 
         .main-container {
@@ -809,7 +773,7 @@
 
         .welcome-steps {
             text-align: left;
-            max-width: 400px;
+            max-width: 450px;
             margin: 0 auto;
         }
 
@@ -841,14 +805,35 @@
             padding-top: 3px;
         }
 
-        .welcome-step-text code {
-            background: #F0F7FF;
-            color: var(--talendro-blue);
-            padding: 2px 8px;
-            border-radius: 4px;
+        .start-prep-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: linear-gradient(135deg, var(--talendro-blue) 0%, #1E5AD8 100%);
+            color: var(--white);
+            padding: 16px 32px;
+            border-radius: 8px;
             font-family: 'Montserrat', sans-serif;
-            font-weight: 600;
-            font-size: 13px;
+            font-weight: 700;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            margin-top: 24px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 12px rgba(47, 109, 246, 0.3);
+        }
+
+        .start-prep-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(47, 109, 246, 0.4);
+        }
+
+        .start-prep-btn:disabled {
+            background: var(--warm-gray);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
 
         .message {
@@ -920,23 +905,12 @@
             animation: typing 1.4s infinite ease-in-out;
         }
 
-        .typing-indicator span:nth-child(2) {
-            animation-delay: 0.2s;
-        }
-
-        .typing-indicator span:nth-child(3) {
-            animation-delay: 0.4s;
-        }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
 
         @keyframes typing {
-            0%, 60%, 100% {
-                transform: translateY(0);
-                opacity: 0.4;
-            }
-            30% {
-                transform: translateY(-4px);
-                opacity: 1;
-            }
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+            30% { transform: translateY(-4px); opacity: 1; }
         }
 
         .chat-input-container {
@@ -995,74 +969,7 @@
         }
 
         .mic-btn {
-            background: var(--vibrant-aqua);
-            color: var(--white);
-            border: none;
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.2s, transform 0.2s;
-            flex-shrink: 0;
-            font-size: 20px;
-        }
-
-        .mic-btn:hover:not(:disabled) {
-            background: #00A8B0;
-        }
-
-        .mic-btn:disabled {
-            background: var(--warm-gray);
-            cursor: not-allowed;
-        }
-
-        .mic-btn.recording {
-            background: #EF4444;
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-
-        .audio-controls {
             display: none;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 16px;
-            background: #F0F7FF;
-            border-radius: 8px;
-            margin-top: 8px;
-        }
-
-        .audio-controls.active {
-            display: flex;
-        }
-
-        .speaker-btn {
-            background: var(--talendro-blue);
-            color: var(--white);
-            border: none;
-            padding: 6px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .speaker-btn:hover {
-            background: #1E5AD8;
-        }
-
-        .speaker-btn.speaking {
-            background: var(--bright-lime);
-            color: var(--talendro-slate);
         }
 
         .session-type-display {
@@ -1074,19 +981,13 @@
         }
 
         @media (max-width: 900px) {
-            .main-container {
-                flex-direction: column;
-            }
-            .sidebar {
-                width: 100%;
-            }
+            .main-container { flex-direction: column; }
+            .sidebar { width: 100%; }
         }
     </style>
 </head>
 <body>
-    <!-- ==================== -->
-    <!-- LANDING PAGE         -->
-    <!-- ==================== -->
+    <!-- LANDING PAGE -->
     <div class="landing-page" id="landingPage">
         <header class="landing-header">
             <div class="landing-header-content">
@@ -1101,7 +1002,6 @@
                 <h1>Ace Your Interview with <em>Confidence</em></h1>
                 <p>Personalized interview coaching powered by AI. Get the preparation you need at a fraction of traditional coaching costs.</p>
                 <a href="#pricing" class="hero-btn">View Packages</a>
-                
                 <div class="hero-stats">
                     <div class="stat">
                         <div class="stat-number">80%</div>
@@ -1145,9 +1045,7 @@
                 <h2>Choose Your Prep Level</h2>
                 <p>From quick refreshers to comprehensive coaching — find the right fit for your interview timeline.</p>
             </div>
-
             <div class="pricing-grid">
-                <!-- Quick Prep -->
                 <div class="pricing-card">
                     <div class="card-title">Quick Prep</div>
                     <div class="card-description">Perfect for last-minute preparation</div>
@@ -1160,8 +1058,6 @@
                     </ul>
                     <a href="https://buy.stripe.com/cNi3cu7jh6ZA81jbYXcV203" class="pricing-btn secondary">Get Quick Prep</a>
                 </div>
-
-                <!-- Full Mock -->
                 <div class="pricing-card featured">
                     <div class="card-title">Full Mock Interview</div>
                     <div class="card-description">Complete interview simulation</div>
@@ -1175,8 +1071,6 @@
                     </ul>
                     <a href="https://buy.stripe.com/28E8wO6fdcjUbdv0gfcV204" class="pricing-btn primary">Start Mock Interview</a>
                 </div>
-
-                <!-- Premium Audio -->
                 <div class="pricing-card">
                     <div class="card-title">Premium Audio Mock</div>
                     <div class="card-description">Realistic voice-based practice</div>
@@ -1190,8 +1084,6 @@
                     </ul>
                     <a href="https://buy.stripe.com/8x29AS1YX6ZA1CVfb9cV205" class="pricing-btn secondary">Try Audio Mock</a>
                 </div>
-
-                <!-- Pro Subscription -->
                 <div class="pricing-card pro">
                     <div class="card-title">Interview Coach Pro</div>
                     <div class="card-description">Unlimited prep for serious job seekers</div>
@@ -1225,31 +1117,11 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td>Price per session</td>
-                        <td class="muted">$150 - $500</td>
-                        <td class="highlight">$12 - $49</td>
-                    </tr>
-                    <tr>
-                        <td>Availability</td>
-                        <td class="muted">By appointment</td>
-                        <td class="highlight">24/7 instant access</td>
-                    </tr>
-                    <tr>
-                        <td>Personalization</td>
-                        <td class="muted">Varies by coach</td>
-                        <td class="highlight">Always tailored to your role</td>
-                    </tr>
-                    <tr>
-                        <td>Practice sessions</td>
-                        <td class="muted">Limited by budget</td>
-                        <td class="highlight">Unlimited with Pro</td>
-                    </tr>
-                    <tr>
-                        <td>Feedback speed</td>
-                        <td class="muted">After session ends</td>
-                        <td class="highlight">Real-time</td>
-                    </tr>
+                    <tr><td>Price per session</td><td class="muted">$150 - $500</td><td class="highlight">$12 - $49</td></tr>
+                    <tr><td>Availability</td><td class="muted">By appointment</td><td class="highlight">24/7 instant access</td></tr>
+                    <tr><td>Personalization</td><td class="muted">Varies by coach</td><td class="highlight">Always tailored to your role</td></tr>
+                    <tr><td>Practice sessions</td><td class="muted">Limited by budget</td><td class="highlight">Unlimited with Pro</td></tr>
+                    <tr><td>Feedback speed</td><td class="muted">After session ends</td><td class="highlight">Real-time</td></tr>
                 </tbody>
             </table>
         </section>
@@ -1272,9 +1144,7 @@
         </footer>
     </div>
 
-    <!-- ==================== -->
-    <!-- CHAT APPLICATION     -->
-    <!-- ==================== -->
+    <!-- CHAT APPLICATION -->
     <div class="chat-app" id="chatApp">
         <header class="header">
             <div class="logo">Talendro<span>™</span> Interview Coach</div>
@@ -1288,7 +1158,7 @@
                     
                     <div class="form-group">
                         <label for="resume">Résumé</label>
-                        <textarea id="resume" placeholder="Paste your résumé here..."></textarea>
+                        <textarea id="resume" placeholder="Paste your résumé text here..."></textarea>
                         <div class="status-indicator">
                             <span class="status-dot" id="resumeStatus"></span>
                             <span id="resumeStatusText">Not provided</span>
@@ -1297,7 +1167,7 @@
 
                     <div class="form-group">
                         <label for="jobDescription">Job Description</label>
-                        <textarea id="jobDescription" placeholder="Paste the job description here..."></textarea>
+                        <textarea id="jobDescription" placeholder="Paste the job description text here..."></textarea>
                         <div class="status-indicator">
                             <span class="status-dot" id="jdStatus"></span>
                             <span id="jdStatusText">Not provided</span>
@@ -1312,11 +1182,9 @@
                             <span id="urlStatusText">Not provided</span>
                         </div>
                     </div>
-
-                    <button class="btn btn-primary" id="saveDocsBtn">Save Documents</button>
                 </div>
 
-                <div class="sidebar-card" id="sessionTypeCard">
+                <div class="sidebar-card">
                     <h3>Your Session</h3>
                     <div class="session-type-display" id="sessionTypeDisplay">Loading...</div>
                     <select id="sessionType" style="display: none;">
@@ -1348,23 +1216,21 @@
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">4</span>
-                                <span class="welcome-step-text">Click <strong>"Save Documents"</strong></span>
+                                <span class="welcome-step-text">Click the button below to generate your prep packet</span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">5</span>
-                                <span class="welcome-step-text">Type <code>Start my interview prep</code> below and hit Send</span>
-                            </div>
-                            <div class="welcome-step">
-                                <span class="welcome-step-number">6</span>
                                 <span class="welcome-step-text">When finished, click <strong>"Complete Session"</strong> to receive your results via email</span>
                             </div>
                         </div>
+                        <button class="start-prep-btn" id="startPrepBtn">
+                            🚀 Start My Interview Prep
+                        </button>
                     </div>
                 </div>
 
                 <div class="chat-input-container">
-                    <textarea class="chat-input" id="chatInput" placeholder="Type your message..." rows="1"></textarea>
-                    <button class="mic-btn" id="micBtn" title="Click to speak">🎤</button>
+                    <textarea class="chat-input" id="chatInput" placeholder="Type a follow-up question..." rows="1"></textarea>
                     <button class="send-btn" id="sendBtn">Send</button>
                 </div>
             </section>
@@ -1372,15 +1238,11 @@
     </div>
 
     <script>
-        // Read session type from URL parameter (set by Stripe payment link)
         const urlParams = new URLSearchParams(window.location.search);
         const urlSessionType = urlParams.get('session_type');
         const customerEmail = urlParams.get('email');
         
-        // Valid session types
         const validSessionTypes = ['quick_prep', 'full_mock', 'audio_mock', 'pro'];
-        
-        // Session type labels
         const sessionTypeLabels = {
             'quick_prep': 'Quick Prep',
             'full_mock': 'Full Mock Interview',
@@ -1388,41 +1250,34 @@
             'pro': 'Interview Coach Pro'
         };
         
-        // Determine which view to show
         const landingPage = document.getElementById('landingPage');
         const chatApp = document.getElementById('chatApp');
         
         if (urlSessionType && validSessionTypes.includes(urlSessionType)) {
-            // Valid session - show chat app
             landingPage.classList.remove('active');
             chatApp.classList.add('active');
             initializeChatApp();
         } else {
-            // No session - show landing page
             landingPage.classList.add('active');
             chatApp.classList.remove('active');
         }
         
         function initializeChatApp() {
-            // Generate unique session ID
             const sessionId = 'session_' + Math.random().toString(36).substr(2, 9);
             
-            // DOM Elements
             const chatMessages = document.getElementById('chatMessages');
             const chatInput = document.getElementById('chatInput');
             const sendBtn = document.getElementById('sendBtn');
-            const saveDocsBtn = document.getElementById('saveDocsBtn');
             const sessionType = document.getElementById('sessionType');
             const sessionBadge = document.getElementById('sessionBadge');
             const sessionTypeDisplay = document.getElementById('sessionTypeDisplay');
             const completeSessionBtn = document.getElementById('completeSessionBtn');
+            const startPrepBtn = document.getElementById('startPrepBtn');
             
-            // Document inputs
             const resumeInput = document.getElementById('resume');
             const jdInput = document.getElementById('jobDescription');
             const urlInput = document.getElementById('companyUrl');
             
-            // Status indicators
             const resumeStatus = document.getElementById('resumeStatus');
             const resumeStatusText = document.getElementById('resumeStatusText');
             const jdStatus = document.getElementById('jdStatus');
@@ -1430,17 +1285,15 @@
             const urlStatus = document.getElementById('urlStatus');
             const urlStatusText = document.getElementById('urlStatusText');
             
-            // State
             let documents = { resume: '', jobDescription: '', companyUrl: '' };
             let isLoading = false;
             let conversationHistory = [];
             
-            // Set session type from URL
             sessionType.value = urlSessionType;
             sessionTypeDisplay.textContent = sessionTypeLabels[urlSessionType];
             sessionBadge.textContent = sessionTypeLabels[urlSessionType].toUpperCase();
             
-            // Update welcome message for audio sessions
+            // Audio mock has different instructions
             if (urlSessionType === 'audio_mock') {
                 const welcomeMessage = document.getElementById('welcomeMessage');
                 if (welcomeMessage) {
@@ -1449,78 +1302,124 @@
                         <div class="welcome-steps">
                             <div class="welcome-step">
                                 <span class="welcome-step-number">1</span>
-                                <span class="welcome-step-text">Copy and paste the <strong>text</strong> from your résumé, job description, and company URL into the sidebar (open your docs, select all, copy, paste)</span>
+                                <span class="welcome-step-text">Paste your <strong>résumé text</strong>, <strong>job description</strong>, and <strong>company URL</strong> in the sidebar</span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">2</span>
-                                <span class="welcome-step-text">Click <strong>"Save Documents"</strong></span>
-                            </div>
-                            <div class="welcome-step">
-                                <span class="welcome-step-number">3</span>
                                 <span class="welcome-step-text">Click <strong>"📞 Start a call"</strong> in the bottom right corner</span>
                             </div>
                             <div class="welcome-step">
-                                <span class="welcome-step-number">4</span>
+                                <span class="welcome-step-number">3</span>
                                 <span class="welcome-step-text">Allow microphone access when prompted</span>
                             </div>
                             <div class="welcome-step">
-                                <span class="welcome-step-number">5</span>
-                                <span class="welcome-step-text"><strong>Speak naturally</strong> — the coach listens and responds in real-time. You can interrupt, ask for clarification, request examples, or have questions repeated anytime.</span>
+                                <span class="welcome-step-number">4</span>
+                                <span class="welcome-step-text"><strong>Speak naturally</strong> — the coach responds in real-time</span>
                             </div>
                             <div class="welcome-step">
-                                <span class="welcome-step-number">6</span>
-                                <span class="welcome-step-text">When finished, click <strong>"Complete Session"</strong> to receive your results via email</span>
+                                <span class="welcome-step-number">5</span>
+                                <span class="welcome-step-text">Click <strong>"Complete Session"</strong> when finished</span>
                             </div>
                         </div>
-                        <p style="margin-top: 20px; color: #666; font-size: 14px;">
-                            💡 <em>Tip: Use headphones for the best experience</em>
-                        </p>
+                        <p style="margin-top: 20px; color: #666; font-size: 14px;">💡 <em>Tip: Use headphones for the best experience</em></p>
                     `;
                 }
+                
+                // Load ElevenLabs widget for audio sessions
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/@elevenlabs/convai-widget-embed';
+                script.async = true;
+                document.head.appendChild(script);
+                
+                const widget = document.createElement('elevenlabs-convai');
+                widget.setAttribute('agent-id', 'agent_1901kb0ray8kfph9x9bh4w97bbe4');
+                document.body.appendChild(widget);
+                
+                document.querySelector('.chat-input-container').style.display = 'none';
             }
             
-            // Save documents
-            saveDocsBtn.addEventListener('click', function() {
-                documents.resume = resumeInput.value.trim();
-                documents.jobDescription = jdInput.value.trim();
-                documents.companyUrl = urlInput.value.trim();
-                
-                // Update status indicators
-                if (documents.resume) {
-                    resumeStatus.classList.add('active');
-                    resumeStatusText.textContent = 'Saved';
-                }
-                if (documents.jobDescription) {
-                    jdStatus.classList.add('active');
-                    jdStatusText.textContent = 'Saved';
-                }
-                if (documents.companyUrl) {
-                    urlStatus.classList.add('active');
-                    urlStatusText.textContent = 'Saved';
-                }
-                
-                // Visual feedback
-                saveDocsBtn.textContent = 'Saved!';
-                saveDocsBtn.style.background = '#00C4CC';
-                setTimeout(() => {
-                    saveDocsBtn.textContent = 'Save Documents';
-                    saveDocsBtn.style.background = '';
-                }, 2000);
-            });
+            // START PREP BUTTON - saves docs AND starts session
+            if (startPrepBtn) {
+                startPrepBtn.addEventListener('click', function() {
+                    // Save documents from form fields
+                    documents.resume = resumeInput.value.trim();
+                    documents.jobDescription = jdInput.value.trim();
+                    documents.companyUrl = urlInput.value.trim();
+                    
+                    // Update status indicators
+                    if (documents.resume) {
+                        resumeStatus.classList.add('active');
+                        resumeStatusText.textContent = 'Saved';
+                    }
+                    if (documents.jobDescription) {
+                        jdStatus.classList.add('active');
+                        jdStatusText.textContent = 'Saved';
+                    }
+                    if (documents.companyUrl) {
+                        urlStatus.classList.add('active');
+                        urlStatusText.textContent = 'Saved';
+                    }
+                    
+                    // Disable button and show loading
+                    startPrepBtn.disabled = true;
+                    startPrepBtn.innerHTML = '⏳ Generating your prep packet...';
+                    
+                    // Send start message
+                    sendStartMessage();
+                });
+            }
             
-            // Add message to chat
-            function addMessage(content, role) {
-                // Remove welcome message if present
+            function sendStartMessage() {
+                const message = 'Start my interview prep';
+                isLoading = true;
+                sendBtn.disabled = true;
+                
                 const welcome = document.querySelector('.welcome-message');
                 if (welcome) welcome.remove();
                 
-                // Track conversation history
+                addMessage(message, 'user');
+                showTyping();
+                
+                fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: message,
+                        sessionId: sessionId,
+                        sessionType: sessionType.value,
+                        documents: documents,
+                        customerEmail: customerEmail
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    hideTyping();
+                    if (data.error) {
+                        addMessage('Sorry, there was an error. Please try again.', 'assistant');
+                    } else {
+                        addMessage(data.message, 'assistant');
+                    }
+                })
+                .catch(error => {
+                    hideTyping();
+                    addMessage('Sorry, there was a connection error. Please try again.', 'assistant');
+                })
+                .finally(() => {
+                    isLoading = false;
+                    sendBtn.disabled = false;
+                    chatInput.focus();
+                });
+            }
+            
+            function addMessage(content, role) {
+                const welcome = document.querySelector('.welcome-message');
+                if (welcome) welcome.remove();
+                
                 conversationHistory.push({ role: role, content: content });
                 
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `message ${role}`;
                 
-                // Parse markdown-like formatting for assistant messages
                 if (role === 'assistant') {
                     content = content
                         .replace(/^### (.+)$/gm, '<h3>$1</h3>')
@@ -1541,7 +1440,6 @@
                 chatMessages.scrollTop = chatMessages.scrollHeight;
             }
             
-            // Complete session
             async function completeSession() {
                 if (conversationHistory.length === 0) {
                     alert('No session to complete. Start your interview prep first.');
@@ -1570,8 +1468,6 @@
                         completeSessionBtn.textContent = 'Session Complete!';
                         completeSessionBtn.style.background = '#00C4CC';
                         addMessage('Your session is complete! You will receive an email shortly with your interview prep materials. Thank you for using Talendro Interview Coach!', 'assistant');
-                        
-                        // Disable inputs
                         chatInput.disabled = true;
                         sendBtn.disabled = true;
                     } else {
@@ -1585,10 +1481,8 @@
                 }
             }
             
-            // Complete session button listener
             completeSessionBtn.addEventListener('click', completeSession);
             
-            // Show typing indicator
             function showTyping() {
                 const typing = document.createElement('div');
                 typing.className = 'typing-indicator';
@@ -1598,13 +1492,11 @@
                 chatMessages.scrollTop = chatMessages.scrollHeight;
             }
             
-            // Hide typing indicator
             function hideTyping() {
                 const typing = document.getElementById('typingIndicator');
                 if (typing) typing.remove();
             }
             
-            // Send message
             async function sendMessage() {
                 const message = chatInput.value.trim();
                 if (!message || isLoading) return;
@@ -1628,29 +1520,26 @@
                         customerEmail: customerEmail
                     })
                 })
-                .then(function(response) {
-                    return response.json();
-                })
-                .then(function(data) {
+                .then(response => response.json())
+                .then(data => {
                     hideTyping();
                     if (data.error) {
-                        addMessage('Sorry, there was an error processing your request. Please try again.', 'assistant');
+                        addMessage('Sorry, there was an error. Please try again.', 'assistant');
                     } else {
                         addMessage(data.message, 'assistant');
                     }
                 })
-                .catch(function(error) {
+                .catch(error => {
                     hideTyping();
                     addMessage('Sorry, there was a connection error. Please try again.', 'assistant');
                 })
-                .finally(function() {
+                .finally(() => {
                     isLoading = false;
                     sendBtn.disabled = false;
                     chatInput.focus();
                 });
             }
             
-            // Event listeners
             sendBtn.addEventListener('click', sendMessage);
             
             chatInput.addEventListener('keydown', function(e) {
@@ -1664,71 +1553,6 @@
                 chatInput.style.height = 'auto';
                 chatInput.style.height = Math.min(chatInput.scrollHeight, 150) + 'px';
             });
-            
-            // ==================== AUDIO FUNCTIONALITY (ElevenLabs Conversational AI) ====================
-            const micBtn = document.getElementById('micBtn');
-            const isAudioSession = urlSessionType === 'audio_mock';
-            
-            // For audio sessions, embed ElevenLabs widget
-            if (isAudioSession) {
-                // Hide the normal chat input for audio sessions
-                chatInput.style.display = 'none';
-                sendBtn.style.display = 'none';
-                micBtn.style.display = 'none';
-                
-                // Load the widget script first
-                const script = document.createElement('script');
-                script.src = 'https://unpkg.com/@elevenlabs/convai-widget-embed';
-                script.async = true;
-                document.head.appendChild(script);
-                
-                // Add custom styles for the widget
-                const style = document.createElement('style');
-                style.textContent = `
-                    elevenlabs-convai {
-                        position: fixed !important;
-                        bottom: 100px !important;
-                        right: 30px !important;
-                        z-index: 9999 !important;
-                    }
-                    .audio-instructions {
-                        text-align: center;
-                        padding: 40px 20px;
-                        color: #666;
-                    }
-                    .audio-instructions h3 {
-                        color: #2F6DF6;
-                        margin-bottom: 20px;
-                    }
-                    .audio-instructions p {
-                        margin: 10px 0;
-                    }
-                    .audio-arrow {
-                        font-size: 48px;
-                        animation: bounce 2s infinite;
-                        margin-top: 30px;
-                        display: inline-block;
-                    }
-                    @keyframes bounce {
-                        0%, 20%, 50%, 80%, 100% { transform: translateX(0); }
-                        40% { transform: translateX(15px); }
-                        60% { transform: translateX(7px); }
-                    }
-                `;
-                document.head.appendChild(style);
-                
-                // Add the ElevenLabs widget to the page
-                const widget = document.createElement('elevenlabs-convai');
-                widget.setAttribute('agent-id', 'agent_1901kb0ray8kfph9x9bh4w97bbe4');
-                document.body.appendChild(widget);
-                
-                // Replace chat input container - just hide it for audio sessions
-                const chatInputContainer = document.querySelector('.chat-input-container');
-                chatInputContainer.style.display = 'none';
-            } else {
-                // Non-audio sessions - hide mic button
-                micBtn.style.display = 'none';
-            }
         }
     </script>
 </body>
