@@ -740,6 +740,21 @@
             margin-bottom: 6px;
         }
 
+        .field-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            background: var(--talendro-blue);
+            color: var(--white);
+            border-radius: 50%;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 11px;
+            margin-right: 6px;
+        }
+
         .form-group textarea,
         .form-group input {
             width: 100%;
@@ -1266,7 +1281,7 @@
                     <h3>Your Documents</h3>
                     
                     <div class="form-group">
-                        <label for="resume">Résumé</label>
+                        <label for="resume"><span class="field-number">1</span> Résumé</label>
                         <textarea id="resume" placeholder="Paste your résumé text here..."></textarea>
                         <div class="status-indicator">
                             <span class="status-dot" id="resumeStatus"></span>
@@ -1275,7 +1290,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="jobDescription">Job Description</label>
+                        <label for="jobDescription"><span class="field-number">2</span> Job Description</label>
                         <textarea id="jobDescription" placeholder="Paste the job description text here..."></textarea>
                         <div class="status-indicator">
                             <span class="status-dot" id="jdStatus"></span>
@@ -1284,7 +1299,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="companyUrl">Company Website URL</label>
+                        <label for="companyUrl"><span class="field-number">3</span> Company Website URL</label>
                         <input type="url" id="companyUrl" placeholder="https://company.com">
                         <div class="status-indicator">
                             <span class="status-dot" id="urlStatus"></span>
