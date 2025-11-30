@@ -416,6 +416,45 @@ app.get('/api/transcript/:email/:sessionType', async (req, res) => {
 });
 
 // ============================================
+// COMPLETE SESSION ENDPOINT (Zapier webhook)
+// ============================================
+
+app.post('/api/complete', async (req, res) => {
+  try {
+    const { email, sessionType, sessionId, transcript, documents } = req.body;
+    
+    // Build transcript text from conversation history
+    const transcriptText = Array.isArray(transcript) 
+      ? transcript.map(msg => {
+          const role = msg.role === 'user' ? '[USER]' : '[COACH]';
+          return `${role}: ${msg.content}`;
+        }).join('\n\n')
+      : transcript;
+    
+    // Send to Zapier webhook
+    const zapierWebhookUrl = 'https://hooks.zapier.com/hooks/catch/9843127/uko6xa9/';
+    
+    await fetch(zapierWebhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: email,
+        sessionType: sessionType,
+        sessionId: sessionId,
+        transcript: transcriptText,
+        documents: documents,
+        completedAt: new Date().toISOString()
+      })
+    });
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Complete session error:', error);
+    res.status(500).json({ error: 'Failed to complete session' });
+  }
+});
+
+// ============================================
 // ELEVENLABS CONFIGURATION
 // ============================================
 
