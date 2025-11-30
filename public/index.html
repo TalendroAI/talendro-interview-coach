@@ -1396,6 +1396,54 @@
 
     <script>
         const urlParams = new URLSearchParams(window.location.search);
+        
+        // Check for Stripe session_id and resolve it
+        const stripeSessionId = urlParams.get('session_id');
+        if (stripeSessionId) {
+            // Show a loading message while we resolve the session
+            document.body.innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: 'Inter', sans-serif;">
+                    <div style="font-size: 48px; margin-bottom: 20px;">⏳</div>
+                    <h2 style="color: #2F6DF6; margin-bottom: 10px;">Setting up your session...</h2>
+                    <p style="color: #666;">Please wait while we prepare your interview coach.</p>
+                </div>
+            `;
+            
+            // Call API to resolve the Stripe session
+            fetch('/api/resolve-stripe-session?session_id=' + encodeURIComponent(stripeSessionId))
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.redirectUrl) {
+                        // Redirect to the proper session URL
+                        window.location.href = data.redirectUrl;
+                    } else {
+                        // Show error
+                        document.body.innerHTML = `
+                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: 'Inter', sans-serif;">
+                                <div style="font-size: 48px; margin-bottom: 20px;">❌</div>
+                                <h2 style="color: #dc2626; margin-bottom: 10px;">Session Error</h2>
+                                <p style="color: #666; margin-bottom: 20px;">${data.error || 'Unable to load your session.'}</p>
+                                <p style="color: #666;">Please check your email for the session link, or contact support.</p>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Session resolution error:', error);
+                    document.body.innerHTML = `
+                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: 'Inter', sans-serif;">
+                            <div style="font-size: 48px; margin-bottom: 20px;">❌</div>
+                            <h2 style="color: #dc2626; margin-bottom: 10px;">Connection Error</h2>
+                            <p style="color: #666; margin-bottom: 20px;">Unable to connect to the server.</p>
+                            <p style="color: #666;">Please check your email for the session link, or try again later.</p>
+                        </div>
+                    `;
+                });
+            
+            // Stop further script execution since we're redirecting
+            throw new Error('Redirecting after session resolution');
+        }
+        
         const urlSessionType = urlParams.get('session_type');
         const customerEmail = urlParams.get('email');
         

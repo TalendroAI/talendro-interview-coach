@@ -9,6 +9,27 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ============================================
+// STRIPE CONFIGURATION
+// ============================================
+
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+let stripe = null;
+if (STRIPE_SECRET_KEY) {
+  stripe = require('stripe')(STRIPE_SECRET_KEY);
+  console.log('Stripe API initialized');
+} else {
+  console.warn('Stripe secret key not configured - session resolution disabled');
+}
+
+// Product name to session type mapping
+const PRODUCT_TO_SESSION_TYPE = {
+  'Talendro™ Interview Coach - Quick Prep': 'quick_prep',
+  'Talendro™ Interview Coach - Full Mock': 'full_mock',
+  'Talendro™ Interview Coach - Premium Audio': 'audio_mock',
+  'Talendro™ Interview Coach Pro': 'pro'
+};
+
+// ============================================
 // GOOGLE SHEETS CONFIGURATION
 // ============================================
 
@@ -274,6 +295,76 @@ async function validateSession(email, sessionType) {
 // ============================================
 // API ENDPOINTS
 // ============================================
+
+// Resolve Stripe checkout session to get customer email and product
+app.get('/api/resolve-stripe-session', async (req, res) => {
+  try {
+    const { session_id } = req.query;
+    
+    if (!session_id) {
+      return res.status(400).json({ error: 'Session ID required' });
+    }
+    
+    if (!stripe) {
+      console.error('Stripe not configured');
+      return res.status(500).json({ error: 'Stripe not configured' });
+    }
+    
+    // Retrieve the checkout session from Stripe
+    const session = await stripe.checkout.sessions.retrieve(session_id, {
+      expand: ['line_items', 'line_items.data.price.product']
+    });
+    
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    
+    // Get customer email
+    const email = session.customer_details?.email || session.customer_email;
+    
+    if (!email) {
+      return res.status(400).json({ error: 'No email found in session' });
+    }
+    
+    // Get product name and map to session type
+    let sessionType = 'quick_prep'; // default
+    
+    if (session.line_items?.data?.length > 0) {
+      const productName = session.line_items.data[0].price?.product?.name || 
+                          session.line_items.data[0].description;
+      
+      // Try exact match first
+      if (PRODUCT_TO_SESSION_TYPE[productName]) {
+        sessionType = PRODUCT_TO_SESSION_TYPE[productName];
+      } else {
+        // Try partial matching
+        const productLower = productName?.toLowerCase() || '';
+        if (productLower.includes('full mock')) {
+          sessionType = 'full_mock';
+        } else if (productLower.includes('audio') || productLower.includes('premium')) {
+          sessionType = 'audio_mock';
+        } else if (productLower.includes('pro')) {
+          sessionType = 'pro';
+        } else if (productLower.includes('quick prep')) {
+          sessionType = 'quick_prep';
+        }
+      }
+    }
+    
+    console.log(`Resolved Stripe session: email=${email}, sessionType=${sessionType}`);
+    
+    res.json({ 
+      success: true, 
+      email, 
+      sessionType,
+      redirectUrl: `/?session_type=${sessionType}&email=${encodeURIComponent(email)}`
+    });
+    
+  } catch (error) {
+    console.error('Error resolving Stripe session:', error);
+    res.status(500).json({ error: 'Failed to resolve session', details: error.message });
+  }
+});
 
 app.post('/api/check-session', async (req, res) => {
   try {
