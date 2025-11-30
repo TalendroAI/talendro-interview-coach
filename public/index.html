@@ -936,6 +936,29 @@
             box-shadow: none;
         }
 
+        .sidebar-start-btn {
+            width: 100%;
+            margin-top: 16px;
+            padding: 14px 16px;
+            font-size: 14px;
+        }
+
+        .sidebar-start-btn .field-number {
+            background: rgba(255,255,255,0.25);
+        }
+
+        .btn-complete {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .complete-number {
+            background: var(--talendro-slate);
+            color: var(--white);
+        }
+
         .message {
             max-width: 80%;
             padding: 14px 18px;
@@ -1306,6 +1329,10 @@
                             <span id="urlStatusText">Not provided</span>
                         </div>
                     </div>
+
+                    <button class="start-prep-btn sidebar-start-btn" id="startPrepBtn">
+                        <span class="field-number">4</span> 🚀 Start My Interview Prep
+                    </button>
                 </div>
 
                 <div class="sidebar-card">
@@ -1317,7 +1344,9 @@
                         <option value="audio_mock">Premium Audio Mock ($49)</option>
                         <option value="pro">Interview Coach Pro</option>
                     </select>
-                    <button class="btn btn-complete" id="completeSessionBtn">Complete Session</button>
+                    <button class="btn btn-complete" id="completeSessionBtn">
+                        <span class="field-number complete-number">5</span> Complete Session
+                    </button>
                 </div>
             </aside>
 
@@ -1340,16 +1369,13 @@
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">4</span>
-                                <span class="welcome-step-text">Click the button below to generate your prep packet</span>
+                                <span class="welcome-step-text">Click <strong>"Start My Interview Prep"</strong> to generate your prep packet</span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">5</span>
-                                <span class="welcome-step-text">When finished, click <strong>"Complete Session"</strong> to receive your results via email</span>
+                                <span class="welcome-step-text">Click <strong>"Complete Session"</strong> to receive your results via email</span>
                             </div>
                         </div>
-                        <button class="start-prep-btn" id="startPrepBtn">
-                            🚀 Start My Interview Prep
-                        </button>
                     </div>
                 </div>
 
@@ -1669,7 +1695,7 @@
                 }
                 
                 completeSessionBtn.disabled = true;
-                completeSessionBtn.textContent = 'Completing...';
+                completeSessionBtn.innerHTML = '<span class="field-number complete-number">5</span> Completing...';
                 
                 const transcriptText = conversationHistory.map(msg => {
                     const role = msg.role === 'user' ? '[USER]' : '[COACH]';
@@ -1702,7 +1728,7 @@
                     const data = await response.json();
                     
                     if (data.success) {
-                        completeSessionBtn.textContent = 'Session Complete!';
+                        completeSessionBtn.innerHTML = '<span class="field-number complete-number">5</span> Session Complete!';
                         completeSessionBtn.style.background = '#00C4CC';
                         addMessage('Your session is complete! You will receive an email shortly with your interview prep materials. You can also access this prep packet anytime by visiting this link again. Thank you for using Talendro Interview Coach!', 'assistant');
                         chatInput.disabled = true;
@@ -1713,7 +1739,7 @@
                 } catch (error) {
                     console.error('Complete session error:', error);
                     completeSessionBtn.disabled = false;
-                    completeSessionBtn.textContent = 'Complete Session';
+                    completeSessionBtn.innerHTML = '<span class="field-number complete-number">5</span> Complete Session';
                     alert('Error completing session. Please try again.');
                 }
             }
