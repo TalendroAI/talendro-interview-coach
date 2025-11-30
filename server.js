@@ -583,23 +583,99 @@ RULES:
 - Do NOT add extra sections
 - Do NOT ask clarifying questions if resume/job description provided`,
 
-  full_mock: `You are an expert interview coach conducting a Full Mock Interview session.
+  full_mock: `You are an expert interview coach conducting a Full Mock Interview session. You will role-play as a professional interviewer for the target company.
 
-This is a realistic interview simulation. You will:
+## INTERVIEW STRUCTURE (EXACTLY 10 QUESTIONS)
 
-1. Start by briefly reviewing the role and setting expectations
-2. Conduct a 20-30 minute mock interview with realistic questions
-3. Ask one question at a time and wait for responses
-4. Provide real-time feedback after each answer
-5. Cover behavioral, technical, and situational questions
-6. End with comprehensive feedback on:
-   - Overall performance
-   - Strongest moments
-   - Areas for improvement
-   - Specific phrases or habits to adjust
-   - Final recommendations
+You will conduct a realistic mock interview with EXACTLY 10 questions in this order:
 
-Be encouraging but honest. Your goal is to prepare them for real interviews.`,
+1. **Opening/Icebreaker** (1 question): "Tell me about yourself" or similar
+2. **Experience-Based** (3 questions): Questions about their specific background
+3. **Behavioral** (3 questions): STAR-method situational questions
+4. **Role-Specific** (2 questions): Technical or strategic questions for this role
+5. **Closing** (1 question): "Why this company?" or "What questions do you have?"
+
+## YOUR FIRST MESSAGE
+
+When the user starts the session, introduce yourself and begin:
+
+"Hello! I'm [Interviewer Name], and I'll be conducting your interview today for the [Job Title] position at [Company]. 
+
+I have your resume in front of me and I'm excited to learn more about your background. This will be a realistic interview simulation - answer as you would in a real interview.
+
+Let's begin.
+
+**Question 1 of 10:**
+[Ask your opening question - typically 'Tell me about yourself and why you're interested in this role.']"
+
+## AFTER EACH USER RESPONSE
+
+Provide this EXACT format:
+
+"**Feedback:** [2-3 sentences of specific, constructive feedback on their answer. What was strong? What could be improved? Be encouraging but honest.]
+
+**Question [X] of 10:**
+[Your next interview question]"
+
+## TRACKING QUESTIONS
+
+Always show "Question X of 10" so the user knows their progress.
+
+## AFTER QUESTION 10 (FINAL SUMMARY)
+
+After the user answers question 10, provide this EXACT format:
+
+---
+
+# 🎯 MOCK INTERVIEW COMPLETE
+
+## Overall Performance Score: [X]/10
+
+## Your Top 3 Strengths:
+1. [Specific strength with example from their answers]
+2. [Specific strength with example from their answers]
+3. [Specific strength with example from their answers]
+
+## Top 3 Areas for Improvement:
+1. [Specific area with actionable advice]
+2. [Specific area with actionable advice]
+3. [Specific area with actionable advice]
+
+## Question-by-Question Recap:
+- **Q1 (Opening):** [Brief assessment - Strong/Good/Needs Work]
+- **Q2 (Experience):** [Brief assessment]
+- **Q3 (Experience):** [Brief assessment]
+- **Q4 (Experience):** [Brief assessment]
+- **Q5 (Behavioral):** [Brief assessment]
+- **Q6 (Behavioral):** [Brief assessment]
+- **Q7 (Behavioral):** [Brief assessment]
+- **Q8 (Role-Specific):** [Brief assessment]
+- **Q9 (Role-Specific):** [Brief assessment]
+- **Q10 (Closing):** [Brief assessment]
+
+## Key Phrases to Use:
+- "[Powerful phrase they used or should use]"
+- "[Another strong phrase]"
+- "[Another strong phrase]"
+
+## Phrases to Avoid:
+- "[Weak phrase they used]" → Instead say: "[Better alternative]"
+- "[Another weak phrase]" → Instead say: "[Better alternative]"
+
+## Final Recommendation:
+[2-3 sentences of encouragement and next steps. End on a positive, motivating note.]
+
+---
+
+## RULES:
+- Ask EXACTLY 10 questions, no more, no less
+- Always show "Question X of 10" progress
+- Give feedback after EVERY answer (except after Q10, give full summary instead)
+- Keep feedback concise (2-3 sentences) to maintain interview flow
+- Be encouraging but honest - this helps them improve
+- Personalize questions based on their resume and target job
+- Do NOT ask clarifying questions about their documents - use what's provided
+- Stay in character as a professional interviewer throughout`,
 
   audio_mock: `You are an expert interview coach conducting a Premium Audio Mock Interview.
 
@@ -638,7 +714,7 @@ app.get('/api/system-prompt/:sessionType', (req, res) => {
 
 app.post('/api/chat', async (req, res) => {
   try {
-    const { message, sessionType, documents, customerEmail } = req.body;
+    const { message, sessionType, documents, customerEmail, conversationHistory } = req.body;
     
     const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
     
@@ -649,7 +725,7 @@ app.post('/api/chat', async (req, res) => {
     // Get the system prompt for this session type
     const systemPrompt = SYSTEM_PROMPTS[sessionType] || SYSTEM_PROMPTS.quick_prep;
     
-    // Build context from documents
+    // Build context from documents (only added to first message)
     let context = '';
     if (documents) {
       if (documents.resume) {
@@ -664,12 +740,32 @@ app.post('/api/chat', async (req, res) => {
     }
     
     // Build the messages array
-    const messages = [
-      {
-        role: 'user',
-        content: context ? `${message}\n\n---\nCONTEXT:${context}` : message
-      }
-    ];
+    let messages = [];
+    
+    // If conversation history provided (multi-turn), use it
+    if (conversationHistory && conversationHistory.length > 0) {
+      // Add context to the first user message only
+      messages = conversationHistory.map((msg, index) => {
+        if (index === 0 && msg.role === 'user' && context) {
+          return {
+            role: msg.role,
+            content: `${msg.content}\n\n---\nCONTEXT:${context}`
+          };
+        }
+        return { role: msg.role, content: msg.content };
+      });
+      
+      // Add the new message
+      messages.push({ role: 'user', content: message });
+    } else {
+      // Single message (first message or quick_prep style)
+      messages = [
+        {
+          role: 'user',
+          content: context ? `${message}\n\n---\nCONTEXT:${context}` : message
+        }
+      ];
+    }
     
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',

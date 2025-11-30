@@ -1544,6 +1544,50 @@
             sessionTypeDisplay.textContent = sessionTypeLabels[urlSessionType];
             sessionBadge.textContent = sessionTypeLabels[urlSessionType].toUpperCase();
             
+            // Full Mock Interview customization
+            if (urlSessionType === 'full_mock') {
+                const welcomeMessage = document.getElementById('welcomeMessage');
+                if (welcomeMessage) {
+                    welcomeMessage.innerHTML = `
+                        <h2>🎯 Full Mock Interview</h2>
+                        <div class="welcome-steps">
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">1</span>
+                                <span class="welcome-step-text">Paste your <strong>résumé text</strong>, <strong>job description</strong>, and <strong>company URL</strong> in the sidebar</span>
+                            </div>
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">2</span>
+                                <span class="welcome-step-text">Click <strong>"Start My Mock Interview"</strong> to begin</span>
+                            </div>
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">3</span>
+                                <span class="welcome-step-text">Answer <strong>10 interview questions</strong> — type your responses in the chat</span>
+                            </div>
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">4</span>
+                                <span class="welcome-step-text">Receive <strong>real-time feedback</strong> after each answer</span>
+                            </div>
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">5</span>
+                                <span class="welcome-step-text">Get a <strong>comprehensive score</strong> and improvement tips at the end</span>
+                            </div>
+                        </div>
+                        <p style="margin-top: 20px; color: #666; font-size: 14px;">💡 <em>Tip: Answer as you would in a real interview — be specific and use examples</em></p>
+                    `;
+                }
+                
+                // Update button text for Full Mock
+                if (startPrepBtn) {
+                    startPrepBtn.innerHTML = '🎯 Start My Mock Interview';
+                }
+                
+                // Update chat input placeholder for Full Mock
+                const chatInputEl = document.getElementById('chatInput');
+                if (chatInputEl) {
+                    chatInputEl.placeholder = 'Type your answer...';
+                }
+            }
+            
             if (urlSessionType === 'audio_mock') {
                 const welcomeMessage = document.getElementById('welcomeMessage');
                 if (welcomeMessage) {
@@ -1607,7 +1651,11 @@
                     }
                     
                     startPrepBtn.disabled = true;
-                    startPrepBtn.innerHTML = '⏳ Generating your prep packet...';
+                    if (urlSessionType === 'full_mock') {
+                        startPrepBtn.innerHTML = '⏳ Starting your interview...';
+                    } else {
+                        startPrepBtn.innerHTML = '⏳ Generating your prep packet...';
+                    }
                     
                     if (urlSessionType === 'full_mock' || urlSessionType === 'audio_mock') {
                         fetch('/api/start-session', {
@@ -1625,7 +1673,11 @@
             }
             
             function sendStartMessage() {
-                const message = 'Start my interview prep';
+                // Use different start message based on session type
+                const message = urlSessionType === 'full_mock' 
+                    ? 'Start my mock interview' 
+                    : 'Start my interview prep';
+                    
                 isLoading = true;
                 sendBtn.disabled = true;
                 
@@ -1654,12 +1706,21 @@
                         addMessage('Sorry, there was an error. Please try again.', 'assistant');
                         // Reset button so they can try again
                         startPrepBtn.disabled = false;
-                        startPrepBtn.innerHTML = '🚀 Start My Interview Prep';
+                        if (urlSessionType === 'full_mock') {
+                            startPrepBtn.innerHTML = '🎯 Start My Mock Interview';
+                        } else {
+                            startPrepBtn.innerHTML = '🚀 Start My Interview Prep';
+                        }
                     } else {
                         addMessage(data.message, 'assistant');
-                        // Show completion state
-                        startPrepBtn.innerHTML = '✅ Prep Complete';
-                        startPrepBtn.style.background = '#10B981';
+                        // Show completion/started state based on session type
+                        if (urlSessionType === 'full_mock') {
+                            startPrepBtn.innerHTML = '🎯 Interview in Progress';
+                            startPrepBtn.style.background = '#2F6DF6';
+                        } else {
+                            startPrepBtn.innerHTML = '✅ Prep Complete';
+                            startPrepBtn.style.background = '#10B981';
+                        }
                     }
                 })
                 .catch(error => {
@@ -1667,7 +1728,11 @@
                     addMessage('Sorry, there was a connection error. Please try again.', 'assistant');
                     // Reset button so they can try again
                     startPrepBtn.disabled = false;
-                    startPrepBtn.innerHTML = '🚀 Start My Interview Prep';
+                    if (urlSessionType === 'full_mock') {
+                        startPrepBtn.innerHTML = '🎯 Start My Mock Interview';
+                    } else {
+                        startPrepBtn.innerHTML = '🚀 Start My Interview Prep';
+                    }
                 })
                 .finally(() => {
                     isLoading = false;
@@ -1786,6 +1851,9 @@
                 chatInput.value = '';
                 chatInput.style.height = 'auto';
                 
+                // Get history BEFORE adding new message (for API call)
+                const historyForApi = [...conversationHistory];
+                
                 addMessage(message, 'user');
                 showTyping();
                 
@@ -1797,7 +1865,8 @@
                         sessionId: sessionId,
                         sessionType: sessionType.value,
                         documents: documents,
-                        customerEmail: customerEmail
+                        customerEmail: customerEmail,
+                        conversationHistory: historyForApi
                     })
                 })
                 .then(response => response.json())
