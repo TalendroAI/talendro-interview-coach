@@ -89,6 +89,16 @@ async function getUserData(email) {
     
     const row = response.data.values ? response.data.values[0] : [];
     
+    // DEBUG LOGGING
+    console.log('=== DEBUG getUserData ===');
+    console.log('Row number:', rowNum);
+    console.log('Row length:', row.length);
+    console.log('Row[22] (Quick Prep Remaining):', row[22]);
+    console.log('Row[25] (Full Mock Remaining):', row[25]);
+    console.log('Row[35] (Full Mock Status):', row[35]);
+    console.log('Full row data:', JSON.stringify(row));
+    console.log('=========================');
+    
     return {
       rowNum,
       email: row[2] || '',
@@ -664,6 +674,21 @@ After the user answers question 10, provide this EXACT format:
 
 ## Final Recommendation:
 [2-3 sentences of encouragement and next steps. End on a positive, motivating note.]
+
+## 📚 Bonus Practice Questions
+Practice these additional questions on your own to strengthen your interview skills:
+
+### Experience-Based:
+- [Additional experience question related to their background]
+- [Another experience question]
+
+### Behavioral (STAR Method):
+- [Additional behavioral question]
+- [Another behavioral question]
+
+### Role-Specific:
+- [Additional technical/strategic question for this role]
+- [Another role-specific question]
 
 ---
 
