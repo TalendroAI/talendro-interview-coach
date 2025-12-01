@@ -481,7 +481,7 @@ app.post('/api/save-transcript', async (req, res) => {
 // Generate polished interview debrief for Full Mock
 app.post('/api/generate-debrief', async (req, res) => {
   try {
-    const { conversationHistory, documents } = req.body;
+    const { conversationHistory, documents, sessionType } = req.body;
     
     if (!conversationHistory || conversationHistory.length === 0) {
       return res.status(400).json({ error: 'Conversation history required' });
@@ -492,6 +492,15 @@ app.post('/api/generate-debrief', async (req, res) => {
       const role = msg.role === 'user' ? 'CANDIDATE' : 'INTERVIEWER';
       return `${role}: ${msg.content}`;
     }).join('\n\n');
+    
+    // Determine session type label
+    const sessionTypeLabel = sessionType === 'audio_mock' 
+      ? 'Premium Audio Mock Interview' 
+      : 'Full Mock Interview';
+    
+    // Count questions (approximate based on interviewer messages)
+    const interviewerMessages = conversationHistory.filter(msg => msg.role === 'assistant');
+    const questionCount = Math.max(interviewerMessages.length, 5);
     
     // Extract document info
     const resume = documents?.resume || 'Not provided';
@@ -517,8 +526,8 @@ Create a comprehensive Interview Debrief Document with this EXACT structure:
 
 ## Session Overview
 - **Date:** ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-- **Session Type:** Full Mock Interview
-- **Questions Completed:** 10
+- **Session Type:** ${sessionTypeLabel}
+- **Questions Completed:** ${questionCount}
 
 ---
 
@@ -569,7 +578,7 @@ Create a comprehensive Interview Debrief Document with this EXACT structure:
 **Your Response Summary:** [2-3 sentence summary of their answer]
 **Assessment:** [Strong / Good / Needs Work] - [Brief feedback]
 
-[Continue for all 10 questions...]
+[Continue for all questions in the transcript...]
 
 ---
 
