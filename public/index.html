@@ -1414,8 +1414,9 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success && data.redirectUrl) {
-                        // Redirect to the proper session URL
-                        window.location.href = data.redirectUrl;
+                        // Redirect to the proper session URL with fresh_purchase flag
+                        const redirectUrl = data.redirectUrl + '&fresh_purchase=true';
+                        window.location.href = redirectUrl;
                     } else {
                         // Show error
                         document.body.innerHTML = `
@@ -1514,26 +1515,111 @@
                 .replace(/\n/g, '<br>');
         }
         
-        // Main initialization
+        // Check if this is a fresh purchase (just completed Stripe payment)
+        const isFreshPurchase = urlParams.get('fresh_purchase') === 'true';
+        
+        // Show payment confirmation waiting screen
+        function showPaymentConfirmationScreen(attempt, maxAttempts) {
+            const progressPercent = Math.round((attempt / maxAttempts) * 100);
+            loadingScreen.innerHTML = `
+                <div style="text-align: center; padding: 40px;">
+                    <div style="font-size: 48px; margin-bottom: 20px;">💳</div>
+                    <h2 style="color: #2F6DF6; margin-bottom: 10px;">Confirming your purchase...</h2>
+                    <p style="color: #666; margin-bottom: 20px;">This usually takes 5-15 seconds.</p>
+                    <div style="width: 200px; height: 8px; background: #E2E8F0; border-radius: 4px; margin: 0 auto 12px;">
+                        <div style="width: ${progressPercent}%; height: 100%; background: linear-gradient(90deg, #2F6DF6, #00C4CC); border-radius: 4px; transition: width 0.3s;"></div>
+                    </div>
+                    <p style="color: #999; font-size: 12px;">Attempt ${attempt} of ${maxAttempts}</p>
+                </div>
+            `;
+            loadingScreen.classList.add('active');
+            landingPage.classList.remove('active');
+            chatApp.classList.remove('active');
+            accessDeniedScreen.classList.remove('active');
+            transcriptScreen.classList.remove('active');
+        }
+        
+        // Check session with retry support
+        async function checkSession() {
+            const response = await fetch('/api/check-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: customerEmail,
+                    sessionType: urlSessionType
+                })
+            });
+            return await response.json();
+        }
+        
+        // Main initialization with retry for fresh purchases
         async function validateAndInitialize() {
             if (!urlSessionType || !validSessionTypes.includes(urlSessionType)) {
                 showLandingPage();
                 return;
             }
             
+            const maxAttempts = 15;  // 15 attempts x 2 seconds = 30 seconds max
+            const retryInterval = 2000;  // 2 seconds between attempts
+            
+            // For fresh purchases, show confirmation screen and retry
+            if (isFreshPurchase) {
+                for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                    showPaymentConfirmationScreen(attempt, maxAttempts);
+                    
+                    try {
+                        const result = await checkSession();
+                        
+                        // If allowed, we're good!
+                        if (result.allowed) {
+                            // Remove fresh_purchase param and reload cleanly
+                            const cleanUrl = new URL(window.location.href);
+                            cleanUrl.searchParams.delete('fresh_purchase');
+                            window.history.replaceState({}, '', cleanUrl);
+                            
+                            showChatApp();
+                            initializeChatApp();
+                            return;
+                        }
+                        
+                        // If there's a transcript (already completed), show it
+                        if (result.hasTranscript && result.transcript) {
+                            showTranscript(result.transcript);
+                            return;
+                        }
+                        
+                        // If not allowed yet and not last attempt, wait and retry
+                        if (attempt < maxAttempts) {
+                            await new Promise(resolve => setTimeout(resolve, retryInterval));
+                        }
+                        
+                    } catch (error) {
+                        console.error('Session check error (attempt ' + attempt + '):', error);
+                        if (attempt < maxAttempts) {
+                            await new Promise(resolve => setTimeout(resolve, retryInterval));
+                        }
+                    }
+                }
+                
+                // All attempts failed - show helpful error
+                loadingScreen.innerHTML = `
+                    <div style="text-align: center; padding: 40px;">
+                        <div style="font-size: 48px; margin-bottom: 20px;">⏰</div>
+                        <h2 style="color: #f59e0b; margin-bottom: 10px;">Taking longer than expected...</h2>
+                        <p style="color: #666; margin-bottom: 20px;">Your payment was successful! Our system is still processing it.</p>
+                        <p style="color: #666; margin-bottom: 24px;">You'll receive an email with your session link within a few minutes.</p>
+                        <button onclick="location.reload()" style="background: #2F6DF6; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; cursor: pointer; margin-right: 12px;">Try Again</button>
+                        <a href="/" style="color: #2F6DF6; text-decoration: none; font-size: 14px;">Return to Home</a>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Regular session check (not a fresh purchase)
             showLoadingScreen();
             
             try {
-                const response = await fetch('/api/check-session', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        email: customerEmail,
-                        sessionType: urlSessionType
-                    })
-                });
-                
-                const result = await response.json();
+                const result = await checkSession();
                 
                 if (result.error) {
                     showAccessDenied(result.message || result.error);
