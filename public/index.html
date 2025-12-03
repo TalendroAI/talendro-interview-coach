@@ -1400,7 +1400,6 @@
         // Check for Stripe session_id and resolve it
         const stripeSessionId = urlParams.get('session_id');
         if (stripeSessionId) {
-            // Show a loading message while we resolve the session
             document.body.innerHTML = `
                 <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: 'Inter', sans-serif;">
                     <div style="font-size: 48px; margin-bottom: 20px;">⏳</div>
@@ -1409,16 +1408,13 @@
                 </div>
             `;
             
-            // Call API to resolve the Stripe session
             fetch('/api/resolve-stripe-session?session_id=' + encodeURIComponent(stripeSessionId))
                 .then(response => response.json())
                 .then(data => {
                     if (data.success && data.redirectUrl) {
-                        // Redirect to the proper session URL with fresh_purchase flag
                         const redirectUrl = data.redirectUrl + '&fresh_purchase=true';
                         window.location.href = redirectUrl;
                     } else {
-                        // Show error
                         document.body.innerHTML = `
                             <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: 'Inter', sans-serif;">
                                 <div style="font-size: 48px; margin-bottom: 20px;">❌</div>
@@ -1441,7 +1437,6 @@
                     `;
                 });
             
-            // Stop further script execution since we're redirecting
             throw new Error('Redirecting after session resolution');
         }
         
@@ -1462,7 +1457,6 @@
         const accessDeniedScreen = document.getElementById('accessDeniedScreen');
         const transcriptScreen = document.getElementById('transcriptScreen');
         
-        // Screen management functions
         function showLoadingScreen() {
             loadingScreen.classList.add('active');
             landingPage.classList.remove('active');
@@ -1515,10 +1509,8 @@
                 .replace(/\n/g, '<br>');
         }
         
-        // Check if this is a fresh purchase (just completed Stripe payment)
         const isFreshPurchase = urlParams.get('fresh_purchase') === 'true';
         
-        // Check session with backend
         async function checkSession() {
             const response = await fetch('/api/check-session', {
                 method: 'POST',
@@ -1531,28 +1523,22 @@
             return await response.json();
         }
         
-        // Main initialization - FIXED: Instant access for fresh purchases
         async function validateAndInitialize() {
             if (!urlSessionType || !validSessionTypes.includes(urlSessionType)) {
                 showLandingPage();
                 return;
             }
             
-            // ⭐ FIXED: If this is a fresh purchase, grant IMMEDIATE access
-            // Stripe already verified payment in the redirect flow - no need to wait for Zapier
             if (isFreshPurchase) {
-                // Remove fresh_purchase param for clean URL
                 const cleanUrl = new URL(window.location.href);
                 cleanUrl.searchParams.delete('fresh_purchase');
                 window.history.replaceState({}, '', cleanUrl);
                 
-                // Grant immediate access - Zapier will update credits in background
                 showChatApp();
                 initializeChatApp();
                 return;
             }
             
-            // Regular session check (not a fresh purchase - checking existing credits)
             showLoadingScreen();
             
             try {
@@ -1646,18 +1632,17 @@
                     `;
                 }
                 
-                // Update button text for Full Mock
                 if (startPrepBtn) {
                     startPrepBtn.innerHTML = '🎯 Start My Mock Interview';
                 }
                 
-                // Update chat input placeholder for Full Mock
                 const chatInputEl = document.getElementById('chatInput');
                 if (chatInputEl) {
                     chatInputEl.placeholder = 'Type your answer...';
                 }
             }
             
+            // FIXED Audio Mock - uses ElevenLabs widget instead of broken client library
             if (urlSessionType === 'audio_mock') {
                 const welcomeMessage = document.getElementById('welcomeMessage');
                 if (welcomeMessage) {
@@ -1689,12 +1674,6 @@
                     `;
                 }
                 
-                // Audio Mock: Use ElevenLabs widget with transcript capture
-                const script = document.createElement('script');
-                script.src = 'https://unpkg.com/@elevenlabs/convai-widget-embed';
-                script.async = true;
-                document.head.appendChild(script);
-                
                 // Create audio controls container
                 const audioControls = document.createElement('div');
                 audioControls.id = 'audioControls';
@@ -1707,11 +1686,14 @@
                         🎙️ Start Voice Interview
                     </button>
                     <button id="endVoiceBtn" style="background: #dc2626; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; display: none;">
-                        ⏹️ End Call
+                        ⏹️ End Interview
                     </button>
+                    <div id="elevenLabsContainer" style="width: 100%; display: none;">
+                        <!-- ElevenLabs widget will be inserted here -->
+                    </div>
                     <div id="voiceTranscript" style="width: 100%; max-height: 300px; overflow-y: auto; background: white; border-radius: 8px; padding: 16px; display: none; border: 1px solid #e2e8f0;">
-                        <h4 style="margin-bottom: 12px; color: #374151;">Live Transcript</h4>
-                        <div id="transcriptContent" style="font-size: 14px; line-height: 1.6;"></div>
+                        <h4 style="margin-bottom: 12px; color: #374151;">Interview Active</h4>
+                        <div id="transcriptContent" style="font-size: 14px; line-height: 1.6;">Speak naturally with your AI interviewer. The conversation is being conducted through the widget above.</div>
                     </div>
                 `;
                 
@@ -1721,8 +1703,7 @@
                 document.querySelector('.chat-input-container').style.display = 'none';
                 
                 // Audio Mock state
-                let audioConversation = null;
-                let audioTranscript = [];
+                let widgetElement = null;
                 
                 // Start voice interview
                 document.getElementById('startVoiceBtn').addEventListener('click', async function() {
@@ -1730,75 +1711,55 @@
                     const endBtn = document.getElementById('endVoiceBtn');
                     const statusEl = document.getElementById('connectionStatus');
                     const transcriptBox = document.getElementById('voiceTranscript');
-                    const transcriptContent = document.getElementById('transcriptContent');
+                    const widgetContainer = document.getElementById('elevenLabsContainer');
                     
                     startBtn.disabled = true;
                     startBtn.innerHTML = '⏳ Connecting...';
                     statusEl.textContent = '🟡 Connecting to AI coach...';
                     
                     try {
-                        // Get signed URL from server
-                        const response = await fetch('/api/signed-url');
-                        const data = await response.json();
+                        // Get the agent ID from server config
+                        const configResponse = await fetch('/api/config');
+                        const config = await configResponse.json();
+                        const agentId = config.agentId;
                         
-                        if (!data.signedUrl) {
-                            throw new Error('Failed to get signed URL');
+                        if (!agentId) {
+                            throw new Error('Agent ID not configured');
                         }
                         
-                        // Load ElevenLabs SDK
-                        const { Conversation } = await import('https://unpkg.com/@elevenlabs/client@latest/+esm');
+                        // Load the ElevenLabs widget script if not already loaded
+                        if (!window.customElements.get('elevenlabs-convai')) {
+                            await new Promise((resolve, reject) => {
+                                const script = document.createElement('script');
+                                script.src = 'https://elevenlabs.io/convai-widget/index.js';
+                                script.async = true;
+                                script.onload = resolve;
+                                script.onerror = reject;
+                                document.head.appendChild(script);
+                            });
+                            // Wait a moment for custom element to register
+                            await new Promise(r => setTimeout(r, 500));
+                        }
                         
-                        // Start conversation with transcript capture
-                        audioConversation = await Conversation.startSession({
-                            signedUrl: data.signedUrl,
-                            onConnect: () => {
-                                statusEl.textContent = '🟢 Connected - Speak now!';
-                                startBtn.style.display = 'none';
-                                endBtn.style.display = 'block';
-                                transcriptBox.style.display = 'block';
-                                
-                                // Add to conversation history for session tracking
-                                conversationHistory.push({
-                                    role: 'system',
-                                    content: 'Voice interview session started'
-                                });
-                            },
-                            onDisconnect: () => {
-                                statusEl.textContent = '⚪ Call ended';
-                                startBtn.style.display = 'block';
-                                startBtn.disabled = false;
-                                startBtn.innerHTML = '🎙️ Start Voice Interview';
-                                endBtn.style.display = 'none';
-                            },
-                            onMessage: (message) => {
-                                // Capture transcript messages
-                                if (message.type === 'transcript') {
-                                    const role = message.role === 'user' ? 'user' : 'assistant';
-                                    const text = message.text || message.message;
-                                    
-                                    if (text && message.isFinal !== false) {
-                                        audioTranscript.push({ role, content: text });
-                                        conversationHistory.push({ role, content: text });
-                                        
-                                        // Update live transcript display
-                                        const msgDiv = document.createElement('div');
-                                        msgDiv.style.cssText = role === 'user' 
-                                            ? 'background: #e0f2fe; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px;'
-                                            : 'background: #f0fdf4; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px;';
-                                        msgDiv.innerHTML = `<strong>${role === 'user' ? 'You' : 'Coach'}:</strong> ${text}`;
-                                        transcriptContent.appendChild(msgDiv);
-                                        transcriptContent.scrollTop = transcriptContent.scrollHeight;
-                                    }
-                                }
-                            },
-                            onError: (error) => {
-                                console.error('Audio conversation error:', error);
-                                statusEl.textContent = '🔴 Error: ' + (error.message || 'Connection failed');
-                                startBtn.style.display = 'block';
-                                startBtn.disabled = false;
-                                startBtn.innerHTML = '🎙️ Start Voice Interview';
-                                endBtn.style.display = 'none';
-                            }
+                        // Create the widget element
+                        widgetElement = document.createElement('elevenlabs-convai');
+                        widgetElement.setAttribute('agent-id', agentId);
+                        
+                        // Clear container and add widget
+                        widgetContainer.innerHTML = '';
+                        widgetContainer.appendChild(widgetElement);
+                        widgetContainer.style.display = 'block';
+                        
+                        // Update UI
+                        statusEl.textContent = '🟢 Connected - Click the microphone in the widget to speak!';
+                        startBtn.style.display = 'none';
+                        endBtn.style.display = 'block';
+                        transcriptBox.style.display = 'block';
+                        
+                        // Track session start
+                        conversationHistory.push({
+                            role: 'system',
+                            content: 'Voice interview session started'
                         });
                         
                     } catch (error) {
@@ -1809,16 +1770,32 @@
                     }
                 });
                 
-                // End voice call
-                document.getElementById('endVoiceBtn').addEventListener('click', async function() {
-                    if (audioConversation) {
-                        try {
-                            await audioConversation.endSession();
-                        } catch (e) {
-                            console.log('Session end:', e);
-                        }
-                        audioConversation = null;
+                // End voice interview
+                document.getElementById('endVoiceBtn').addEventListener('click', function() {
+                    const startBtn = document.getElementById('startVoiceBtn');
+                    const endBtn = document.getElementById('endVoiceBtn');
+                    const statusEl = document.getElementById('connectionStatus');
+                    const widgetContainer = document.getElementById('elevenLabsContainer');
+                    
+                    // Remove the widget
+                    if (widgetElement) {
+                        widgetElement.remove();
+                        widgetElement = null;
                     }
+                    widgetContainer.style.display = 'none';
+                    
+                    // Reset UI
+                    statusEl.textContent = '⚪ Interview ended - click Complete Session to finish';
+                    startBtn.style.display = 'block';
+                    startBtn.disabled = false;
+                    startBtn.innerHTML = '🎙️ Start New Voice Interview';
+                    endBtn.style.display = 'none';
+                    
+                    // Add end marker to history
+                    conversationHistory.push({
+                        role: 'system',
+                        content: 'Voice interview session ended'
+                    });
                 });
                 
                 // Update button text for Audio Mock
@@ -1875,7 +1852,6 @@
             }
             
             function sendStartMessage() {
-                // Use different start message based on session type
                 const message = urlSessionType === 'full_mock' 
                     ? 'Start my mock interview' 
                     : 'Start my interview prep';
@@ -1886,7 +1862,6 @@
                 const welcome = document.querySelector('.welcome-message');
                 if (welcome) welcome.remove();
                 
-                // Track in history for transcript, but don't display in UI
                 conversationHistory.push({ role: 'user', content: message });
                 showTyping();
                 
@@ -1906,7 +1881,6 @@
                     hideTyping();
                     if (data.error) {
                         addMessage('Sorry, there was an error. Please try again.', 'assistant');
-                        // Reset button so they can try again
                         startPrepBtn.disabled = false;
                         if (urlSessionType === 'full_mock') {
                             startPrepBtn.innerHTML = '🎯 Start My Mock Interview';
@@ -1915,7 +1889,6 @@
                         }
                     } else {
                         addMessage(data.message, 'assistant');
-                        // Show completion/started state based on session type
                         if (urlSessionType === 'full_mock') {
                             startPrepBtn.innerHTML = '🎯 Interview in Progress';
                             startPrepBtn.style.background = '#2F6DF6';
@@ -1928,7 +1901,6 @@
                 .catch(error => {
                     hideTyping();
                     addMessage('Sorry, there was a connection error. Please try again.', 'assistant');
-                    // Reset button so they can try again
                     startPrepBtn.disabled = false;
                     if (urlSessionType === 'full_mock') {
                         startPrepBtn.innerHTML = '🎯 Start My Mock Interview';
@@ -1984,7 +1956,6 @@
                 try {
                     let transcriptToSave;
                     
-                    // For Full Mock and Audio Mock, generate a polished debrief document
                     if (sessionType.value === 'full_mock' || sessionType.value === 'audio_mock') {
                         completeSessionBtn.textContent = 'Generating your debrief...';
                         
@@ -2003,14 +1974,12 @@
                         if (debriefData.success && debriefData.debrief) {
                             transcriptToSave = debriefData.debrief;
                         } else {
-                            // Fallback to raw transcript if debrief generation fails
                             transcriptToSave = conversationHistory.map(msg => {
                                 const role = msg.role === 'user' ? '[USER]' : '[COACH]';
                                 return `${role}: ${msg.content}`;
                             }).join('\n\n');
                         }
                     } else {
-                        // For other session types, use raw transcript
                         transcriptToSave = conversationHistory.map(msg => {
                             const role = msg.role === 'user' ? '[USER]' : '[COACH]';
                             return `${role}: ${msg.content}`;
@@ -2085,7 +2054,6 @@
                 chatInput.value = '';
                 chatInput.style.height = 'auto';
                 
-                // Get history BEFORE adding new message (for API call)
                 const historyForApi = [...conversationHistory];
                 
                 addMessage(message, 'user');
