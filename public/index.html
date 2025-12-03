@@ -1904,90 +1904,6 @@
                 
                 startPrepBtn.innerHTML = '📋 Save Documents';
                 document.querySelector('.chat-input-container').style.display = 'none';
-                
-                // Audio Mock voice button handler
-                const startVoiceBtn = document.getElementById('startVoiceBtn');
-                let audioConversation = null;
-                let audioTranscript = [];
-                
-                startVoiceBtn.addEventListener('click', async function() {
-                    startVoiceBtn.disabled = true;
-                    startVoiceBtn.innerHTML = '⏳ Connecting...';
-                    step5Status.textContent = '🟡 Connecting to AI coach...';
-                    
-                    try {
-                        const response = await fetch('/api/signed-url');
-                        const data = await response.json();
-                        
-                        if (!data.signedUrl) {
-                            throw new Error('Failed to get signed URL');
-                        }
-                        
-                        const { Conversation } = await import('https://unpkg.com/@elevenlabs/client@latest/+esm');
-                        
-                        audioConversation = await Conversation.startSession({
-                            signedUrl: data.signedUrl,
-                            onConnect: () => {
-                                step5Number.classList.add('completed');
-                                step5Status.className = 'btn-status unlocked';
-                                step5Status.textContent = '🟢 Connected - Speak now!';
-                                startVoiceBtn.innerHTML = '🎙️ Interview Active';
-                                startVoiceBtn.style.background = '#10B981';
-                                
-                                // Enable complete button
-                                completeSessionBtn.disabled = false;
-                                completeStepNumber.classList.remove('disabled');
-                                completeStatus.className = 'btn-status unlocked';
-                                completeStatus.textContent = '✓ Click when finished speaking';
-                                
-                                sessionStarted = true;
-                                conversationHistory.push({ role: 'system', content: 'Voice interview session started' });
-                                
-                                // Show interview active message
-                                const welcome = document.querySelector('.welcome-message');
-                                if (welcome) {
-                                    welcome.innerHTML = `
-                                        <div style="background: linear-gradient(135deg, #10B981, #059669); color: white; padding: 32px; border-radius: 16px; text-align: center;">
-                                            <h2 style="color: white; margin-bottom: 16px;">🎙️ Interview In Progress</h2>
-                                            <p style="font-size: 18px; margin-bottom: 24px;">Your AI interviewer is listening. Speak naturally!</p>
-                                            <div style="background: rgba(255,255,255,0.2); padding: 16px; border-radius: 8px;">
-                                                <p style="margin: 0;">When finished, click <strong>"Complete Session"</strong> in the sidebar</p>
-                                            </div>
-                                        </div>
-                                    `;
-                                }
-                            },
-                            onDisconnect: () => {
-                                step5Status.textContent = '⚪ Call ended';
-                                startVoiceBtn.disabled = false;
-                                startVoiceBtn.innerHTML = '🎙️ Start Voice Interview';
-                                startVoiceBtn.style.background = 'linear-gradient(135deg, #10B981, #059669)';
-                            },
-                            onMessage: (message) => {
-                                if (message.type === 'transcript') {
-                                    const role = message.role === 'user' ? 'user' : 'assistant';
-                                    const text = message.text || message.message;
-                                    if (text && message.isFinal !== false) {
-                                        audioTranscript.push({ role, content: text });
-                                        conversationHistory.push({ role, content: text });
-                                    }
-                                }
-                            },
-                            onError: (error) => {
-                                console.error('Audio error:', error);
-                                step5Status.textContent = '🔴 Error: ' + (error.message || 'Connection failed');
-                                startVoiceBtn.disabled = false;
-                                startVoiceBtn.innerHTML = '🎙️ Start Voice Interview';
-                            }
-                        });
-                        
-                    } catch (error) {
-                        console.error('Failed to start audio:', error);
-                        step5Status.textContent = '🔴 Failed to connect. Try again.';
-                        startVoiceBtn.disabled = false;
-                        startVoiceBtn.innerHTML = '🎙️ Start Voice Interview';
-                    }
-                });
             }
             
             // Pro subscription customization
@@ -2131,6 +2047,92 @@
                         step4Status.textContent = '🔒 Complete steps 1-2 first';
                     }
                 };
+            }
+            
+            // Voice Interview Button Handler (works for both audio_mock and Pro with audio_mock selected)
+            const startVoiceBtn = document.getElementById('startVoiceBtn');
+            let audioConversation = null;
+            let audioTranscript = [];
+            
+            if (startVoiceBtn) {
+                startVoiceBtn.addEventListener('click', async function() {
+                    startVoiceBtn.disabled = true;
+                    startVoiceBtn.innerHTML = '⏳ Connecting...';
+                    step5Status.textContent = '🟡 Connecting to AI coach...';
+                    
+                    try {
+                        const response = await fetch('/api/signed-url');
+                        const data = await response.json();
+                        
+                        if (!data.signedUrl) {
+                            throw new Error('Failed to get signed URL');
+                        }
+                        
+                        const { Conversation } = await import('https://unpkg.com/@elevenlabs/client@latest/+esm');
+                        
+                        audioConversation = await Conversation.startSession({
+                            signedUrl: data.signedUrl,
+                            onConnect: () => {
+                                step5Number.classList.add('completed');
+                                step5Status.className = 'btn-status unlocked';
+                                step5Status.textContent = '🟢 Connected - Speak now!';
+                                startVoiceBtn.innerHTML = '🎙️ Interview Active';
+                                startVoiceBtn.style.background = '#10B981';
+                                
+                                // Enable complete button
+                                completeSessionBtn.disabled = false;
+                                completeStepNumber.classList.remove('disabled');
+                                completeStatus.className = 'btn-status unlocked';
+                                completeStatus.textContent = '✓ Click when finished speaking';
+                                
+                                sessionStarted = true;
+                                conversationHistory.push({ role: 'system', content: 'Voice interview session started' });
+                                
+                                // Show interview active message
+                                const welcome = document.querySelector('.welcome-message');
+                                if (welcome) {
+                                    welcome.innerHTML = `
+                                        <div style="background: linear-gradient(135deg, #10B981, #059669); color: white; padding: 32px; border-radius: 16px; text-align: center;">
+                                            <h2 style="color: white; margin-bottom: 16px;">🎙️ Interview In Progress</h2>
+                                            <p style="font-size: 18px; margin-bottom: 24px;">Your AI interviewer is listening. Speak naturally!</p>
+                                            <div style="background: rgba(255,255,255,0.2); padding: 16px; border-radius: 8px;">
+                                                <p style="margin: 0;">When finished, click <strong>"Complete Session"</strong> in the sidebar</p>
+                                            </div>
+                                        </div>
+                                    `;
+                                }
+                            },
+                            onDisconnect: () => {
+                                step5Status.textContent = '⚪ Call ended';
+                                startVoiceBtn.disabled = false;
+                                startVoiceBtn.innerHTML = '🎙️ Start Voice Interview';
+                                startVoiceBtn.style.background = 'linear-gradient(135deg, #10B981, #059669)';
+                            },
+                            onMessage: (message) => {
+                                if (message.type === 'transcript') {
+                                    const role = message.role === 'user' ? 'user' : 'assistant';
+                                    const text = message.text || message.message;
+                                    if (text && message.isFinal !== false) {
+                                        audioTranscript.push({ role, content: text });
+                                        conversationHistory.push({ role, content: text });
+                                    }
+                                }
+                            },
+                            onError: (error) => {
+                                console.error('Audio error:', error);
+                                step5Status.textContent = '🔴 Error: ' + (error.message || 'Connection failed');
+                                startVoiceBtn.disabled = false;
+                                startVoiceBtn.innerHTML = '🎙️ Start Voice Interview';
+                            }
+                        });
+                        
+                    } catch (error) {
+                        console.error('Failed to start audio:', error);
+                        step5Status.textContent = '🔴 Failed to connect. Try again.';
+                        startVoiceBtn.disabled = false;
+                        startVoiceBtn.innerHTML = '🎙️ Start Voice Interview';
+                    }
+                });
             }
             
             // Start Prep Button Handler
