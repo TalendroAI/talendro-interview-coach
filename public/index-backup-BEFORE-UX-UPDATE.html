@@ -839,93 +839,6 @@
             cursor: not-allowed;
         }
 
-        /* New: Disabled button states and status messages */
-        .btn:disabled,
-        .start-prep-btn:disabled,
-        .btn-complete:disabled {
-            background: #E5E8EB !important;
-            color: #9CA3AF !important;
-            cursor: not-allowed !important;
-            transform: none !important;
-            box-shadow: none !important;
-            border: 2px dashed #D1D5DB !important;
-        }
-
-        .btn-status {
-            font-size: 11px;
-            text-align: center;
-            margin-top: 6px;
-            padding: 4px 8px;
-            border-radius: 4px;
-        }
-
-        .btn-status.locked {
-            color: #9CA3AF;
-            background: #F3F4F6;
-        }
-
-        .btn-status.unlocked {
-            color: #10B981;
-            background: #ECFDF5;
-            font-weight: 500;
-        }
-
-        .field-number.disabled {
-            background: #D1D5DB;
-        }
-
-        .field-number.completed {
-            background: #10B981;
-        }
-
-        .highlight-keyword {
-            background: rgba(164, 244, 0, 0.25);
-            padding: 1px 4px;
-            border-radius: 3px;
-            font-weight: 600;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: none;
-            width: 100%;
-            margin-top: 16px;
-        }
-
-        .btn-primary {
-            background: var(--talendro-blue);
-            color: var(--white);
-        }
-
-        .btn-primary:hover {
-            background: #1E5AD8;
-        }
-
-        .btn-complete {
-            background: var(--bright-lime);
-            color: var(--talendro-slate);
-            margin-top: 12px;
-        }
-
-        .btn-complete:hover {
-            background: #8FD600;
-        }
-
-        .btn-complete:disabled {
-            background: var(--warm-gray);
-            color: var(--white);
-            cursor: not-allowed;
-        }
-
         .chat-container {
             flex: 1;
             background: var(--white);
@@ -1392,52 +1305,37 @@
                     <h3>Your Documents</h3>
                     
                     <div class="form-group">
-                        <label for="resume"><span class="field-number" id="step1Number">1</span> Résumé</label>
+                        <label for="resume"><span class="field-number">1</span> Résumé</label>
                         <textarea id="resume" placeholder="Paste your résumé text here..."></textarea>
                         <div class="status-indicator">
                             <span class="status-dot" id="resumeStatus"></span>
-                            <span id="resumeStatusText">Waiting for content</span>
+                            <span id="resumeStatusText">Not provided</span>
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label for="jobDescription"><span class="field-number" id="step2Number">2</span> Job Description</label>
+                        <label for="jobDescription"><span class="field-number">2</span> Job Description</label>
                         <textarea id="jobDescription" placeholder="Paste the job description text here..."></textarea>
                         <div class="status-indicator">
                             <span class="status-dot" id="jdStatus"></span>
-                            <span id="jdStatusText">Waiting for content</span>
+                            <span id="jdStatusText">Not provided</span>
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label for="companyUrl"><span class="field-number" id="step3Number">3</span> Company Website URL <span style="color: #9CA3AF; font-weight: normal;">(optional)</span></label>
+                        <label for="companyUrl"><span class="field-number">3</span> Company Website URL</label>
                         <input type="url" id="companyUrl" placeholder="https://company.com">
                         <div class="status-indicator">
                             <span class="status-dot" id="urlStatus"></span>
-                            <span id="urlStatusText">Optional but recommended</span>
+                            <span id="urlStatusText">Not provided</span>
                         </div>
                     </div>
 
-                    <!-- Step 4: Save/Start -->
                     <div class="numbered-button-row">
-                        <span class="field-number" id="step4Number">4</span>
-                        <div style="flex: 1;">
-                            <button class="start-prep-btn sidebar-start-btn" id="startPrepBtn" disabled>
-                                🚀 Start My Interview Prep
-                            </button>
-                            <div class="btn-status locked" id="step4Status">🔒 Complete steps 1-2 first</div>
-                        </div>
-                    </div>
-
-                    <!-- Step 5: Start Voice Interview (Audio Mock only, hidden for other types) -->
-                    <div class="numbered-button-row" id="step5Container" style="display: none;">
-                        <span class="field-number disabled" id="step5Number">5</span>
-                        <div style="flex: 1;">
-                            <button class="start-prep-btn sidebar-start-btn" id="startVoiceBtn" disabled style="background: linear-gradient(135deg, #10B981, #059669);">
-                                🎙️ Start Voice Interview
-                            </button>
-                            <div class="btn-status locked" id="step5Status">🔒 Save documents first (Step 4)</div>
-                        </div>
+                        <span class="field-number">4</span>
+                        <button class="start-prep-btn sidebar-start-btn" id="startPrepBtn">
+                            🚀 Start My Interview Prep
+                        </button>
                     </div>
                 </div>
 
@@ -1450,16 +1348,11 @@
                         <option value="audio_mock">Premium Audio Mock ($49)</option>
                         <option value="pro">Interview Coach Pro</option>
                     </select>
-                    
-                    <!-- Step 5 or 6: Complete Session -->
                     <div class="numbered-button-row">
-                        <span class="field-number disabled" id="completeStepNumber">5</span>
-                        <div style="flex: 1;">
-                            <button class="btn btn-complete" id="completeSessionBtn" disabled>
-                                ✅ Complete Session
-                            </button>
-                            <div class="btn-status locked" id="completeStatus">🔒 Start your session first</div>
-                        </div>
+                        <span class="field-number">5</span>
+                        <button class="btn btn-complete" id="completeSessionBtn">
+                            Complete Session
+                        </button>
                     </div>
                 </div>
             </aside>
@@ -1471,23 +1364,23 @@
                         <div class="welcome-steps">
                             <div class="welcome-step">
                                 <span class="welcome-step-number">1</span>
-                                <span class="welcome-step-text">Open your résumé file, press <span class="highlight-keyword">Ctrl+A</span> (select all), then <span class="highlight-keyword">Ctrl+C</span> (copy), then <span class="highlight-keyword">Ctrl+V</span> (paste) into the Résumé box</span>
+                                <span class="welcome-step-text">Copy and paste the <strong>text</strong> from your résumé into the sidebar (open your doc, select all, copy, paste)</span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">2</span>
-                                <span class="welcome-step-text">Go to the job posting, <span class="highlight-keyword">select all</span> the text, <span class="highlight-keyword">copy it</span>, and <span class="highlight-keyword">paste it</span> into the Job Description box</span>
+                                <span class="welcome-step-text">Copy and paste the <strong>job description text</strong></span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">3</span>
-                                <span class="welcome-step-text">Type or paste the <strong>company's website URL</strong> (optional but recommended)</span>
+                                <span class="welcome-step-text">Add the <strong>company website URL</strong></span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">4</span>
-                                <span class="welcome-step-text">Click <strong>"Start My Interview Prep"</strong> — the button will unlock once steps 1-2 are done</span>
+                                <span class="welcome-step-text">Click <strong>"Start My Interview Prep"</strong> to generate your prep packet</span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">5</span>
-                                <span class="welcome-step-text">When finished, click <strong>"Complete Session"</strong> to receive your results via email</span>
+                                <span class="welcome-step-text">Click <strong>"Complete Session"</strong> to receive your results via email</span>
                             </div>
                         </div>
                     </div>
@@ -1501,13 +1394,13 @@
         </main>
     </div>
 
-
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         
         // Check for Stripe session_id and resolve it
         const stripeSessionId = urlParams.get('session_id');
         if (stripeSessionId) {
+            // Show a loading message while we resolve the session
             document.body.innerHTML = `
                 <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: 'Inter', sans-serif;">
                     <div style="font-size: 48px; margin-bottom: 20px;">⏳</div>
@@ -1516,12 +1409,16 @@
                 </div>
             `;
             
+            // Call API to resolve the Stripe session
             fetch('/api/resolve-stripe-session?session_id=' + encodeURIComponent(stripeSessionId))
                 .then(response => response.json())
                 .then(data => {
                     if (data.success && data.redirectUrl) {
-                        window.location.href = data.redirectUrl + '&fresh_purchase=true';
+                        // Redirect to the proper session URL with fresh_purchase flag
+                        const redirectUrl = data.redirectUrl + '&fresh_purchase=true';
+                        window.location.href = redirectUrl;
                     } else {
+                        // Show error
                         document.body.innerHTML = `
                             <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: 'Inter', sans-serif;">
                                 <div style="font-size: 48px; margin-bottom: 20px;">❌</div>
@@ -1538,10 +1435,13 @@
                         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: 'Inter', sans-serif;">
                             <div style="font-size: 48px; margin-bottom: 20px;">❌</div>
                             <h2 style="color: #dc2626; margin-bottom: 10px;">Connection Error</h2>
+                            <p style="color: #666; margin-bottom: 20px;">Unable to connect to the server.</p>
                             <p style="color: #666;">Please check your email for the session link, or try again later.</p>
                         </div>
                     `;
                 });
+            
+            // Stop further script execution since we're redirecting
             throw new Error('Redirecting after session resolution');
         }
         
@@ -1562,6 +1462,7 @@
         const accessDeniedScreen = document.getElementById('accessDeniedScreen');
         const transcriptScreen = document.getElementById('transcriptScreen');
         
+        // Screen management functions
         function showLoadingScreen() {
             loadingScreen.classList.add('active');
             landingPage.classList.remove('active');
@@ -1614,8 +1515,10 @@
                 .replace(/\n/g, '<br>');
         }
         
+        // Check if this is a fresh purchase (just completed Stripe payment)
         const isFreshPurchase = urlParams.get('fresh_purchase') === 'true';
         
+        // Check session with backend
         async function checkSession() {
             const response = await fetch('/api/check-session', {
                 method: 'POST',
@@ -1628,21 +1531,28 @@
             return await response.json();
         }
         
+        // Main initialization - FIXED: Instant access for fresh purchases
         async function validateAndInitialize() {
             if (!urlSessionType || !validSessionTypes.includes(urlSessionType)) {
                 showLandingPage();
                 return;
             }
             
+            // ⭐ FIXED: If this is a fresh purchase, grant IMMEDIATE access
+            // Stripe already verified payment in the redirect flow - no need to wait for Zapier
             if (isFreshPurchase) {
+                // Remove fresh_purchase param for clean URL
                 const cleanUrl = new URL(window.location.href);
                 cleanUrl.searchParams.delete('fresh_purchase');
                 window.history.replaceState({}, '', cleanUrl);
+                
+                // Grant immediate access - Zapier will update credits in background
                 showChatApp();
                 initializeChatApp();
                 return;
             }
             
+            // Regular session check (not a fresh purchase - checking existing credits)
             showLoadingScreen();
             
             try {
@@ -1696,95 +1606,13 @@
             const urlStatus = document.getElementById('urlStatus');
             const urlStatusText = document.getElementById('urlStatusText');
             
-            // Step number elements
-            const step1Number = document.getElementById('step1Number');
-            const step2Number = document.getElementById('step2Number');
-            const step3Number = document.getElementById('step3Number');
-            const step4Number = document.getElementById('step4Number');
-            const step4Status = document.getElementById('step4Status');
-            const step5Container = document.getElementById('step5Container');
-            const step5Number = document.getElementById('step5Number');
-            const step5Status = document.getElementById('step5Status');
-            const completeStepNumber = document.getElementById('completeStepNumber');
-            const completeStatus = document.getElementById('completeStatus');
-            
             let documents = { resume: '', jobDescription: '', companyUrl: '' };
             let isLoading = false;
             let conversationHistory = [];
-            let sessionStarted = false;
-            let documentsSaved = false;
             
             sessionType.value = urlSessionType;
             sessionTypeDisplay.textContent = sessionTypeLabels[urlSessionType];
             sessionBadge.textContent = sessionTypeLabels[urlSessionType].toUpperCase();
-            
-            // Update step numbers based on session type
-            if (urlSessionType === 'audio_mock') {
-                step5Container.style.display = 'flex';
-                completeStepNumber.textContent = '6';
-                completeStatus.textContent = '🔒 Complete your voice interview first';
-            }
-            
-            // Function to check field content and update UI
-            function checkFieldsAndUpdateButtons() {
-                const hasResume = resumeInput.value.trim().length > 50;
-                const hasJD = jdInput.value.trim().length > 50;
-                const hasURL = urlInput.value.trim().length > 0;
-                
-                // Update step 1
-                if (hasResume) {
-                    step1Number.classList.add('completed');
-                    resumeStatus.classList.add('active');
-                    resumeStatusText.textContent = '✓ Ready';
-                } else {
-                    step1Number.classList.remove('completed');
-                    resumeStatus.classList.remove('active');
-                    resumeStatusText.textContent = 'Waiting for content';
-                }
-                
-                // Update step 2
-                if (hasJD) {
-                    step2Number.classList.add('completed');
-                    jdStatus.classList.add('active');
-                    jdStatusText.textContent = '✓ Ready';
-                } else {
-                    step2Number.classList.remove('completed');
-                    jdStatus.classList.remove('active');
-                    jdStatusText.textContent = 'Waiting for content';
-                }
-                
-                // Update step 3
-                if (hasURL) {
-                    step3Number.classList.add('completed');
-                    urlStatus.classList.add('active');
-                    urlStatusText.textContent = '✓ Added';
-                } else {
-                    step3Number.classList.remove('completed');
-                    urlStatus.classList.remove('active');
-                    urlStatusText.textContent = 'Optional but recommended';
-                }
-                
-                // Update step 4 (Start button)
-                if (hasResume && hasJD) {
-                    startPrepBtn.disabled = false;
-                    step4Number.classList.remove('disabled');
-                    step4Status.className = 'btn-status unlocked';
-                    step4Status.textContent = '✓ Ready to start';
-                } else {
-                    startPrepBtn.disabled = true;
-                    step4Number.classList.add('disabled');
-                    step4Status.className = 'btn-status locked';
-                    step4Status.textContent = '🔒 Complete steps 1-2 first';
-                }
-            }
-            
-            // Add event listeners for real-time field validation
-            resumeInput.addEventListener('input', checkFieldsAndUpdateButtons);
-            jdInput.addEventListener('input', checkFieldsAndUpdateButtons);
-            urlInput.addEventListener('input', checkFieldsAndUpdateButtons);
-            
-            // Initial check
-            checkFieldsAndUpdateButtons();
             
             // Full Mock Interview customization
             if (urlSessionType === 'full_mock') {
@@ -1795,15 +1623,15 @@
                         <div class="welcome-steps">
                             <div class="welcome-step">
                                 <span class="welcome-step-number">1</span>
-                                <span class="welcome-step-text">Open your résumé, press <span class="highlight-keyword">Ctrl+A</span> (select all), <span class="highlight-keyword">Ctrl+C</span> (copy), <span class="highlight-keyword">Ctrl+V</span> (paste) into the Résumé box</span>
+                                <span class="welcome-step-text">Paste your <strong>résumé text</strong> in the sidebar</span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">2</span>
-                                <span class="welcome-step-text">Go to the job posting, <span class="highlight-keyword">select all</span> text, <span class="highlight-keyword">copy it</span>, <span class="highlight-keyword">paste it</span> into Job Description</span>
+                                <span class="welcome-step-text">Paste the <strong>job description</strong> you're interviewing for</span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">3</span>
-                                <span class="welcome-step-text">Enter the <strong>company website URL</strong> (optional but recommended)</span>
+                                <span class="welcome-step-text">Enter the <strong>company website URL</strong></span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">4</span>
@@ -1811,17 +1639,25 @@
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">5</span>
-                                <span class="welcome-step-text">Answer each question, then click <strong>"Complete Session"</strong> for your full score</span>
+                                <span class="welcome-step-text">Answer each question, receive feedback, then <strong>"Complete Session"</strong> for your full score</span>
                             </div>
                         </div>
-                        <p style="margin-top: 20px; color: #666; font-size: 14px;">💡 <em>Pro tip: Type your answers below, or use your device's voice-to-text to speak naturally!</em></p>
+                        <p style="margin-top: 20px; color: #666; font-size: 14px;">💡 <em>Pro tip: Type your answers in the chat below, or use your device's voice-to-text to speak naturally — just like a real interview!</em></p>
                     `;
                 }
-                startPrepBtn.innerHTML = '🎯 Start My Mock Interview';
-                chatInput.placeholder = 'Type your answer...';
+                
+                // Update button text for Full Mock
+                if (startPrepBtn) {
+                    startPrepBtn.innerHTML = '🎯 Start My Mock Interview';
+                }
+                
+                // Update chat input placeholder for Full Mock
+                const chatInputEl = document.getElementById('chatInput');
+                if (chatInputEl) {
+                    chatInputEl.placeholder = 'Type your answer...';
+                }
             }
             
-            // Audio Mock customization
             if (urlSessionType === 'audio_mock') {
                 const welcomeMessage = document.getElementById('welcomeMessage');
                 if (welcomeMessage) {
@@ -1830,47 +1666,78 @@
                         <div class="welcome-steps">
                             <div class="welcome-step">
                                 <span class="welcome-step-number">1</span>
-                                <span class="welcome-step-text">Open your résumé, press <span class="highlight-keyword">Ctrl+A</span> (select all), <span class="highlight-keyword">Ctrl+C</span> (copy), <span class="highlight-keyword">Ctrl+V</span> (paste) into the Résumé box</span>
+                                <span class="welcome-step-text">Paste your <strong>résumé text</strong> in the sidebar</span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">2</span>
-                                <span class="welcome-step-text">Go to the job posting, <span class="highlight-keyword">select all</span> text, <span class="highlight-keyword">copy it</span>, <span class="highlight-keyword">paste it</span> into Job Description</span>
+                                <span class="welcome-step-text">Paste the <strong>job description</strong> in the sidebar</span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">3</span>
-                                <span class="welcome-step-text">Enter the <strong>company website URL</strong> (optional but recommended)</span>
+                                <span class="welcome-step-text">Enter the <strong>company URL</strong> in the sidebar</span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">4</span>
-                                <span class="welcome-step-text">Click <strong>"Save Documents"</strong> and wait for confirmation</span>
+                                <span class="welcome-step-text">Click <strong>"📋 Save Documents & Prepare"</strong> in the sidebar</span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">5</span>
-                                <span class="welcome-step-text">Click <strong>"Start Voice Interview"</strong> and allow microphone access</span>
-                            </div>
-                            <div class="welcome-step">
-                                <span class="welcome-step-number">6</span>
-                                <span class="welcome-step-text">When done speaking, click <strong>"Complete Session"</strong> for your transcript</span>
+                                <span class="welcome-step-text">Click <strong>"🎙️ Start Voice Interview"</strong> below to begin speaking</span>
                             </div>
                         </div>
                         <p style="margin-top: 20px; color: #666; font-size: 14px;">💡 <em>Tip: Use headphones for the best experience. Allow microphone access when prompted.</em></p>
                     `;
                 }
                 
-                startPrepBtn.innerHTML = '📋 Save Documents';
+                // Audio Mock: Use ElevenLabs widget with transcript capture
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/@elevenlabs/convai-widget-embed';
+                script.async = true;
+                document.head.appendChild(script);
+                
+                // Create audio controls container
+                const audioControls = document.createElement('div');
+                audioControls.id = 'audioControls';
+                audioControls.style.cssText = 'display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 24px; background: #f8fafc; border-radius: 12px; margin: 20px 0;';
+                audioControls.innerHTML = `
+                    <div id="audioStatus" style="font-size: 16px; color: #666; text-align: center;">
+                        <span id="connectionStatus">⚪ Ready to start</span>
+                    </div>
+                    <button id="startVoiceBtn" style="background: linear-gradient(135deg, #2F6DF6, #00C4CC); color: white; border: none; padding: 16px 32px; border-radius: 8px; font-size: 18px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        🎙️ Start Voice Interview
+                    </button>
+                    <button id="endVoiceBtn" style="background: #dc2626; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; display: none;">
+                        ⏹️ End Call
+                    </button>
+                    <div id="voiceTranscript" style="width: 100%; max-height: 300px; overflow-y: auto; background: white; border-radius: 8px; padding: 16px; display: none; border: 1px solid #e2e8f0;">
+                        <h4 style="margin-bottom: 12px; color: #374151;">Live Transcript</h4>
+                        <div id="transcriptContent" style="font-size: 14px; line-height: 1.6;"></div>
+                    </div>
+                `;
+                
+                chatMessages.appendChild(audioControls);
+                
+                // Hide chat input for audio mock
                 document.querySelector('.chat-input-container').style.display = 'none';
                 
-                // Audio Mock voice button handler
-                const startVoiceBtn = document.getElementById('startVoiceBtn');
+                // Audio Mock state
                 let audioConversation = null;
                 let audioTranscript = [];
                 
-                startVoiceBtn.addEventListener('click', async function() {
-                    startVoiceBtn.disabled = true;
-                    startVoiceBtn.innerHTML = '⏳ Connecting...';
-                    step5Status.textContent = '🟡 Connecting to AI coach...';
+                // Start voice interview
+                document.getElementById('startVoiceBtn').addEventListener('click', async function() {
+                    const startBtn = this;
+                    const endBtn = document.getElementById('endVoiceBtn');
+                    const statusEl = document.getElementById('connectionStatus');
+                    const transcriptBox = document.getElementById('voiceTranscript');
+                    const transcriptContent = document.getElementById('transcriptContent');
+                    
+                    startBtn.disabled = true;
+                    startBtn.innerHTML = '⏳ Connecting...';
+                    statusEl.textContent = '🟡 Connecting to AI coach...';
                     
                     try {
+                        // Get signed URL from server
                         const response = await fetch('/api/signed-url');
                         const data = await response.json();
                         
@@ -1878,140 +1745,137 @@
                             throw new Error('Failed to get signed URL');
                         }
                         
+                        // Load ElevenLabs SDK
                         const { Conversation } = await import('https://unpkg.com/@elevenlabs/client@latest/+esm');
                         
+                        // Start conversation with transcript capture
                         audioConversation = await Conversation.startSession({
                             signedUrl: data.signedUrl,
                             onConnect: () => {
-                                step5Number.classList.add('completed');
-                                step5Status.className = 'btn-status unlocked';
-                                step5Status.textContent = '🟢 Connected - Speak now!';
-                                startVoiceBtn.innerHTML = '🎙️ Interview Active';
-                                startVoiceBtn.style.background = '#10B981';
+                                statusEl.textContent = '🟢 Connected - Speak now!';
+                                startBtn.style.display = 'none';
+                                endBtn.style.display = 'block';
+                                transcriptBox.style.display = 'block';
                                 
-                                // Enable complete button
-                                completeSessionBtn.disabled = false;
-                                completeStepNumber.classList.remove('disabled');
-                                completeStatus.className = 'btn-status unlocked';
-                                completeStatus.textContent = '✓ Click when finished speaking';
-                                
-                                sessionStarted = true;
-                                conversationHistory.push({ role: 'system', content: 'Voice interview session started' });
-                                
-                                // Show interview active message
-                                const welcome = document.querySelector('.welcome-message');
-                                if (welcome) {
-                                    welcome.innerHTML = `
-                                        <div style="background: linear-gradient(135deg, #10B981, #059669); color: white; padding: 32px; border-radius: 16px; text-align: center;">
-                                            <h2 style="color: white; margin-bottom: 16px;">🎙️ Interview In Progress</h2>
-                                            <p style="font-size: 18px; margin-bottom: 24px;">Your AI interviewer is listening. Speak naturally!</p>
-                                            <div style="background: rgba(255,255,255,0.2); padding: 16px; border-radius: 8px;">
-                                                <p style="margin: 0;">When finished, click <strong>"Complete Session"</strong> in the sidebar</p>
-                                            </div>
-                                        </div>
-                                    `;
-                                }
+                                // Add to conversation history for session tracking
+                                conversationHistory.push({
+                                    role: 'system',
+                                    content: 'Voice interview session started'
+                                });
                             },
                             onDisconnect: () => {
-                                step5Status.textContent = '⚪ Call ended';
-                                startVoiceBtn.disabled = false;
-                                startVoiceBtn.innerHTML = '🎙️ Start Voice Interview';
-                                startVoiceBtn.style.background = 'linear-gradient(135deg, #10B981, #059669)';
+                                statusEl.textContent = '⚪ Call ended';
+                                startBtn.style.display = 'block';
+                                startBtn.disabled = false;
+                                startBtn.innerHTML = '🎙️ Start Voice Interview';
+                                endBtn.style.display = 'none';
                             },
                             onMessage: (message) => {
+                                // Capture transcript messages
                                 if (message.type === 'transcript') {
                                     const role = message.role === 'user' ? 'user' : 'assistant';
                                     const text = message.text || message.message;
+                                    
                                     if (text && message.isFinal !== false) {
                                         audioTranscript.push({ role, content: text });
                                         conversationHistory.push({ role, content: text });
+                                        
+                                        // Update live transcript display
+                                        const msgDiv = document.createElement('div');
+                                        msgDiv.style.cssText = role === 'user' 
+                                            ? 'background: #e0f2fe; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px;'
+                                            : 'background: #f0fdf4; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px;';
+                                        msgDiv.innerHTML = `<strong>${role === 'user' ? 'You' : 'Coach'}:</strong> ${text}`;
+                                        transcriptContent.appendChild(msgDiv);
+                                        transcriptContent.scrollTop = transcriptContent.scrollHeight;
                                     }
                                 }
                             },
                             onError: (error) => {
-                                console.error('Audio error:', error);
-                                step5Status.textContent = '🔴 Error: ' + (error.message || 'Connection failed');
-                                startVoiceBtn.disabled = false;
-                                startVoiceBtn.innerHTML = '🎙️ Start Voice Interview';
+                                console.error('Audio conversation error:', error);
+                                statusEl.textContent = '🔴 Error: ' + (error.message || 'Connection failed');
+                                startBtn.style.display = 'block';
+                                startBtn.disabled = false;
+                                startBtn.innerHTML = '🎙️ Start Voice Interview';
+                                endBtn.style.display = 'none';
                             }
                         });
                         
                     } catch (error) {
-                        console.error('Failed to start audio:', error);
-                        step5Status.textContent = '🔴 Failed to connect. Try again.';
-                        startVoiceBtn.disabled = false;
-                        startVoiceBtn.innerHTML = '🎙️ Start Voice Interview';
+                        console.error('Failed to start audio conversation:', error);
+                        statusEl.textContent = '🔴 Failed to connect. Please try again.';
+                        startBtn.disabled = false;
+                        startBtn.innerHTML = '🎙️ Start Voice Interview';
                     }
                 });
+                
+                // End voice call
+                document.getElementById('endVoiceBtn').addEventListener('click', async function() {
+                    if (audioConversation) {
+                        try {
+                            await audioConversation.endSession();
+                        } catch (e) {
+                            console.log('Session end:', e);
+                        }
+                        audioConversation = null;
+                    }
+                });
+                
+                // Update button text for Audio Mock
+                if (startPrepBtn) {
+                    startPrepBtn.innerHTML = '📋 Save Documents & Prepare';
+                }
             }
             
-            // Start Prep Button Handler
             if (startPrepBtn) {
                 startPrepBtn.addEventListener('click', function() {
                     documents.resume = resumeInput.value.trim();
                     documents.jobDescription = jdInput.value.trim();
                     documents.companyUrl = urlInput.value.trim();
                     
-                    // Update status indicators
                     if (documents.resume) {
                         resumeStatus.classList.add('active');
-                        resumeStatusText.textContent = '✓ Saved';
+                        resumeStatusText.textContent = 'Saved';
                     }
                     if (documents.jobDescription) {
                         jdStatus.classList.add('active');
-                        jdStatusText.textContent = '✓ Saved';
+                        jdStatusText.textContent = 'Saved';
                     }
                     if (documents.companyUrl) {
                         urlStatus.classList.add('active');
-                        urlStatusText.textContent = '✓ Saved';
+                        urlStatusText.textContent = 'Saved';
                     }
                     
                     startPrepBtn.disabled = true;
-                    step4Number.classList.add('completed');
-                    
-                    if (urlSessionType === 'audio_mock') {
-                        // For audio mock, just save documents and enable voice button
-                        startPrepBtn.innerHTML = '✅ Documents Saved';
+                    if (urlSessionType === 'full_mock') {
+                        startPrepBtn.innerHTML = '⏳ Starting your interview...';
+                    } else if (urlSessionType === 'audio_mock') {
+                        startPrepBtn.innerHTML = '✅ Documents Saved - Start Voice Call Below';
                         startPrepBtn.style.background = '#10B981';
-                        step4Status.className = 'btn-status unlocked';
-                        step4Status.textContent = '✓ Ready for voice interview';
-                        
-                        // Enable step 5 (voice button)
-                        const startVoiceBtn = document.getElementById('startVoiceBtn');
-                        startVoiceBtn.disabled = false;
-                        step5Number.classList.remove('disabled');
-                        step5Status.className = 'btn-status unlocked';
-                        step5Status.textContent = '✓ Click to start speaking';
-                        
-                        documentsSaved = true;
-                        
-                        // Track session start
-                        fetch('/api/start-session', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ email: customerEmail, sessionType: urlSessionType })
-                        }).catch(err => console.log('Start session tracking:', err));
-                        
-                    } else if (urlSessionType === 'full_mock') {
-                        startPrepBtn.innerHTML = '⏳ Starting interview...';
-                        step4Status.textContent = '🟡 Preparing questions...';
-                        
-                        fetch('/api/start-session', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ email: customerEmail, sessionType: urlSessionType })
-                        }).catch(err => console.log('Start session tracking:', err));
-                        
-                        sendStartMessage();
                     } else {
-                        startPrepBtn.innerHTML = '⏳ Generating prep...';
-                        step4Status.textContent = '🟡 Creating your prep packet...';
+                        startPrepBtn.innerHTML = '⏳ Generating your prep packet...';
+                    }
+                    
+                    if (urlSessionType === 'full_mock' || urlSessionType === 'audio_mock') {
+                        fetch('/api/start-session', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                email: customerEmail,
+                                sessionType: urlSessionType
+                            })
+                        }).catch(err => console.log('Start session tracking:', err));
+                    }
+                    
+                    // For audio_mock, don't call the text-based chat - voice button handles it
+                    if (urlSessionType !== 'audio_mock') {
                         sendStartMessage();
                     }
                 });
             }
             
             function sendStartMessage() {
+                // Use different start message based on session type
                 const message = urlSessionType === 'full_mock' 
                     ? 'Start my mock interview' 
                     : 'Start my interview prep';
@@ -2022,6 +1886,7 @@
                 const welcome = document.querySelector('.welcome-message');
                 if (welcome) welcome.remove();
                 
+                // Track in history for transcript, but don't display in UI
                 conversationHistory.push({ role: 'user', content: message });
                 showTyping();
                 
@@ -2041,38 +1906,35 @@
                     hideTyping();
                     if (data.error) {
                         addMessage('Sorry, there was an error. Please try again.', 'assistant');
+                        // Reset button so they can try again
                         startPrepBtn.disabled = false;
-                        startPrepBtn.innerHTML = urlSessionType === 'full_mock' ? '🎯 Start My Mock Interview' : '🚀 Start My Interview Prep';
-                        step4Number.classList.remove('completed');
+                        if (urlSessionType === 'full_mock') {
+                            startPrepBtn.innerHTML = '🎯 Start My Mock Interview';
+                        } else {
+                            startPrepBtn.innerHTML = '🚀 Start My Interview Prep';
+                        }
                     } else {
                         addMessage(data.message, 'assistant');
-                        sessionStarted = true;
-                        
-                        // Enable complete button
-                        completeSessionBtn.disabled = false;
-                        completeStepNumber.classList.remove('disabled');
-                        completeStatus.className = 'btn-status unlocked';
-                        completeStatus.textContent = '✓ Click when ready to finish';
-                        
+                        // Show completion/started state based on session type
                         if (urlSessionType === 'full_mock') {
                             startPrepBtn.innerHTML = '🎯 Interview in Progress';
                             startPrepBtn.style.background = '#2F6DF6';
-                            step4Status.className = 'btn-status unlocked';
-                            step4Status.textContent = '✓ Answer questions below';
                         } else {
                             startPrepBtn.innerHTML = '✅ Prep Complete';
                             startPrepBtn.style.background = '#10B981';
-                            step4Status.className = 'btn-status unlocked';
-                            step4Status.textContent = '✓ Review your prep packet';
                         }
                     }
                 })
                 .catch(error => {
                     hideTyping();
                     addMessage('Sorry, there was a connection error. Please try again.', 'assistant');
+                    // Reset button so they can try again
                     startPrepBtn.disabled = false;
-                    startPrepBtn.innerHTML = urlSessionType === 'full_mock' ? '🎯 Start My Mock Interview' : '🚀 Start My Interview Prep';
-                    step4Number.classList.remove('completed');
+                    if (urlSessionType === 'full_mock') {
+                        startPrepBtn.innerHTML = '🎯 Start My Mock Interview';
+                    } else {
+                        startPrepBtn.innerHTML = '🚀 Start My Interview Prep';
+                    }
                 })
                 .finally(() => {
                     isLoading = false;
@@ -2118,13 +1980,13 @@
                 
                 completeSessionBtn.disabled = true;
                 completeSessionBtn.textContent = 'Completing...';
-                completeStatus.textContent = '🟡 Processing...';
                 
                 try {
                     let transcriptToSave;
                     
+                    // For Full Mock and Audio Mock, generate a polished debrief document
                     if (sessionType.value === 'full_mock' || sessionType.value === 'audio_mock') {
-                        completeSessionBtn.textContent = 'Generating debrief...';
+                        completeSessionBtn.textContent = 'Generating your debrief...';
                         
                         const debriefResponse = await fetch('/api/generate-debrief', {
                             method: 'POST',
@@ -2141,12 +2003,14 @@
                         if (debriefData.success && debriefData.debrief) {
                             transcriptToSave = debriefData.debrief;
                         } else {
+                            // Fallback to raw transcript if debrief generation fails
                             transcriptToSave = conversationHistory.map(msg => {
                                 const role = msg.role === 'user' ? '[USER]' : '[COACH]';
                                 return `${role}: ${msg.content}`;
                             }).join('\n\n');
                         }
                     } else {
+                        // For other session types, use raw transcript
                         transcriptToSave = conversationHistory.map(msg => {
                             const role = msg.role === 'user' ? '[USER]' : '[COACH]';
                             return `${role}: ${msg.content}`;
@@ -2180,11 +2044,8 @@
                     const data = await response.json();
                     
                     if (data.success) {
-                        completeSessionBtn.textContent = '✅ Complete!';
+                        completeSessionBtn.textContent = 'Session Complete!';
                         completeSessionBtn.style.background = '#00C4CC';
-                        completeStepNumber.classList.add('completed');
-                        completeStatus.className = 'btn-status unlocked';
-                        completeStatus.textContent = '✓ Check your email for results!';
                         addMessage('Your session is complete! You will receive an email shortly with your personalized Interview Debrief Report. Thank you for using Talendro Interview Coach!', 'assistant');
                         chatInput.disabled = true;
                         sendBtn.disabled = true;
@@ -2194,8 +2055,7 @@
                 } catch (error) {
                     console.error('Complete session error:', error);
                     completeSessionBtn.disabled = false;
-                    completeSessionBtn.textContent = '✅ Complete Session';
-                    completeStatus.textContent = '🔴 Error - try again';
+                    completeSessionBtn.textContent = 'Complete Session';
                     alert('Error completing session. Please try again.');
                 }
             }
@@ -2225,6 +2085,7 @@
                 chatInput.value = '';
                 chatInput.style.height = 'auto';
                 
+                // Get history BEFORE adding new message (for API call)
                 const historyForApi = [...conversationHistory];
                 
                 addMessage(message, 'user');
