@@ -1418,7 +1418,22 @@
                         </div>
                     </div>
 
-                    <!-- Step 4: Save/Start -->
+                    <!-- Step 4: Interview Type Selector (Pro only, hidden for other types) -->
+                    <div class="numbered-button-row" id="step4ProContainer" style="display: none;">
+                        <span class="field-number disabled" id="step4ProNumber">4</span>
+                        <div style="flex: 1;">
+                            <label style="font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; display: block;">Select Interview Type</label>
+                            <select id="proInterviewType" style="width: 100%; padding: 10px 12px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 14px; background: white;">
+                                <option value="">Choose your session type...</option>
+                                <option value="quick_prep">⚡ Quick Prep (5 questions)</option>
+                                <option value="full_mock">🎯 Full Mock Interview (10 questions)</option>
+                                <option value="audio_mock">🎙️ Audio Mock (Voice-to-voice)</option>
+                            </select>
+                            <div class="btn-status locked" id="step4ProStatus">Select an interview type</div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4 (or 5 for Pro): Save/Start -->
                     <div class="numbered-button-row">
                         <span class="field-number" id="step4Number">4</span>
                         <div style="flex: 1;">
@@ -1784,6 +1799,38 @@
             // Initial check
             checkFieldsAndUpdateButtons();
             
+            // Session-specific welcome messages and button text
+            if (urlSessionType === 'quick_prep') {
+                const welcomeMessage = document.getElementById('welcomeMessage');
+                if (welcomeMessage) {
+                    welcomeMessage.innerHTML = `
+                        <h2>Welcome to Interview Coach</h2>
+                        <div class="welcome-steps">
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">1</span>
+                                <span class="welcome-step-text">Open your résumé file, press <span class="highlight-keyword">Ctrl+A</span> (select all), then <span class="highlight-keyword">Ctrl+C</span> (copy), then <span class="highlight-keyword">Ctrl+V</span> (paste) into the Résumé box</span>
+                            </div>
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">2</span>
+                                <span class="welcome-step-text">Go to the job posting, <span class="highlight-keyword">select all</span> the text, <span class="highlight-keyword">copy it</span>, and <span class="highlight-keyword">paste it</span> into the Job Description box</span>
+                            </div>
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">3</span>
+                                <span class="welcome-step-text">Type or paste the <strong>company's website URL</strong> (optional but recommended)</span>
+                            </div>
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">4</span>
+                                <span class="welcome-step-text">Click <strong>"Start My Interview Prep"</strong> — the button will unlock once steps 1-2 are done</span>
+                            </div>
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">5</span>
+                                <span class="welcome-step-text">Once the Quick Prep interview content is displayed on screen, click <strong>"Complete Session"</strong> to receive your full results via email</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
             // Full Mock Interview customization
             if (urlSessionType === 'full_mock') {
                 const welcomeMessage = document.getElementById('welcomeMessage');
@@ -1809,7 +1856,7 @@
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">5</span>
-                                <span class="welcome-step-text">Answer each question, then click <strong>"Complete Session"</strong> for your full score</span>
+                                <span class="welcome-step-text">Once all Full Mock interview questions have been completed and results displayed, click <strong>"Complete Session"</strong> to receive your full results via email</span>
                             </div>
                         </div>
                         <p style="margin-top: 20px; color: #666; font-size: 14px;">💡 <em>Pro tip: Type your answers below, or use your device's voice-to-text to speak naturally!</em></p>
@@ -1848,7 +1895,7 @@
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">6</span>
-                                <span class="welcome-step-text">When done speaking, click <strong>"Complete Session"</strong> for your transcript</span>
+                                <span class="welcome-step-text">Once all Audio Mock interview questions have been answered and results displayed, click <strong>"Complete Session"</strong> to receive your full results via email</span>
                             </div>
                         </div>
                         <p style="margin-top: 20px; color: #666; font-size: 14px;">💡 <em>Tip: Use headphones for the best experience. Allow microphone access when prompted.</em></p>
@@ -1943,6 +1990,149 @@
                 });
             }
             
+            // Pro subscription customization
+            if (urlSessionType === 'pro') {
+                // Show the interview type selector
+                const step4ProContainer = document.getElementById('step4ProContainer');
+                const step4ProNumber = document.getElementById('step4ProNumber');
+                const step4ProStatus = document.getElementById('step4ProStatus');
+                const proInterviewType = document.getElementById('proInterviewType');
+                
+                if (step4ProContainer) {
+                    step4ProContainer.style.display = 'flex';
+                }
+                
+                // Update step numbers for Pro (4→5, 5→6, complete→6 or 7)
+                step4Number.textContent = '5';
+                completeStepNumber.textContent = '6';
+                
+                // Initial welcome message for Pro
+                const welcomeMessage = document.getElementById('welcomeMessage');
+                if (welcomeMessage) {
+                    welcomeMessage.innerHTML = `
+                        <h2>🏆 Interview Coach Pro</h2>
+                        <div class="welcome-steps">
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">1</span>
+                                <span class="welcome-step-text">Open your résumé, press <span class="highlight-keyword">Ctrl+A</span> (select all), <span class="highlight-keyword">Ctrl+C</span> (copy), <span class="highlight-keyword">Ctrl+V</span> (paste) into the Résumé box</span>
+                            </div>
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">2</span>
+                                <span class="welcome-step-text">Go to the job posting, <span class="highlight-keyword">select all</span> text, <span class="highlight-keyword">copy it</span>, <span class="highlight-keyword">paste it</span> into Job Description</span>
+                            </div>
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">3</span>
+                                <span class="welcome-step-text">Enter the <strong>company website URL</strong> (optional but recommended)</span>
+                            </div>
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">4</span>
+                                <span class="welcome-step-text">Select your <strong>interview type</strong> from the dropdown</span>
+                            </div>
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">5</span>
+                                <span class="welcome-step-text">Click the <strong>Start</strong> button to begin your session</span>
+                            </div>
+                            <div class="welcome-step">
+                                <span class="welcome-step-number">6</span>
+                                <span class="welcome-step-text">Once your interview is complete and results displayed, click <strong>"Complete Session"</strong> to receive your full results via email</span>
+                            </div>
+                        </div>
+                        <p style="margin-top: 20px; color: #666; font-size: 14px;">💡 <em>As a Pro subscriber, you have unlimited Quick Prep, 6 Full Mock interviews, and 2 Audio Mock sessions per month!</em></p>
+                    `;
+                }
+                
+                // Track selected Pro interview type
+                let proSelectedType = '';
+                
+                // Handle Pro interview type selection
+                if (proInterviewType) {
+                    proInterviewType.addEventListener('change', function() {
+                        proSelectedType = this.value;
+                        
+                        if (proSelectedType) {
+                            step4ProNumber.classList.remove('disabled');
+                            step4ProNumber.classList.add('completed');
+                            step4ProStatus.className = 'btn-status unlocked';
+                            step4ProStatus.textContent = '✓ ' + this.options[this.selectedIndex].text;
+                            
+                            // Update start button based on selection
+                            if (proSelectedType === 'quick_prep') {
+                                startPrepBtn.innerHTML = '🚀 Start Quick Prep';
+                                step5Container.style.display = 'none';
+                                step5Number.textContent = '6';
+                                completeStepNumber.textContent = '6';
+                            } else if (proSelectedType === 'full_mock') {
+                                startPrepBtn.innerHTML = '🎯 Start Mock Interview';
+                                step5Container.style.display = 'none';
+                                step5Number.textContent = '6';
+                                completeStepNumber.textContent = '6';
+                            } else if (proSelectedType === 'audio_mock') {
+                                startPrepBtn.innerHTML = '📋 Save Documents';
+                                step5Container.style.display = 'flex';
+                                step5Number.textContent = '6';
+                                completeStepNumber.textContent = '7';
+                                document.querySelector('.chat-input-container').style.display = 'none';
+                            }
+                            
+                            // Re-check if start button should be enabled
+                            checkFieldsAndUpdateButtons();
+                        } else {
+                            step4ProNumber.classList.add('disabled');
+                            step4ProNumber.classList.remove('completed');
+                            step4ProStatus.className = 'btn-status locked';
+                            step4ProStatus.textContent = 'Select an interview type';
+                            startPrepBtn.disabled = true;
+                        }
+                    });
+                }
+                
+                // Modify checkFieldsAndUpdateButtons for Pro to also require interview type selection
+                const originalCheck = checkFieldsAndUpdateButtons;
+                checkFieldsAndUpdateButtons = function() {
+                    const hasResume = resumeInput.value.trim().length > 50;
+                    const hasJD = jdInput.value.trim().length > 50;
+                    const hasProType = proInterviewType && proInterviewType.value !== '';
+                    
+                    // Update step indicators
+                    if (hasResume) {
+                        step1Number.classList.add('completed');
+                        step1Number.classList.remove('disabled');
+                        step1Status.className = 'btn-status unlocked';
+                        step1Status.textContent = '✓ Ready';
+                    } else {
+                        step1Number.classList.remove('completed');
+                        step1Status.className = 'btn-status locked';
+                        step1Status.textContent = 'Waiting for content';
+                    }
+                    
+                    if (hasJD) {
+                        step2Number.classList.add('completed');
+                        step2Number.classList.remove('disabled');
+                        step2Status.className = 'btn-status unlocked';
+                        step2Status.textContent = '✓ Ready';
+                    } else {
+                        step2Number.classList.remove('completed');
+                        step2Status.className = 'btn-status locked';
+                        step2Status.textContent = 'Waiting for content';
+                    }
+                    
+                    // For Pro, require all three: resume, JD, and interview type
+                    if (hasResume && hasJD && hasProType) {
+                        startPrepBtn.disabled = false;
+                        step4Status.className = 'btn-status unlocked';
+                        step4Status.textContent = '✓ Ready to start';
+                    } else if (hasResume && hasJD && !hasProType) {
+                        startPrepBtn.disabled = true;
+                        step4Status.className = 'btn-status locked';
+                        step4Status.textContent = '🔒 Select interview type first';
+                    } else {
+                        startPrepBtn.disabled = true;
+                        step4Status.className = 'btn-status locked';
+                        step4Status.textContent = '🔒 Complete steps 1-2 first';
+                    }
+                };
+            }
+            
             // Start Prep Button Handler
             if (startPrepBtn) {
                 startPrepBtn.addEventListener('click', function() {
@@ -1967,7 +2157,13 @@
                     startPrepBtn.disabled = true;
                     step4Number.classList.add('completed');
                     
-                    if (urlSessionType === 'audio_mock') {
+                    // Determine effective session type (Pro uses selected type)
+                    const proInterviewType = document.getElementById('proInterviewType');
+                    const effectiveSessionType = (urlSessionType === 'pro' && proInterviewType) 
+                        ? proInterviewType.value 
+                        : urlSessionType;
+                    
+                    if (effectiveSessionType === 'audio_mock') {
                         // For audio mock, just save documents and enable voice button
                         startPrepBtn.innerHTML = '✅ Documents Saved';
                         startPrepBtn.style.background = '#10B981';
@@ -1981,36 +2177,48 @@
                         step5Status.className = 'btn-status unlocked';
                         step5Status.textContent = '✓ Click to start speaking';
                         
+                        // Update complete status for audio
+                        completeStatus.textContent = '🔒 Complete voice interview first';
+                        
                         documentsSaved = true;
                         
                         // Track session start
                         fetch('/api/start-session', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ email: customerEmail, sessionType: urlSessionType })
+                            body: JSON.stringify({ email: customerEmail, sessionType: effectiveSessionType })
                         }).catch(err => console.log('Start session tracking:', err));
                         
-                    } else if (urlSessionType === 'full_mock') {
+                    } else if (effectiveSessionType === 'full_mock') {
                         startPrepBtn.innerHTML = '⏳ Starting interview...';
                         step4Status.textContent = '🟡 Preparing questions...';
+                        
+                        // Update complete status for full mock
+                        completeStatus.textContent = '🔒 Complete all questions first';
                         
                         fetch('/api/start-session', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ email: customerEmail, sessionType: urlSessionType })
+                            body: JSON.stringify({ email: customerEmail, sessionType: effectiveSessionType })
                         }).catch(err => console.log('Start session tracking:', err));
                         
-                        sendStartMessage();
+                        sendStartMessage(effectiveSessionType);
                     } else {
+                        // Quick Prep
                         startPrepBtn.innerHTML = '⏳ Generating prep...';
                         step4Status.textContent = '🟡 Creating your prep packet...';
-                        sendStartMessage();
+                        
+                        // Update complete status for quick prep
+                        completeStatus.textContent = '🔒 Wait for prep to display';
+                        
+                        sendStartMessage(effectiveSessionType);
                     }
                 });
             }
             
-            function sendStartMessage() {
-                const message = urlSessionType === 'full_mock' 
+            function sendStartMessage(effectiveType) {
+                const sessionTypeToUse = effectiveType || urlSessionType;
+                const message = sessionTypeToUse === 'full_mock' 
                     ? 'Start my mock interview' 
                     : 'Start my interview prep';
                     
@@ -2029,7 +2237,7 @@
                     body: JSON.stringify({
                         message: message,
                         sessionId: sessionId,
-                        sessionType: sessionType.value,
+                        sessionType: sessionTypeToUse,
                         documents: documents,
                         customerEmail: customerEmail
                     })
@@ -2040,7 +2248,7 @@
                     if (data.error) {
                         addMessage('Sorry, there was an error. Please try again.', 'assistant');
                         startPrepBtn.disabled = false;
-                        startPrepBtn.innerHTML = urlSessionType === 'full_mock' ? '🎯 Start My Mock Interview' : '🚀 Start My Interview Prep';
+                        startPrepBtn.innerHTML = sessionTypeToUse === 'full_mock' ? '🎯 Start My Mock Interview' : '🚀 Start My Interview Prep';
                         step4Number.classList.remove('completed');
                     } else {
                         addMessage(data.message, 'assistant');
@@ -2050,18 +2258,19 @@
                         completeSessionBtn.disabled = false;
                         completeStepNumber.classList.remove('disabled');
                         completeStatus.className = 'btn-status unlocked';
-                        completeStatus.textContent = '✓ Click when ready to finish';
                         
-                        if (urlSessionType === 'full_mock') {
+                        if (sessionTypeToUse === 'full_mock') {
                             startPrepBtn.innerHTML = '🎯 Interview in Progress';
                             startPrepBtn.style.background = '#2F6DF6';
                             step4Status.className = 'btn-status unlocked';
                             step4Status.textContent = '✓ Answer questions below';
+                            completeStatus.textContent = '✓ Click when all questions answered';
                         } else {
                             startPrepBtn.innerHTML = '✅ Prep Complete';
                             startPrepBtn.style.background = '#10B981';
                             step4Status.className = 'btn-status unlocked';
                             step4Status.textContent = '✓ Review your prep packet';
+                            completeStatus.textContent = '✓ Click to receive results via email';
                         }
                     }
                 })
@@ -2069,7 +2278,7 @@
                     hideTyping();
                     addMessage('Sorry, there was a connection error. Please try again.', 'assistant');
                     startPrepBtn.disabled = false;
-                    startPrepBtn.innerHTML = urlSessionType === 'full_mock' ? '🎯 Start My Mock Interview' : '🚀 Start My Interview Prep';
+                    startPrepBtn.innerHTML = sessionTypeToUse === 'full_mock' ? '🎯 Start My Mock Interview' : '🚀 Start My Interview Prep';
                     step4Number.classList.remove('completed');
                 })
                 .finally(() => {
