@@ -2009,27 +2009,26 @@
                     const hasJD = jdInput.value.trim().length > 50;
                     const hasProType = proInterviewType && proInterviewType.value !== '';
                     
-                    // Update step indicators
+                    // Update step 1
                     if (hasResume) {
                         step1Number.classList.add('completed');
-                        step1Number.classList.remove('disabled');
-                        step1Status.className = 'btn-status unlocked';
-                        step1Status.textContent = '✓ Ready';
+                        resumeStatus.classList.add('active');
+                        resumeStatusText.textContent = '✓ Ready';
                     } else {
                         step1Number.classList.remove('completed');
-                        step1Status.className = 'btn-status locked';
-                        step1Status.textContent = 'Waiting for content';
+                        resumeStatus.classList.remove('active');
+                        resumeStatusText.textContent = 'Waiting for content';
                     }
                     
+                    // Update step 2
                     if (hasJD) {
                         step2Number.classList.add('completed');
-                        step2Number.classList.remove('disabled');
-                        step2Status.className = 'btn-status unlocked';
-                        step2Status.textContent = '✓ Ready';
+                        jdStatus.classList.add('active');
+                        jdStatusText.textContent = '✓ Ready';
                     } else {
                         step2Number.classList.remove('completed');
-                        step2Status.className = 'btn-status locked';
-                        step2Status.textContent = 'Waiting for content';
+                        jdStatus.classList.remove('active');
+                        jdStatusText.textContent = 'Waiting for content';
                     }
                     
                     // For Pro, require all three: resume, JD, and interview type
@@ -2068,7 +2067,7 @@
                             throw new Error('Failed to get signed URL');
                         }
                         
-                        const { Conversation } = await import('https://unpkg.com/@elevenlabs/client@latest/+esm');
+                        const { Conversation } = await import('https://esm.sh/@elevenlabs/client@latest');
                         
                         audioConversation = await Conversation.startSession({
                             signedUrl: data.signedUrl,
