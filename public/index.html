@@ -1436,21 +1436,10 @@
                             <button class="start-prep-btn sidebar-start-btn" id="startVoiceBtn" disabled style="background: linear-gradient(135deg, #10B981, #059669);">
                                 🎙️ Start Voice Interview
                             </button>
-                            <div class="btn-status locked" id="step5Status">🔒 Save documents first (Step 4)</div>
+                            <div class="btn-status locked" id="step5Status">🔒 Save documents first</div>
                         </div>
                     </div>
-                </div>
 
-                <div class="sidebar-card">
-                    <h3>Your Session</h3>
-                    <div class="session-type-display" id="sessionTypeDisplay">Loading...</div>
-                    <select id="sessionType" style="display: none;">
-                        <option value="quick_prep">Quick Prep ($12)</option>
-                        <option value="full_mock">Full Mock Interview ($29)</option>
-                        <option value="audio_mock">Premium Audio Mock ($49)</option>
-                        <option value="pro">Interview Coach Pro</option>
-                    </select>
-                    
                     <!-- Step 5 or 6: Complete Session -->
                     <div class="numbered-button-row">
                         <span class="field-number disabled" id="completeStepNumber">5</span>
@@ -1461,6 +1450,15 @@
                             <div class="btn-status locked" id="completeStatus">🔒 Start your session first</div>
                         </div>
                     </div>
+                    
+                    <!-- Hidden select for session type tracking -->
+                    <select id="sessionType" style="display: none;">
+                        <option value="quick_prep">Quick Prep ($12)</option>
+                        <option value="full_mock">Full Mock Interview ($29)</option>
+                        <option value="audio_mock">Premium Audio Mock ($49)</option>
+                        <option value="pro">Interview Coach Pro</option>
+                    </select>
+                    <div id="sessionTypeDisplay" style="display: none;"></div>
                 </div>
             </aside>
 
