@@ -1899,6 +1899,15 @@
                             </div>
                         </div>
                         <p style="margin-top: 20px; color: #666; font-size: 14px;">💡 <em>Tip: Use headphones for the best experience. Allow microphone access when prompted.</em></p>
+                        <div style="margin-top: 16px; padding: 16px; background: #F0F9FF; border: 1px solid #BAE6FD; border-radius: 8px;">
+                            <p style="color: #0369A1; font-size: 14px; margin: 0;"><strong>During your interview, you can ask Sarah to:</strong></p>
+                            <ul style="color: #0369A1; font-size: 13px; margin: 8px 0 0 20px; padding: 0;">
+                                <li>Repeat the question</li>
+                                <li>Speak slower or faster</li>
+                                <li>Rephrase the question differently</li>
+                                <li>Give an example of a good answer</li>
+                            </ul>
+                        </div>
                     `;
                 }
                 
@@ -2094,6 +2103,15 @@
                                         <div style="background: linear-gradient(135deg, #10B981, #059669); color: white; padding: 32px; border-radius: 16px; text-align: center;">
                                             <h2 style="color: white; margin-bottom: 16px;">🎙️ Interview In Progress</h2>
                                             <p style="font-size: 18px; margin-bottom: 24px;">Your AI interviewer is listening. Speak naturally!</p>
+                                            <div style="background: rgba(255,255,255,0.15); padding: 16px; border-radius: 8px; margin-bottom: 16px; text-align: left;">
+                                                <p style="margin: 0 0 8px 0; font-weight: 600;">💡 You can ask Sarah to:</p>
+                                                <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+                                                    <li>Repeat the question</li>
+                                                    <li>Speak slower or faster</li>
+                                                    <li>Rephrase the question</li>
+                                                    <li>Give an example answer</li>
+                                                </ul>
+                                            </div>
                                             <div style="background: rgba(255,255,255,0.2); padding: 16px; border-radius: 8px;">
                                                 <p style="margin: 0;">When finished, click <strong>"Complete Session"</strong> in the sidebar</p>
                                             </div>
@@ -2322,6 +2340,17 @@
                 if (conversationHistory.length === 0) {
                     alert('No session to complete. Start your interview prep first.');
                     return;
+                }
+                
+                // Disconnect audio conversation if active
+                if (audioConversation) {
+                    try {
+                        await audioConversation.endSession();
+                        audioConversation = null;
+                        console.log('Audio session disconnected');
+                    } catch (err) {
+                        console.log('Audio disconnect:', err);
+                    }
                 }
                 
                 completeSessionBtn.disabled = true;
