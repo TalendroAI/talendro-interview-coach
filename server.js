@@ -752,6 +752,75 @@ app.get('/api/config', (req, res) => {
   });
 });
 
+// ============================================
+// ELEVENLABS SIGNED URL WITH CUSTOMER CONTEXT
+// Changed from GET to POST to accept customer documents
+// ============================================
+
+app.post('/api/signed-url', async (req, res) => {
+  try {
+    const apiKey = process.env.ELEVENLABS_API_KEY;
+    const agentId = process.env.ELEVENLABS_AGENT_ID || 'agent_01jwpkjy1xeyxdh51gbqy62wd0';
+    
+    if (!apiKey) {
+      return res.status(500).json({ error: 'ElevenLabs API key not configured' });
+    }
+
+    // Get customer documents from request body
+    const { resume, jobDescription, companyUrl } = req.body;
+    
+    // Build dynamic prompt context with customer's actual data
+    const dynamicContext = `
+=== CANDIDATE INFORMATION (USE THIS FOR ALL QUESTIONS) ===
+
+CANDIDATE'S RESUME:
+${resume || 'Not provided - ask general interview questions'}
+
+TARGET JOB DESCRIPTION:
+${jobDescription || 'Not provided - ask general interview questions'}
+
+TARGET COMPANY URL:
+${companyUrl || 'Not provided'}
+
+=== END CANDIDATE INFORMATION ===
+
+CRITICAL INSTRUCTIONS:
+1. You HAVE the candidate's information above. Use it to personalize ALL your questions.
+2. Reference specific details from their resume when asking questions.
+3. Tailor questions to the specific job description provided.
+4. DO NOT ask the candidate to tell you about themselves or what role they're applying for - you already know this.
+5. Start by acknowledging you've reviewed their materials and jump straight into the interview.
+`;
+
+    // Get signed URL from ElevenLabs
+    const response = await fetch(
+      `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agentId}`,
+      {
+        method: 'GET',
+        headers: {
+          'xi-api-key': apiKey,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to get signed URL: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    // Return both the signed URL and the dynamic context for the frontend
+    res.json({ 
+      signedUrl: data.signed_url,
+      dynamicContext: dynamicContext
+    });
+  } catch (error) {
+    console.error('Error getting signed URL:', error);
+    res.status(500).json({ error: 'Failed to get signed URL' });
+  }
+});
+
+// Keep the old GET endpoint for backwards compatibility but redirect to POST behavior
 app.get('/api/signed-url', async (req, res) => {
   try {
     const apiKey = process.env.ELEVENLABS_API_KEY;
@@ -980,18 +1049,35 @@ Practice these additional questions on your own to strengthen your interview ski
 - Do NOT ask clarifying questions about their documents - use what's provided
 - Stay in character as a professional interviewer throughout`,
 
-  audio_mock: `You are an expert interview coach conducting a Premium Audio Mock Interview.
+  audio_mock: `You are SARAH, a professional interview coach for TALENDRO™ Interview Coach. You are conducting a realistic Premium Audio Mock Interview.
 
-This is a voice-based realistic interview simulation. You will:
+CRITICAL: The candidate has ALREADY provided their resume, job description, and target company. This information will be provided to you at the start of the conversation. You MUST use this information to personalize your questions.
 
-1. Introduce yourself naturally as the interviewer
-2. Conduct a conversational 20-30 minute mock interview
-3. React naturally to their responses
-4. Ask follow-up questions based on their answers
-5. Provide verbal feedback and coaching
-6. End with a comprehensive debrief
+YOUR BEHAVIOR:
+1. You ALREADY KNOW the candidate's background from their resume. Reference it specifically.
+2. You ALREADY KNOW the job they want. Tailor questions to that role.
+3. Speak at a calm, measured pace. Do not rush.
+4. Ask ONE question at a time and wait for their complete response.
+5. After each response, provide brief verbal feedback (30 seconds max), then move to the next question.
+6. Be warm, professional, and encouraging.
+7. DO NOT ask "tell me about yourself and the role you're applying for" - you already know this.
 
-Speak naturally and conversationally. Help them practice thinking on their feet.`,
+INTERVIEW STRUCTURE (16 questions total):
+1. Opening (2 questions) - Start with something like "I've reviewed your background at [their company from resume]. Tell me what excites you most about this [target role] opportunity."
+2. Behavioral questions using STAR method (6 questions) - Reference their actual experience
+3. Role-specific questions based on the job description (5 questions)
+4. Company culture fit questions (3 questions)
+
+FIRST MESSAGE:
+"Hi! I'm Sarah, your interview coach today. I've reviewed your resume and the [job title] position you're targeting. I can see you have experience in [something from their resume]. Let's make this feel like the real thing - I'll ask you 16 questions and give you feedback along the way. Ready to begin?"
+
+Then immediately ask your first real question based on their materials.
+
+At the end, provide a verbal summary of:
+- Their overall performance (score out of 10)
+- Top 3 strengths with examples
+- 2-3 specific areas to improve
+- Words of encouragement`,
 
   pro: `You are an expert interview coach for a Pro subscriber with unlimited access.
 

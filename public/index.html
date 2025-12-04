@@ -2069,16 +2069,34 @@
                     step5Status.textContent = '🟡 Connecting to AI coach...';
                     
                     try {
-                        const response = await fetch('/api/signed-url');
+                        // FIXED: Send customer documents to server via POST
+                        // This allows Sarah to receive the resume, job description, and company URL
+                        const response = await fetch('/api/signed-url', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                resume: documents.resume || '',
+                                jobDescription: documents.jobDescription || '',
+                                companyUrl: documents.companyUrl || ''
+                            })
+                        });
                         const data = await response.json();
                         
                         if (!data.signedUrl) {
                             throw new Error('Failed to get signed URL');
                         }
                         
+                        console.log('Customer context being sent to Sarah:', {
+                            hasResume: !!documents.resume,
+                            hasJD: !!documents.jobDescription,
+                            hasUrl: !!documents.companyUrl
+                        });
+                        
                         const { Conversation } = await import('https://esm.sh/@elevenlabs/client@latest');
                         
-                        audioConversation = await Conversation.startSession({
+                        // FIXED: Pass dynamic context to ElevenLabs via overrides
+                        // This injects the customer's documents into Sarah's system prompt
+                        const sessionConfig = {
                             signedUrl: data.signedUrl,
                             onConnect: () => {
                                 step5Number.classList.add('completed');
@@ -2094,7 +2112,7 @@
                                 completeStatus.textContent = '✓ Click when finished speaking';
                                 
                                 sessionStarted = true;
-                                conversationHistory.push({ role: 'system', content: 'Voice interview session started' });
+                                conversationHistory.push({ role: 'system', content: 'Voice interview session started with customer context' });
                                 
                                 // Show interview active message
                                 const welcome = document.querySelector('.welcome-message');
@@ -2141,7 +2159,21 @@
                                 startVoiceBtn.disabled = false;
                                 startVoiceBtn.innerHTML = '🎙️ Start Voice Interview';
                             }
-                        });
+                        };
+                        
+                        // Add dynamic context override if server returned it
+                        if (data.dynamicContext) {
+                            sessionConfig.overrides = {
+                                agent: {
+                                    prompt: {
+                                        prompt: data.dynamicContext
+                                    }
+                                }
+                            };
+                            console.log('Dynamic context injected into Sarah');
+                        }
+                        
+                        audioConversation = await Conversation.startSession(sessionConfig);
                         
                     } catch (error) {
                         console.error('Failed to start audio:', error);
