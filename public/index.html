@@ -1234,7 +1234,7 @@
         <section class="hero">
             <div class="hero-content">
                 <span class="hero-badge">AI-Powered Interview Prep</span>
-                <h1>Own Your Next <em>Interview</em></h1>
+                <h1>Ace Your Interview with <em>Confidence</em></h1>
                 <p>Personalized interview coaching powered by AI. Get the preparation you need at a fraction of traditional coaching costs.</p>
                 <a href="#pricing" class="hero-btn">View Packages</a>
                 <div class="hero-stats">
@@ -1460,7 +1460,7 @@
                         <span class="field-number disabled" id="completeStepNumber">5</span>
                         <div style="flex: 1;">
                             <button class="btn btn-complete" id="completeSessionBtn" disabled>
-                                ✅ Complete Session
+                                Complete Session
                             </button>
                             <div class="btn-status locked" id="completeStatus">🔒 Start your session first</div>
                         </div>
@@ -1986,17 +1986,137 @@
                                 step5Container.style.display = 'none';
                                 step5Number.textContent = '6';
                                 completeStepNumber.textContent = '6';
+                                document.querySelector('.chat-input-container').style.display = 'block';
+                                
+                                // Update welcome message for Quick Prep
+                                const welcomeMsg = document.getElementById('welcomeMessage');
+                                if (welcomeMsg) {
+                                    welcomeMsg.innerHTML = `
+                                        <h2>🏆 Interview Coach Pro — Quick Prep</h2>
+                                        <div class="welcome-steps">
+                                            <div class="welcome-step">
+                                                <span class="welcome-step-number">1</span>
+                                                <span class="welcome-step-text">Open your résumé, press <span class="highlight-keyword">Ctrl+A</span> (select all), <span class="highlight-keyword">Ctrl+C</span> (copy), <span class="highlight-keyword">Ctrl+V</span> (paste) into the Résumé box</span>
+                                            </div>
+                                            <div class="welcome-step">
+                                                <span class="welcome-step-number">2</span>
+                                                <span class="welcome-step-text">Go to the job posting, <span class="highlight-keyword">select all</span> text, <span class="highlight-keyword">copy it</span>, <span class="highlight-keyword">paste it</span> into Job Description</span>
+                                            </div>
+                                            <div class="welcome-step">
+                                                <span class="welcome-step-number">3</span>
+                                                <span class="welcome-step-text">Enter the <strong>company website URL</strong> (optional but recommended)</span>
+                                            </div>
+                                            <div class="welcome-step">
+                                                <span class="welcome-step-number">4</span>
+                                                <span class="welcome-step-text">Select <strong>Quick Prep</strong> from the dropdown ✓</span>
+                                            </div>
+                                            <div class="welcome-step">
+                                                <span class="welcome-step-number">5</span>
+                                                <span class="welcome-step-text">Click <strong>"Start Quick Prep"</strong> — the button will unlock once steps 1-2 are done</span>
+                                            </div>
+                                            <div class="welcome-step">
+                                                <span class="welcome-step-number">6</span>
+                                                <span class="welcome-step-text">Once the Quick Prep interview content is displayed on screen, click <strong>"Complete Session"</strong> to receive your full results via email</span>
+                                            </div>
+                                        </div>
+                                        <p style="margin-top: 20px; color: #666; font-size: 14px;">💡 <em>As a Pro subscriber, you have unlimited Quick Prep sessions!</em></p>
+                                    `;
+                                }
                             } else if (proSelectedType === 'full_mock') {
                                 startPrepBtn.innerHTML = '🎯 Start Mock Interview';
                                 step5Container.style.display = 'none';
                                 step5Number.textContent = '6';
                                 completeStepNumber.textContent = '6';
+                                document.querySelector('.chat-input-container').style.display = 'block';
+                                
+                                // Update welcome message for Full Mock
+                                const welcomeMsg = document.getElementById('welcomeMessage');
+                                if (welcomeMsg) {
+                                    welcomeMsg.innerHTML = `
+                                        <h2>🏆 Interview Coach Pro — Full Mock</h2>
+                                        <div class="welcome-steps">
+                                            <div class="welcome-step">
+                                                <span class="welcome-step-number">1</span>
+                                                <span class="welcome-step-text">Open your résumé, press <span class="highlight-keyword">Ctrl+A</span> (select all), <span class="highlight-keyword">Ctrl+C</span> (copy), <span class="highlight-keyword">Ctrl+V</span> (paste) into the Résumé box</span>
+                                            </div>
+                                            <div class="welcome-step">
+                                                <span class="welcome-step-number">2</span>
+                                                <span class="welcome-step-text">Go to the job posting, <span class="highlight-keyword">select all</span> text, <span class="highlight-keyword">copy it</span>, <span class="highlight-keyword">paste it</span> into Job Description</span>
+                                            </div>
+                                            <div class="welcome-step">
+                                                <span class="welcome-step-number">3</span>
+                                                <span class="welcome-step-text">Enter the <strong>company website URL</strong> (optional but recommended)</span>
+                                            </div>
+                                            <div class="welcome-step">
+                                                <span class="welcome-step-number">4</span>
+                                                <span class="welcome-step-text">Select <strong>Full Mock Interview</strong> from the dropdown ✓</span>
+                                            </div>
+                                            <div class="welcome-step">
+                                                <span class="welcome-step-number">5</span>
+                                                <span class="welcome-step-text">Click <strong>"Start Mock Interview"</strong> to begin your 10-question interview</span>
+                                            </div>
+                                            <div class="welcome-step">
+                                                <span class="welcome-step-number">6</span>
+                                                <span class="welcome-step-text">Once all Full Mock interview questions have been completed and results displayed, click <strong>"Complete Session"</strong> to receive your full results via email</span>
+                                            </div>
+                                        </div>
+                                        <p style="margin-top: 20px; color: #666; font-size: 14px;">💡 <em>Pro tip: Type your answers below, or use your device's voice-to-text to speak naturally!</em></p>
+                                    `;
+                                }
                             } else if (proSelectedType === 'audio_mock') {
                                 startPrepBtn.innerHTML = '📋 Save Documents';
                                 step5Container.style.display = 'flex';
                                 step5Number.textContent = '6';
                                 completeStepNumber.textContent = '7';
                                 document.querySelector('.chat-input-container').style.display = 'none';
+                                
+                                // Update welcome message with Audio Mock tips
+                                const welcomeMsg = document.getElementById('welcomeMessage');
+                                if (welcomeMsg) {
+                                    welcomeMsg.innerHTML = `
+                                        <h2>🏆 Interview Coach Pro — Audio Mock</h2>
+                                        <div class="welcome-steps">
+                                            <div class="welcome-step">
+                                                <span class="welcome-step-number">1</span>
+                                                <span class="welcome-step-text">Open your résumé, press <span class="highlight-keyword">Ctrl+A</span> (select all), <span class="highlight-keyword">Ctrl+C</span> (copy), <span class="highlight-keyword">Ctrl+V</span> (paste) into the Résumé box</span>
+                                            </div>
+                                            <div class="welcome-step">
+                                                <span class="welcome-step-number">2</span>
+                                                <span class="welcome-step-text">Go to the job posting, <span class="highlight-keyword">select all</span> text, <span class="highlight-keyword">copy it</span>, <span class="highlight-keyword">paste it</span> into Job Description</span>
+                                            </div>
+                                            <div class="welcome-step">
+                                                <span class="welcome-step-number">3</span>
+                                                <span class="welcome-step-text">Enter the <strong>company website URL</strong> (optional but recommended)</span>
+                                            </div>
+                                            <div class="welcome-step">
+                                                <span class="welcome-step-number">4</span>
+                                                <span class="welcome-step-text">Select <strong>Audio Mock</strong> from the dropdown ✓</span>
+                                            </div>
+                                            <div class="welcome-step">
+                                                <span class="welcome-step-number">5</span>
+                                                <span class="welcome-step-text">Click <strong>"Save Documents"</strong> and wait for confirmation</span>
+                                            </div>
+                                            <div class="welcome-step">
+                                                <span class="welcome-step-number">6</span>
+                                                <span class="welcome-step-text">Click <strong>"Start Voice Interview"</strong> and allow microphone access</span>
+                                            </div>
+                                            <div class="welcome-step">
+                                                <span class="welcome-step-number">7</span>
+                                                <span class="welcome-step-text">Once all Audio Mock interview questions have been answered and results displayed, click <strong>"Complete Session"</strong> to receive your full results via email</span>
+                                            </div>
+                                        </div>
+                                        <p style="margin-top: 20px; color: #666; font-size: 14px;">💡 <em>Tip: Use headphones for the best experience. Allow microphone access when prompted.</em></p>
+                                        <div style="margin-top: 16px; padding: 16px; background: #F0F9FF; border: 1px solid #BAE6FD; border-radius: 8px;">
+                                            <p style="color: #0369A1; font-size: 14px; margin: 0;"><strong>During your interview, you can ask Sarah to:</strong></p>
+                                            <ul style="color: #0369A1; font-size: 13px; margin: 8px 0 0 20px; padding: 0;">
+                                                <li>Repeat the question</li>
+                                                <li>Speak slower or faster</li>
+                                                <li>Rephrase the question differently</li>
+                                                <li>Give an example of a good answer</li>
+                                            </ul>
+                                        </div>
+                                    `;
+                                }
                             }
                             
                             // Re-check if start button should be enabled
@@ -2069,27 +2189,12 @@
                     step5Status.textContent = '🟡 Connecting to AI coach...';
                     
                     try {
-                        // Send customer documents to server via POST for logging/future use
-                        const response = await fetch('/api/signed-url', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                resume: documents.resume || '',
-                                jobDescription: documents.jobDescription || '',
-                                companyUrl: documents.companyUrl || ''
-                            })
-                        });
+                        const response = await fetch('/api/signed-url');
                         const data = await response.json();
                         
                         if (!data.signedUrl) {
                             throw new Error('Failed to get signed URL');
                         }
-                        
-                        console.log('Customer context sent to server:', {
-                            hasResume: !!documents.resume,
-                            hasJD: !!documents.jobDescription,
-                            hasUrl: !!documents.companyUrl
-                        });
                         
                         const { Conversation } = await import('https://esm.sh/@elevenlabs/client@latest');
                         
@@ -2446,7 +2551,7 @@
                 } catch (error) {
                     console.error('Complete session error:', error);
                     completeSessionBtn.disabled = false;
-                    completeSessionBtn.textContent = '✅ Complete Session';
+                    completeSessionBtn.textContent = 'Complete Session';
                     completeStatus.textContent = '🔴 Error - try again';
                     alert('Error completing session. Please try again.');
                 }
