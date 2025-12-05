@@ -36,6 +36,7 @@ const PRODUCT_TO_SESSION_TYPE = {
 // Credentials loaded from environment variable
 const GOOGLE_CREDENTIALS = JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}');
 const SPREADSHEET_ID = process.env.GOOGLE_SHEET_ID || '1nLXvn83ziFGpMNgBfbHE0rKCZe5PkxGHzXwGtAnKvrs';
+const TRANSCRIPT_FOLDER_ID = '120416leJohPp-_nXmNzaJ5GiSXmLQCzL';
 const SHEET_NAME = 'Sheet1';
 
 // Column mapping - UPDATED to include Doc URL columns
@@ -160,7 +161,13 @@ async function createTranscriptDoc(email, sessionType, transcript) {
         ]
       }
     });
-    
+    // Move document to the transcripts folder
+    await drive.files.update({
+      fileId: documentId,
+      addParents: TRANSCRIPT_FOLDER_ID,
+      removeParents: 'root',
+      fields: 'id, parents'
+    });
     // Make the document viewable by anyone with the link
     await drive.permissions.create({
       fileId: documentId,
