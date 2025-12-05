@@ -39,7 +39,7 @@ const SPREADSHEET_ID = process.env.GOOGLE_SHEET_ID || '1nLXvn83ziFGpMNgBfbHE0rKC
 const TRANSCRIPT_FOLDER_ID = '120416leJohPp-_nXmNzaJ5GiSXmLQCzL';
 const SHEET_NAME = 'Sheet1';
 
-// Column mapping - UPDATED to include Doc URL columns
+// Column mapping - includes Doc URL columns
 const COLUMNS = {
   EMAIL: 'C',
   QUICK_PREP_REMAINING: 'W',
@@ -54,13 +54,12 @@ const COLUMNS = {
   AUDIO_MOCK_TRANSCRIPT: 'AK',
   AUDIO_MOCK_STARTED_AT: 'AL',
   AUDIO_MOCK_STATUS: 'AM',
-  // NEW: Google Doc URL columns
   QUICK_PREP_DOC_URL: 'AN',
   FULL_MOCK_DOC_URL: 'AO',
   AUDIO_MOCK_DOC_URL: 'AP'
 };
 
-// Initialize Google APIs (Sheets AND Docs)
+// Initialize Google APIs (Sheets AND Docs AND Drive)
 let sheets = null;
 let docs = null;
 let drive = null;
@@ -119,14 +118,17 @@ async function createTranscriptDoc(email, sessionType, transcript) {
     // Create the document title
     const docTitle = `Talendro Interview Coach - ${sessionLabel} - ${email} - ${dateStr}`;
     
-    // Create a new Google Doc
-    const createResponse = await docs.documents.create({
+    // Create a new Google Doc using Drive API (in the shared folder)
+    const createResponse = await drive.files.create({
       requestBody: {
-        title: docTitle
-      }
+        name: docTitle,
+        mimeType: 'application/vnd.google-apps.document',
+        parents: [TRANSCRIPT_FOLDER_ID]
+      },
+      fields: 'id'
     });
     
-    const documentId = createResponse.data.documentId;
+    const documentId = createResponse.data.id;
     console.log(`Created Google Doc: ${documentId}`);
     
     // Build the document content
@@ -161,13 +163,7 @@ async function createTranscriptDoc(email, sessionType, transcript) {
         ]
       }
     });
-    // Move document to the transcripts folder
-    await drive.files.update({
-      fileId: documentId,
-      addParents: TRANSCRIPT_FOLDER_ID,
-      removeParents: 'root',
-      fields: 'id, parents'
-    });
+    
     // Make the document viewable by anyone with the link
     await drive.permissions.create({
       fileId: documentId,
@@ -256,7 +252,6 @@ async function getUserData(email) {
       audioMockTranscript: row[36] || '',
       audioMockStartedAt: row[37] || '',
       audioMockStatus: row[38] || '',
-      // NEW: Doc URLs
       quickPrepDocUrl: row[39] || '',
       fullMockDocUrl: row[40] || '',
       audioMockDocUrl: row[41] || ''
@@ -558,7 +553,7 @@ app.post('/api/start-session', async (req, res) => {
 });
 
 // ============================================
-// SAVE TRANSCRIPT - NOW CREATES GOOGLE DOC
+// SAVE TRANSCRIPT - CREATES GOOGLE DOC
 // ============================================
 
 app.post('/api/save-transcript', async (req, res) => {
@@ -586,7 +581,7 @@ app.post('/api/save-transcript', async (req, res) => {
     switch (sessionType) {
       case 'quick_prep':
         await updateMultipleCells(userData.rowNum, [
-          { column: COLUMNS.QUICK_PREP_TRANSCRIPT, value: transcript.substring(0, 50000) }, // Limit for sheets
+          { column: COLUMNS.QUICK_PREP_TRANSCRIPT, value: transcript.substring(0, 50000) },
           { column: COLUMNS.QUICK_PREP_GENERATED_AT, value: now },
           { column: COLUMNS.QUICK_PREP_DOC_URL, value: docUrl || '' }
         ]);
@@ -851,7 +846,6 @@ app.get('/api/transcript/:email/:sessionType', async (req, res) => {
 
 // ============================================
 // COMPLETE SESSION ENDPOINT (Zapier webhook)
-// NOW INCLUDES DOC URL
 // ============================================
 
 app.post('/api/complete', async (req, res) => {
@@ -885,7 +879,7 @@ app.post('/api/complete', async (req, res) => {
       }
     }
     
-    // Send to Zapier webhook - NOW INCLUDES docUrl
+    // Send to Zapier webhook - includes docUrl
     const zapierWebhookUrl = 'https://hooks.zapier.com/hooks/catch/9843127/uko6xa9/';
     
     await fetch(zapierWebhookUrl, {
@@ -897,7 +891,7 @@ app.post('/api/complete', async (req, res) => {
         sessionId: sessionId,
         transcript: transcriptText,
         documents: documents,
-        docUrl: docUrl,  // NEW: Include the Google Doc URL
+        docUrl: docUrl,
         completedAt: new Date().toISOString()
       })
     });
@@ -921,7 +915,6 @@ app.get('/api/config', (req, res) => {
 
 // ============================================
 // ELEVENLABS SIGNED URL WITH CUSTOMER CONTEXT
-// Changed from GET to POST to accept customer documents
 // ============================================
 
 app.post('/api/signed-url', async (req, res) => {
@@ -987,7 +980,7 @@ CRITICAL INSTRUCTIONS:
   }
 });
 
-// Keep the old GET endpoint for backwards compatibility but redirect to POST behavior
+// Keep the old GET endpoint for backwards compatibility
 app.get('/api/signed-url', async (req, res) => {
   try {
     const apiKey = process.env.ELEVENLABS_API_KEY;
