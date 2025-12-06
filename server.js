@@ -118,7 +118,7 @@ async function createTranscriptDoc(email, sessionType, transcript) {
     // Create the document title
     const docTitle = `Talendro Interview Coach - ${sessionLabel} - ${email} - ${dateStr}`;
     
-    // Create a new Google Doc using Drive API (in the shared folder)
+    // Create a new Google Doc using Drive API (in the Shared Drive)
     const createResponse = await drive.files.create({
       requestBody: {
         name: docTitle,
