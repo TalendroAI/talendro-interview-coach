@@ -4,1045 +4,453 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Talendro™ Interview Coach</title>
-    <meta name="description" content="AI-powered interview preparation. Get personalized coaching at a fraction of the cost of traditional interview prep.">
-    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;500;600&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --talendro-blue: #2F6DF6;
-            --vibrant-aqua: #00C4CC;
-            --bright-lime: #A4F400;
-            --talendro-slate: #2C2F38;
-            --warm-gray: #9FA6B2;
-            --white: #FFFFFF;
-            --light-bg: #F8FAFC;
-        }
-
         * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
         }
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--light-bg);
-            color: var(--talendro-slate);
-            line-height: 1.6;
-        }
-
-        /* ==================== */
-        /* LANDING PAGE STYLES  */
-        /* ==================== */
-        
-        .landing-page {
-            display: none;
-            background: var(--white);
-        }
-
-        .landing-page.active {
-            display: block;
-        }
-
-        .landing-header {
-            background: var(--white);
-            border-bottom: 1px solid #E2E8F0;
-            padding: 16px 24px;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .landing-header-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .landing-logo {
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 700;
-            font-size: 24px;
-            color: var(--talendro-blue);
-            text-decoration: none;
-        }
-
-        .landing-logo span {
-            color: var(--talendro-slate);
-        }
-
-        .landing-header-cta {
-            background: var(--talendro-blue);
-            color: var(--white);
-            padding: 10px 20px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 600;
-            font-size: 14px;
-            transition: background 0.2s;
-        }
-
-        .landing-header-cta:hover {
-            background: #1E5AD8;
-        }
-
-        .hero {
-            background: linear-gradient(135deg, #F0F7FF 0%, #E8F4F8 100%);
-            padding: 80px 24px;
-            text-align: center;
-        }
-
-        .hero-content {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        .hero-badge {
-            display: inline-block;
-            background: var(--vibrant-aqua);
-            color: var(--white);
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 24px;
-        }
-
-        .hero h1 {
-            font-family: 'DM Serif Display', serif;
-            font-size: 52px;
-            color: var(--talendro-slate);
-            margin-bottom: 20px;
-            line-height: 1.2;
-        }
-
-        .hero h1 em {
-            color: var(--talendro-blue);
-            font-style: italic;
-        }
-
-        .hero p {
-            font-size: 20px;
-            color: var(--warm-gray);
-            margin-bottom: 32px;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .hero-btn {
-            display: inline-block;
-            background: var(--talendro-blue);
-            color: var(--white);
-            padding: 16px 32px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 600;
-            font-size: 16px;
-            transition: background 0.2s;
-        }
-
-        .hero-btn:hover {
-            background: #1E5AD8;
-        }
-
-        .hero-stats {
-            display: flex;
-            justify-content: center;
-            gap: 48px;
-            margin-top: 48px;
-        }
-
-        .stat {
-            text-align: center;
-        }
-
-        .stat-number {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 36px;
-            font-weight: 800;
-            color: var(--talendro-blue);
-        }
-
-        .stat-label {
-            font-size: 14px;
-            color: var(--warm-gray);
-            margin-top: 4px;
-        }
-
-        .how-it-works {
-            padding: 80px 24px;
-            background: var(--light-bg);
-        }
-
-        .how-it-works h2 {
-            font-family: 'DM Serif Display', serif;
-            font-size: 36px;
-            color: var(--talendro-slate);
-            text-align: center;
-            margin-bottom: 48px;
-        }
-
-        .steps {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 32px;
-            max-width: 1000px;
-            margin: 0 auto;
-        }
-
-        .step {
-            text-align: center;
-        }
-
-        .step-number {
-            width: 48px;
-            height: 48px;
-            background: var(--talendro-blue);
-            color: var(--white);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 700;
-            font-size: 20px;
-            margin: 0 auto 16px;
-        }
-
-        .step h3 {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--talendro-slate);
-            margin-bottom: 8px;
-        }
-
-        .step p {
-            font-size: 14px;
-            color: var(--warm-gray);
-        }
-
-        .pricing {
-            padding: 80px 24px;
-            background: var(--white);
-        }
-
-        .pricing-header {
-            text-align: center;
-            max-width: 600px;
-            margin: 0 auto 48px;
-        }
-
-        .pricing-header h2 {
-            font-family: 'DM Serif Display', serif;
-            font-size: 36px;
-            color: var(--talendro-slate);
-            margin-bottom: 16px;
-        }
-
-        .pricing-header p {
-            color: var(--warm-gray);
-            font-size: 18px;
-        }
-
-        .pricing-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 24px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .pricing-card {
-            background: var(--white);
-            border: 1px solid #E2E8F0;
-            border-radius: 16px;
-            padding: 32px;
-            position: relative;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .pricing-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px rgba(0,0,0,0.1);
-        }
-
-        .pricing-card.featured {
-            border: 2px solid var(--talendro-blue);
-        }
-
-        .pricing-card.featured::before {
-            content: 'MOST POPULAR';
-            position: absolute;
-            top: -12px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--talendro-blue);
-            color: var(--white);
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-        }
-
-        .pricing-card.pro {
-            background: linear-gradient(135deg, var(--talendro-slate) 0%, #1a1c20 100%);
-            color: var(--white);
-        }
-
-        .pricing-card.pro .card-title,
-        .pricing-card.pro .price,
-        .pricing-card.pro .price-period {
-            color: var(--white);
-        }
-
-        .pricing-card.pro .feature-list li {
-            color: rgba(255,255,255,0.8);
-        }
-
-        .pricing-card.pro .feature-list li::before {
-            color: var(--bright-lime);
-        }
-
-        .card-title {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--talendro-slate);
-            margin-bottom: 8px;
-        }
-
-        .card-description {
-            font-size: 14px;
-            color: var(--warm-gray);
-            margin-bottom: 20px;
-        }
-
-        .pricing-card.pro .card-description {
-            color: rgba(255,255,255,0.6);
-        }
-
-        .price {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 42px;
-            font-weight: 800;
-            color: var(--talendro-slate);
-        }
-
-        .price-period {
-            font-size: 16px;
-            font-weight: 400;
-            color: var(--warm-gray);
-        }
-
-        .feature-list {
-            list-style: none;
-            margin: 24px 0;
-        }
-
-        .feature-list li {
-            padding: 8px 0;
-            font-size: 14px;
-            color: var(--talendro-slate);
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-        }
-
-        .feature-list li::before {
-            content: '✓';
-            color: var(--vibrant-aqua);
-            font-weight: 600;
-            flex-shrink: 0;
-        }
-
-        .pricing-btn {
-            display: block;
-            width: 100%;
-            padding: 14px 24px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 600;
-            font-size: 14px;
-            text-align: center;
-            transition: all 0.2s;
-        }
-
-        .pricing-btn.primary {
-            background: var(--talendro-blue);
-            color: var(--white);
-        }
-
-        .pricing-btn.primary:hover {
-            background: #1E5AD8;
-        }
-
-        .pricing-btn.secondary {
-            background: var(--light-bg);
-            color: var(--talendro-blue);
-            border: 1px solid var(--talendro-blue);
-        }
-
-        .pricing-btn.secondary:hover {
-            background: rgba(47, 109, 246, 0.05);
-        }
-
-        .pricing-btn.pro-btn {
-            background: var(--bright-lime);
-            color: var(--talendro-slate);
-        }
-
-        .pricing-btn.pro-btn:hover {
-            background: #8FD600;
-        }
-
-        .pro-options {
-            display: flex;
-            gap: 12px;
-            margin-top: 16px;
-        }
-
-        .pro-options a {
-            flex: 1;
-            padding: 10px;
-            font-size: 12px;
-        }
-
-        .comparison {
-            padding: 80px 24px;
-            background: var(--light-bg);
-        }
-
-        .comparison h2 {
-            font-family: 'DM Serif Display', serif;
-            font-size: 36px;
-            color: var(--talendro-slate);
-            text-align: center;
-            margin-bottom: 48px;
-        }
-
-        .comparison-table {
-            max-width: 800px;
-            margin: 0 auto;
-            border-collapse: collapse;
-            width: 100%;
-            background: var(--white);
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-
-        .comparison-table th,
-        .comparison-table td {
-            padding: 16px 20px;
-            text-align: left;
-            border-bottom: 1px solid #E2E8F0;
-        }
-
-        .comparison-table th {
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 600;
-            font-size: 14px;
-            color: var(--warm-gray);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            background: var(--light-bg);
-        }
-
-        .comparison-table td {
-            font-size: 15px;
-        }
-
-        .comparison-table tr:last-child td {
-            border-bottom: none;
-        }
-
-        .comparison-table .highlight {
-            color: var(--talendro-blue);
-            font-weight: 600;
-        }
-
-        .comparison-table .muted {
-            color: var(--warm-gray);
-        }
-
-        .cta {
-            padding: 80px 24px;
-            background: linear-gradient(135deg, var(--talendro-blue) 0%, #1E5AD8 100%);
-            text-align: center;
-        }
-
-        .cta h2 {
-            font-family: 'DM Serif Display', serif;
-            font-size: 36px;
-            color: var(--white);
-            margin-bottom: 16px;
-        }
-
-        .cta p {
-            font-size: 18px;
-            color: rgba(255,255,255,0.8);
-            margin-bottom: 32px;
-            max-width: 500px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .cta-btn {
-            display: inline-block;
-            background: var(--white);
-            color: var(--talendro-blue);
-            padding: 16px 32px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 700;
-            font-size: 16px;
-            transition: transform 0.2s;
-        }
-
-        .cta-btn:hover {
-            transform: translateY(-2px);
-        }
-
-        .landing-footer {
-            background: var(--talendro-slate);
-            color: rgba(255,255,255,0.6);
-            padding: 40px 24px;
-            text-align: center;
-        }
-
-        .footer-logo {
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 700;
-            font-size: 20px;
-            color: var(--white);
-            margin-bottom: 8px;
-        }
-
-        .footer-tagline {
-            font-family: 'DM Serif Display', serif;
-            font-style: italic;
-            color: rgba(255,255,255,0.8);
-            margin-bottom: 24px;
-        }
-
-        .footer-badges {
-            display: flex;
-            justify-content: center;
-            gap: 32px;
-            margin-bottom: 24px;
-            flex-wrap: wrap;
-        }
-
-        .footer-badges span {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: rgba(255,255,255,0.9);
-        }
-
-        @media (max-width: 768px) {
-            .hero h1 { font-size: 36px; }
-            .hero-stats { flex-direction: column; gap: 24px; }
-            .pricing-grid { grid-template-columns: 1fr; max-width: 400px; }
-            .pro-options { flex-direction: column; }
-            .comparison-table { font-size: 14px; }
-            .comparison-table th, .comparison-table td { padding: 12px; }
-            .footer-badges { flex-direction: column; gap: 12px; }
-        }
-
-        /* ==================== */
-        /* LOADING/STATUS SCREENS */
-        /* ==================== */
-
-        .loading-screen, .access-denied-screen, .transcript-screen {
-            display: none;
+            background: #F8FAFC;
+            color: #1E293B;
             min-height: 100vh;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 40px;
-            text-align: center;
         }
 
-        .loading-screen.active, .access-denied-screen.active, .transcript-screen.active {
-            display: flex;
-        }
-
-        .loading-spinner {
-            width: 48px;
-            height: 48px;
-            border: 4px solid var(--light-bg);
-            border-top-color: var(--talendro-blue);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 24px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .loading-screen h2, .access-denied-screen h2, .transcript-screen h2 {
-            font-family: 'DM Serif Display', serif;
-            font-size: 28px;
-            color: var(--talendro-slate);
-            margin-bottom: 12px;
-        }
-
-        .loading-screen p, .access-denied-screen p {
-            color: var(--warm-gray);
-            font-size: 16px;
-        }
-
-        .access-denied-screen {
-            background: var(--light-bg);
-        }
-
-        .access-denied-icon {
-            font-size: 64px;
-            margin-bottom: 24px;
-        }
-
-        .access-denied-screen .btn {
-            margin-top: 24px;
-            display: inline-block;
-            background: var(--talendro-blue);
-            color: var(--white);
-            padding: 14px 28px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 600;
-        }
-
-        .transcript-screen {
-            background: var(--light-bg);
-            align-items: stretch;
-            max-width: 900px;
-            margin: 0 auto;
-        }
-
-        .transcript-content {
-            background: var(--white);
-            border-radius: 12px;
-            padding: 32px;
-            text-align: left;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            white-space: pre-wrap;
-            font-size: 14px;
-            line-height: 1.8;
-            max-height: 70vh;
-            overflow-y: auto;
-        }
-
-        /* ==================== */
-        /* CHAT APP STYLES      */
-        /* ==================== */
-
-        .chat-app {
-            display: none;
-            min-height: 100vh;
-            flex-direction: column;
-        }
-
-        .chat-app.active {
-            display: flex;
-        }
-
+        /* Header */
         .header {
-            background: var(--white);
-            border-bottom: 1px solid #E2E8F0;
+            background: #FFFFFF;
             padding: 16px 24px;
             display: flex;
-            align-items: center;
             justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #E2E8F0;
         }
 
         .logo {
-            font-family: 'Montserrat', sans-serif;
+            font-size: 20px;
             font-weight: 700;
-            font-size: 24px;
-            color: var(--talendro-blue);
+            color: #3B82F6;
+            text-decoration: none;
         }
 
         .logo span {
-            color: var(--talendro-slate);
+            color: #06B6D4;
         }
 
         .session-badge {
-            background: var(--vibrant-aqua);
-            color: var(--white);
-            padding: 6px 12px;
-            border-radius: 20px;
+            color: white;
+            padding: 6px 14px;
+            border-radius: 6px;
             font-size: 12px;
             font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .main-container {
-            flex: 1;
-            display: flex;
-            max-width: 1400px;
-            margin: 0 auto;
-            width: 100%;
-            padding: 24px;
-            gap: 24px;
-        }
-
-        .sidebar {
-            width: 320px;
-            flex-shrink: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .sidebar-card {
-            background: var(--white);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-
-        .sidebar-card h3 {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--talendro-slate);
-            margin-bottom: 16px;
-            text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
-        .form-group {
-            margin-bottom: 16px;
+        .session-badge.quick_prep { background: #3B82F6; }
+        .session-badge.full_mock { background: #3B82F6; }
+        .session-badge.audio_mock { background: #06B6D4; }
+        .session-badge.pro { background: linear-gradient(135deg, #3B82F6, #06B6D4); }
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+            gap: 24px;
+            min-height: calc(100vh - 70px);
         }
 
-        .form-group:last-of-type {
-            margin-bottom: 0;
+        /* Sidebar */
+        .sidebar {
+            width: 320px;
+            flex-shrink: 0;
         }
 
-        .form-group label {
-            display: block;
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--talendro-slate);
-            margin-bottom: 6px;
+        .sidebar-card {
+            background: #FFFFFF;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
         }
 
-        .field-number {
-            display: inline-flex;
+        .sidebar-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #64748B;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 20px;
+        }
+
+        /* Document Input Groups */
+        .doc-group {
+            margin-bottom: 20px;
+        }
+
+        .doc-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .step-circle {
+            width: 22px;
+            height: 22px;
+            background: #3B82F6;
+            color: white;
+            border-radius: 50%;
+            display: flex;
             align-items: center;
             justify-content: center;
-            width: 20px;
-            height: 20px;
-            background: var(--talendro-blue);
-            color: var(--white);
-            border-radius: 50%;
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 700;
-            font-size: 11px;
-            margin-right: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            flex-shrink: 0;
         }
 
-        .form-group textarea,
-        .form-group input {
+        .step-circle.completed {
+            background: #10B981;
+        }
+
+        .step-circle.voice {
+            background: #06B6D4;
+        }
+
+        .doc-label-text {
+            font-size: 14px;
+            font-weight: 500;
+            color: #1E293B;
+        }
+
+        .doc-textarea {
             width: 100%;
-            padding: 10px 12px;
+            min-height: 80px;
+            padding: 12px;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 13px;
+            color: #64748B;
+            resize: vertical;
+            transition: border-color 0.2s;
+        }
+
+        .doc-textarea:focus {
+            outline: none;
+            border-color: #3B82F6;
+        }
+
+        .doc-textarea.has-content {
+            color: #1E293B;
+            border-color: #10B981;
+        }
+
+        .doc-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 13px;
+            color: #64748B;
+            transition: border-color 0.2s;
+        }
+
+        .doc-input:focus {
+            outline: none;
+            border-color: #3B82F6;
+        }
+
+        .doc-input.has-content {
+            color: #1E293B;
+            border-color: #10B981;
+        }
+
+        .doc-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #94A3B8;
+            margin-top: 6px;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #CBD5E1;
+        }
+
+        .status-dot.provided {
+            background: #10B981;
+        }
+
+        /* Interview Type Selector (Pro only) */
+        .type-selector-group {
+            display: none;
+        }
+
+        .type-selector-group.visible {
+            display: block;
+        }
+
+        .type-selector {
+            width: 100%;
+            padding: 12px;
             border: 1px solid #E2E8F0;
             border-radius: 8px;
             font-family: inherit;
             font-size: 14px;
-            resize: vertical;
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-
-        .form-group textarea:focus,
-        .form-group input:focus {
-            outline: none;
-            border-color: var(--talendro-blue);
-            box-shadow: 0 0 0 3px rgba(47, 109, 246, 0.1);
-        }
-
-        .form-group textarea {
-            min-height: 100px;
-        }
-
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-top: 6px;
-            font-size: 12px;
-            color: var(--warm-gray);
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #E2E8F0;
-        }
-
-        .status-dot.active {
-            background: var(--bright-lime);
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 600;
-            font-size: 14px;
+            font-weight: 500;
+            color: #64748B;
+            background: #FFFFFF;
             cursor: pointer;
-            transition: all 0.2s;
-            border: none;
-            width: 100%;
-            margin-top: 16px;
+            transition: border-color 0.2s;
         }
 
-        .btn-primary {
-            background: var(--talendro-blue);
-            color: var(--white);
+        .type-selector:focus {
+            outline: none;
+            border-color: #3B82F6;
         }
 
-        .btn-primary:hover {
-            background: #1E5AD8;
-        }
-
-        .btn-complete {
-            background: var(--bright-lime);
-            color: var(--talendro-slate);
-            margin-top: 12px;
-        }
-
-        .btn-complete:hover {
-            background: #8FD600;
-        }
-
-        .btn-complete:disabled {
-            background: var(--warm-gray);
-            color: var(--white);
+        .type-selector:disabled {
+            background: #F8FAFC;
             cursor: not-allowed;
         }
 
-        .chat-container {
+        .type-selector.has-selection {
+            color: #1E293B;
+            border-color: #10B981;
+        }
+
+        /* Action Buttons */
+        .action-section {
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid #E2E8F0;
+        }
+
+        .action-button {
+            width: 100%;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            transition: all 0.2s;
+        }
+
+        .action-button.primary {
+            background: #3B82F6;
+            color: white;
+        }
+
+        .action-button.primary:hover:not(:disabled) {
+            background: #2563EB;
+        }
+
+        .action-button.voice {
+            background: #06B6D4;
+            color: white;
+        }
+
+        .action-button.voice:hover:not(:disabled) {
+            background: #0891B2;
+        }
+
+        .action-button.success {
+            background: #10B981;
+            color: white;
+        }
+
+        .action-button.success:hover:not(:disabled) {
+            background: #059669;
+        }
+
+        .action-button:disabled {
+            background: #F1F5F9;
+            color: #94A3B8;
+            cursor: not-allowed;
+        }
+
+        .action-button.hidden {
+            display: none;
+        }
+
+        .button-hint {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: #94A3B8;
+            margin-bottom: 16px;
+            padding-left: 4px;
+        }
+
+        .button-hint .hint-icon {
+            font-size: 10px;
+        }
+
+        .button-hint.hidden {
+            display: none;
+        }
+
+        /* Main Content */
+        .main-content {
             flex: 1;
-            background: var(--white);
+            background: #FFFFFF;
             border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
             display: flex;
             flex-direction: column;
-            overflow: hidden;
         }
 
-        .chat-messages {
+        .content-area {
             flex: 1;
-            padding: 24px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .welcome-message {
-            text-align: center;
             padding: 40px;
-            color: var(--warm-gray);
+            overflow-y: auto;
         }
 
-        .welcome-message h2 {
-            font-family: 'DM Serif Display', serif;
+        /* Welcome Section */
+        .welcome-title {
             font-size: 28px;
-            color: var(--talendro-slate);
-            margin-bottom: 24px;
+            font-weight: 600;
+            color: #1E293B;
+            text-align: center;
+            margin-bottom: 40px;
         }
 
         .welcome-steps {
-            text-align: left;
-            max-width: 450px;
+            max-width: 600px;
             margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
         }
 
         .welcome-step {
             display: flex;
+            gap: 16px;
             align-items: flex-start;
-            gap: 12px;
-            margin-bottom: 16px;
-            font-size: 15px;
-            color: var(--talendro-slate);
+        }
+
+        .welcome-step.hidden {
+            display: none;
         }
 
         .welcome-step-number {
             width: 28px;
             height: 28px;
-            background: var(--talendro-blue);
-            color: var(--white);
+            background: #3B82F6;
+            color: white;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 700;
             font-size: 14px;
+            font-weight: 600;
             flex-shrink: 0;
+        }
+
+        .welcome-step-number.voice {
+            background: #06B6D4;
         }
 
         .welcome-step-text {
+            font-size: 15px;
+            line-height: 1.6;
+            color: #475569;
             padding-top: 3px;
         }
 
-        .start-prep-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            background: linear-gradient(135deg, var(--talendro-blue) 0%, #1E5AD8 100%);
-            color: var(--white);
-            padding: 16px 32px;
-            border-radius: 8px;
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 700;
-            font-size: 16px;
-            border: none;
-            cursor: pointer;
-            margin-top: 24px;
-            transition: transform 0.2s, box-shadow 0.2s;
-            box-shadow: 0 4px 12px rgba(47, 109, 246, 0.3);
+        .kbd {
+            display: inline-block;
+            background: #F1F5F9;
+            border: 1px solid #E2E8F0;
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 12px;
+            font-weight: 500;
+            color: #334155;
         }
 
-        .start-prep-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(47, 109, 246, 0.4);
+        .highlight {
+            color: #3B82F6;
+            text-decoration: underline;
+            text-underline-offset: 2px;
         }
 
-        .start-prep-btn:disabled {
-            background: var(--warm-gray);
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
+        .bold {
+            font-weight: 600;
+            color: #1E293B;
         }
 
-        .sidebar-start-btn {
-            flex: 1;
-            margin-top: 0;
-            padding: 14px 16px;
-            font-size: 14px;
+        /* Sarah Tips */
+        .sarah-tips {
+            max-width: 600px;
+            margin: 32px auto 0;
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.08), rgba(59, 130, 246, 0.08));
+            border: 1px solid rgba(6, 182, 212, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            display: none;
         }
 
-        .numbered-button-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-top: 16px;
+        .sarah-tips.visible {
+            display: block;
         }
 
-        .numbered-button-row .field-number {
-            flex-shrink: 0;
-        }
-
-        .numbered-button-row .btn,
-        .numbered-button-row .btn-complete {
-            flex: 1;
-            margin-top: 0;
-        }
-
-        .message {
-            max-width: 80%;
-            padding: 14px 18px;
-            border-radius: 16px;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-
-        .message.user {
-            background: var(--talendro-blue);
-            color: var(--white);
-            align-self: flex-end;
-            border-bottom-right-radius: 4px;
-        }
-
-        .message.assistant {
-            background: var(--light-bg);
-            color: var(--talendro-slate);
-            align-self: flex-start;
-            border-bottom-left-radius: 4px;
-        }
-
-        .message.assistant h1,
-        .message.assistant h2,
-        .message.assistant h3,
-        .message.assistant h4 {
-            font-family: 'Montserrat', sans-serif;
-            margin-top: 16px;
-            margin-bottom: 8px;
-        }
-
-        .message.assistant h1:first-child,
-        .message.assistant h2:first-child,
-        .message.assistant h3:first-child {
-            margin-top: 0;
-        }
-
-        .message.assistant ul,
-        .message.assistant ol {
-            margin-left: 20px;
+        .sarah-tips-title {
+            font-weight: 600;
+            color: #06B6D4;
             margin-bottom: 12px;
-        }
-
-        .message.assistant li {
-            margin-bottom: 6px;
-        }
-
-        .message.assistant strong {
-            color: var(--talendro-blue);
-        }
-
-        .typing-indicator {
             display: flex;
-            gap: 4px;
-            padding: 14px 18px;
-            background: var(--light-bg);
-            border-radius: 16px;
-            border-bottom-left-radius: 4px;
-            align-self: flex-start;
+            align-items: center;
+            gap: 8px;
         }
 
-        .typing-indicator span {
-            width: 8px;
-            height: 8px;
-            background: var(--warm-gray);
-            border-radius: 50%;
-            animation: typing 1.4s infinite ease-in-out;
+        .sarah-tips ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
         }
 
-        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
-        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
-
-        @keyframes typing {
-            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-            30% { transform: translateY(-4px); opacity: 1; }
+        .sarah-tips li {
+            font-size: 14px;
+            color: #475569;
+            padding: 6px 0;
+            padding-left: 24px;
+            position: relative;
         }
 
-        .chat-input-container {
+        .sarah-tips li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #06B6D4;
+            font-weight: 600;
+        }
+
+        /* Chat Input */
+        .chat-container {
             padding: 16px 24px;
             border-top: 1px solid #E2E8F0;
             display: flex;
             gap: 12px;
-            align-items: flex-end;
+            align-items: center;
         }
 
         .chat-input {
@@ -1052,1090 +460,873 @@
             border-radius: 24px;
             font-family: inherit;
             font-size: 14px;
-            resize: none;
-            max-height: 150px;
-            transition: border-color 0.2s, box-shadow 0.2s;
+            color: #64748B;
+            transition: border-color 0.2s;
         }
 
         .chat-input:focus {
             outline: none;
-            border-color: var(--talendro-blue);
-            box-shadow: 0 0 0 3px rgba(47, 109, 246, 0.1);
+            border-color: #3B82F6;
         }
 
         .chat-input:disabled {
-            background: #F1F5F9;
-            cursor: not-allowed;
+            background: #F8FAFC;
         }
 
         .send-btn {
-            background: var(--talendro-blue);
-            color: var(--white);
+            width: 40px;
+            height: 40px;
+            background: #3B82F6;
+            color: white;
             border: none;
-            width: 44px;
-            height: 44px;
             border-radius: 50%;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: background 0.2s;
             flex-shrink: 0;
+            transition: background 0.2s;
         }
 
         .send-btn:hover:not(:disabled) {
-            background: #1E5AD8;
+            background: #2563EB;
         }
 
         .send-btn:disabled {
-            background: var(--warm-gray);
+            background: #CBD5E1;
             cursor: not-allowed;
         }
 
-        .session-type-display {
-            padding: 12px;
-            background: #F0F7FF;
-            border-radius: 8px;
-            font-weight: 500;
-            color: var(--talendro-blue);
+        /* Results Container */
+        .results-container {
+            display: none;
         }
 
+        .results-container.visible {
+            display: block;
+        }
+
+        /* ElevenLabs Widget */
+        #elevenlabs-widget-container {
+            display: none;
+            margin: 24px 0;
+        }
+
+        #elevenlabs-widget-container.visible {
+            display: block;
+        }
+
+        /* Responsive */
         @media (max-width: 900px) {
-            .main-container { flex-direction: column; }
-            .sidebar { width: 100%; }
+            .main-container {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- LOADING SCREEN -->
-    <div class="loading-screen" id="loadingScreen">
-        <div class="loading-spinner"></div>
-        <h2>Loading your session...</h2>
-        <p>Please wait while we verify your access.</p>
-    </div>
+    <!-- Header -->
+    <header class="header">
+        <a href="https://talendro.com" class="logo">Talendro<span>™</span> Interview Coach</a>
+        <div class="session-badge" id="sessionBadge">INTERVIEW COACH</div>
+    </header>
 
-    <!-- ACCESS DENIED SCREEN -->
-    <div class="access-denied-screen" id="accessDeniedScreen">
-        <div class="access-denied-icon">🔒</div>
-        <h2>Session Not Available</h2>
-        <p id="accessDeniedMessage">You don't have any remaining sessions of this type.</p>
-        <a href="https://coach.talendro.com" class="btn">Purchase a Session</a>
-    </div>
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-card">
+                <h3 class="sidebar-title">Your Documents</h3>
 
-    <!-- TRANSCRIPT VIEW SCREEN -->
-    <div class="transcript-screen" id="transcriptScreen">
-        <header class="header">
-            <div class="logo">Talendro<span>™</span> Interview Coach</div>
-            <div class="session-badge">YOUR PREP PACKET</div>
-        </header>
-        <div style="padding: 24px;">
-            <h2 style="font-family: 'DM Serif Display', serif; margin-bottom: 16px;">Your Saved Interview Prep</h2>
-            <p style="color: var(--warm-gray); margin-bottom: 24px;">This is your previously generated prep packet. You can access it anytime.</p>
-            <div class="transcript-content" id="transcriptContent"></div>
-        </div>
-    </div>
-
-    <!-- LANDING PAGE -->
-    <div class="landing-page" id="landingPage">
-        <header class="landing-header">
-            <div class="landing-header-content">
-                <a href="https://talendro.com" class="landing-logo">Talendro<span>™</span></a>
-                <a href="#pricing" class="landing-header-cta">Get Started</a>
-            </div>
-        </header>
-
-        <section class="hero">
-            <div class="hero-content">
-                <span class="hero-badge">AI-Powered Interview Prep</span>
-                <h1>Own Your Next <em>Interview</em></h1>
-                <p>Personalized interview coaching powered by AI. Get the preparation you need at a fraction of traditional coaching costs.</p>
-                <a href="#pricing" class="hero-btn">View Packages</a>
-                <div class="hero-stats">
-                    <div class="stat">
-                        <div class="stat-number">80%</div>
-                        <div class="stat-label">Less than human coaches</div>
+                <!-- Step 1: Resume -->
+                <div class="doc-group">
+                    <div class="doc-label">
+                        <span class="step-circle" id="step1Circle">1</span>
+                        <span class="doc-label-text">Résumé</span>
                     </div>
-                    <div class="stat">
-                        <div class="stat-number">24/7</div>
-                        <div class="stat-label">Available anytime</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-number">∞</div>
-                        <div class="stat-label">Personalized responses</div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section class="how-it-works">
-            <h2>How It Works</h2>
-            <div class="steps">
-                <div class="step">
-                    <div class="step-number">1</div>
-                    <h3>Choose Your Package</h3>
-                    <p>Select the prep level that matches your needs — from quick refreshers to full mock interviews.</p>
-                </div>
-                <div class="step">
-                    <div class="step-number">2</div>
-                    <h3>Upload Your Materials</h3>
-                    <p>Share your résumé, job description, and company details for personalized preparation.</p>
-                </div>
-                <div class="step">
-                    <div class="step-number">3</div>
-                    <h3>Start Practicing</h3>
-                    <p>Get targeted questions, expert feedback, and actionable tips to nail your interview.</p>
-                </div>
-            </div>
-        </section>
-
-        <section class="pricing" id="pricing">
-            <div class="pricing-header">
-                <h2>Choose Your Prep Level</h2>
-                <p>From quick refreshers to comprehensive coaching — find the right fit for your interview timeline.</p>
-            </div>
-            <div class="pricing-grid">
-                <div class="pricing-card">
-                    <div class="card-title">Quick Prep</div>
-                    <div class="card-description">Perfect for last-minute preparation</div>
-                    <div class="price">$12</div>
-                    <ul class="feature-list">
-                        <li>5 targeted interview questions</li>
-                        <li>Company-specific insights</li>
-                        <li>Key talking points</li>
-                        <li>30-minute session</li>
-                    </ul>
-                    <a href="https://buy.stripe.com/cNi3cu7jh6ZA81jbYXcV203" class="pricing-btn secondary">Get Quick Prep</a>
-                </div>
-                <div class="pricing-card featured">
-                    <div class="card-title">Full Mock Interview</div>
-                    <div class="card-description">Complete interview simulation</div>
-                    <div class="price">$29</div>
-                    <ul class="feature-list">
-                        <li>Full mock interview experience</li>
-                        <li>Behavioral & technical questions</li>
-                        <li>Detailed answer feedback</li>
-                        <li>Performance scorecard</li>
-                        <li>Improvement recommendations</li>
-                    </ul>
-                    <a href="https://buy.stripe.com/28E8wO6fdcjUbdv0gfcV204" class="pricing-btn primary">Start Mock Interview</a>
-                </div>
-                <div class="pricing-card">
-                    <div class="card-title">Premium Audio Mock</div>
-                    <div class="card-description">Realistic voice-based practice</div>
-                    <div class="price">$49</div>
-                    <ul class="feature-list">
-                        <li>Everything in Full Mock</li>
-                        <li>Voice-to-voice interaction</li>
-                        <li>Real-time verbal feedback</li>
-                        <li>Pace & clarity coaching</li>
-                        <li>Confidence building exercises</li>
-                    </ul>
-                    <a href="https://buy.stripe.com/8x29AS1YX6ZA1CVfb9cV205" class="pricing-btn secondary">Try Audio Mock</a>
-                </div>
-                <div class="pricing-card pro">
-                    <div class="card-title">Interview Coach Pro</div>
-                    <div class="card-description">Unlimited prep for serious job seekers</div>
-                    <div class="price">$79<span class="price-period">/month</span></div>
-                    <ul class="feature-list">
-                        <li>Unlimited Quick Prep sessions</li>
-                        <li>6 Full Mock Interviews/month</li>
-                        <li>2 Audio Mock sessions/month</li>
-                        <li>Interview Dashboard & Analytics</li>
-                        <li>Intel Briefs on companies</li>
-                        <li>Answer Vault (save best responses)</li>
-                        <li>Question Banks by industry</li>
-                        <li>Round 2 Ready prep</li>
-                    </ul>
-                    <a href="https://buy.stripe.com/dRm8wO7jh4Rs95n0gfcV206" class="pricing-btn pro-btn">Go Pro — Monthly</a>
-                    <div class="pro-options">
-                        <a href="https://buy.stripe.com/14AdR87jh6ZA5TbaUTcV207" class="pricing-btn secondary" style="background: transparent; border-color: rgba(255,255,255,0.3); color: var(--white);">$199/quarter (save 16%)</a>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section class="comparison">
-            <h2>Why Talendro Interview Coach?</h2>
-            <table class="comparison-table">
-                <thead>
-                    <tr>
-                        <th>Feature</th>
-                        <th>Traditional Coaching</th>
-                        <th>Talendro</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr><td>Price per session</td><td class="muted">$150 - $500</td><td class="highlight">$12 - $49</td></tr>
-                    <tr><td>Availability</td><td class="muted">By appointment</td><td class="highlight">24/7 instant access</td></tr>
-                    <tr><td>Personalization</td><td class="muted">Varies by coach</td><td class="highlight">Always tailored to your role</td></tr>
-                    <tr><td>Practice sessions</td><td class="muted">Limited by budget</td><td class="highlight">Unlimited with Pro</td></tr>
-                    <tr><td>Feedback speed</td><td class="muted">After session ends</td><td class="highlight">Real-time</td></tr>
-                </tbody>
-            </table>
-        </section>
-
-        <section class="cta">
-            <h2>Ready to Own Your Interview?</h2>
-            <p>Join thousands of job seekers who've landed their dream roles with Talendro Interview Coach.</p>
-            <a href="#pricing" class="cta-btn">Get Started Now</a>
-        </section>
-
-        <footer class="landing-footer">
-            <div class="footer-logo">Talendro™</div>
-            <p class="footer-tagline">Precision Matches. Faster Results.</p>
-            <div class="footer-badges">
-                <span>🇺🇸 American-Built</span>
-                <span>🎖️ Veteran-Led</span>
-                <span>✓ Recruiter-Tested</span>
-            </div>
-            <p>© 2024 Talendro. All rights reserved.</p>
-        </footer>
-    </div>
-
-    <!-- CHAT APPLICATION -->
-    <div class="chat-app" id="chatApp">
-        <header class="header">
-            <div class="logo">Talendro<span>™</span> Interview Coach</div>
-            <div class="session-badge" id="sessionBadge">QUICK PREP</div>
-        </header>
-
-        <main class="main-container">
-            <aside class="sidebar">
-                <div class="sidebar-card">
-                    <h3>Your Documents</h3>
-                    
-                    <div class="form-group">
-                        <label for="resume"><span class="field-number">1</span> Résumé</label>
-                        <textarea id="resume" placeholder="Paste your résumé text here..."></textarea>
-                        <div class="status-indicator">
-                            <span class="status-dot" id="resumeStatus"></span>
-                            <span id="resumeStatusText">Not provided</span>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="jobDescription"><span class="field-number">2</span> Job Description</label>
-                        <textarea id="jobDescription" placeholder="Paste the job description text here..."></textarea>
-                        <div class="status-indicator">
-                            <span class="status-dot" id="jdStatus"></span>
-                            <span id="jdStatusText">Not provided</span>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="companyUrl"><span class="field-number">3</span> Company Website URL</label>
-                        <input type="url" id="companyUrl" placeholder="https://company.com">
-                        <div class="status-indicator">
-                            <span class="status-dot" id="urlStatus"></span>
-                            <span id="urlStatusText">Not provided</span>
-                        </div>
-                    </div>
-
-                    <div class="numbered-button-row">
-                        <span class="field-number">4</span>
-                        <button class="start-prep-btn sidebar-start-btn" id="startPrepBtn">
-                            🚀 Start My Interview Prep
-                        </button>
+                    <textarea 
+                        class="doc-textarea" 
+                        id="resumeInput"
+                        placeholder="Paste your résumé text here..."
+                    ></textarea>
+                    <div class="doc-status" id="resumeStatus">
+                        <span class="status-dot"></span>
+                        <span>Waiting for content</span>
                     </div>
                 </div>
 
-                <div class="sidebar-card">
-                    <h3>Your Session</h3>
-                    <div class="session-type-display" id="sessionTypeDisplay">Loading...</div>
-                    <select id="sessionType" style="display: none;">
-                        <option value="quick_prep">Quick Prep ($12)</option>
-                        <option value="full_mock">Full Mock Interview ($29)</option>
-                        <option value="audio_mock">Premium Audio Mock ($49)</option>
-                        <option value="pro">Interview Coach Pro</option>
+                <!-- Step 2: Job Description -->
+                <div class="doc-group">
+                    <div class="doc-label">
+                        <span class="step-circle" id="step2Circle">2</span>
+                        <span class="doc-label-text">Job Description</span>
+                    </div>
+                    <textarea 
+                        class="doc-textarea" 
+                        id="jobDescInput"
+                        placeholder="Paste the job description text here..."
+                    ></textarea>
+                    <div class="doc-status" id="jobDescStatus">
+                        <span class="status-dot"></span>
+                        <span>Waiting for content</span>
+                    </div>
+                </div>
+
+                <!-- Step 3: Company URL -->
+                <div class="doc-group">
+                    <div class="doc-label">
+                        <span class="step-circle" id="step3Circle">3</span>
+                        <span class="doc-label-text">Company Website URL</span>
+                    </div>
+                    <input 
+                        type="text" 
+                        class="doc-input" 
+                        id="companyUrlInput"
+                        placeholder="https://company.com"
+                    >
+                    <div class="doc-status" id="companyUrlStatus">
+                        <span class="status-dot"></span>
+                        <span>Waiting for content</span>
+                    </div>
+                </div>
+
+                <!-- Step 4: Interview Type Selector (Pro only) -->
+                <div class="doc-group type-selector-group" id="typeSelectorGroup">
+                    <div class="doc-label">
+                        <span class="step-circle" id="step4Circle">4</span>
+                        <span class="doc-label-text">Select Interview Type</span>
+                    </div>
+                    <select class="type-selector" id="interviewTypeSelect" disabled>
+                        <option value="">-- Select Interview Type --</option>
+                        <option value="quick_prep">Quick Prep</option>
+                        <option value="full_mock">Full Mock Interview</option>
+                        <option value="audio_mock">Premium Audio Mock</option>
                     </select>
-                    <div class="numbered-button-row">
-                        <span class="field-number">5</span>
-                        <button class="btn btn-complete" id="completeSessionBtn">
-                            Complete Session
-                        </button>
+                    <div class="doc-status" id="typeStatus">
+                        <span class="status-dot"></span>
+                        <span>Complete steps 1-3 first</span>
                     </div>
                 </div>
-            </aside>
 
-            <section class="chat-container">
-                <div class="chat-messages" id="chatMessages">
-                    <div class="welcome-message" id="welcomeMessage">
-                        <h2>Welcome to Interview Coach</h2>
-                        <div class="welcome-steps">
-                            <div class="welcome-step">
-                                <span class="welcome-step-number">1</span>
-                                <span class="welcome-step-text">Copy and paste the <strong>text</strong> from your résumé into the sidebar (open your doc, select all, copy, paste)</span>
+                <!-- Action Buttons -->
+                <div class="action-section">
+                    <!-- Start Interview Prep Button (Quick Prep / Full Mock / Pro non-audio) -->
+                    <button class="action-button primary" id="startPrepBtn" disabled>
+                        🚀 Start My Interview Prep
+                    </button>
+                    <div class="button-hint" id="startHint">
+                        <span class="hint-icon">⚠️</span>
+                        <span>Complete steps 1-3 first</span>
+                    </div>
+
+                    <!-- Save Documents Button (Audio Mock / Pro audio) -->
+                    <button class="action-button primary hidden" id="saveDocsBtn" disabled>
+                        💾 Save Documents
+                    </button>
+                    <div class="button-hint hidden" id="saveHint">
+                        <span class="hint-icon">⚠️</span>
+                        <span>Complete steps 1-3 first</span>
+                    </div>
+
+                    <!-- Start Voice Interview Button (Audio Mock / Pro audio) -->
+                    <button class="action-button voice hidden" id="startVoiceBtn" disabled>
+                        🎙️ Start Voice Interview
+                    </button>
+                    <div class="button-hint hidden" id="voiceHint">
+                        <span class="hint-icon">⚠️</span>
+                        <span>Save documents first</span>
+                    </div>
+
+                    <!-- Complete Session Button -->
+                    <button class="action-button success" id="completeSessionBtn" disabled>
+                        Complete Session
+                    </button>
+                    <div class="button-hint" id="completeHint">
+                        <span class="hint-icon">⚠️</span>
+                        <span>Start your session first</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="content-area" id="contentArea">
+                <!-- Welcome Section -->
+                <div id="welcomeSection">
+                    <h1 class="welcome-title">Welcome to Interview Coach</h1>
+                    
+                    <div class="welcome-steps" id="welcomeSteps">
+                        <!-- Step 1 -->
+                        <div class="welcome-step">
+                            <div class="welcome-step-number">1</div>
+                            <div class="welcome-step-text">
+                                Open your résumé file, press <span class="kbd">Ctrl+A</span> (select all), then <span class="kbd">Ctrl+C</span> (copy), then <span class="kbd">Ctrl+V</span> (paste) into the Résumé box
                             </div>
-                            <div class="welcome-step">
-                                <span class="welcome-step-number">2</span>
-                                <span class="welcome-step-text">Copy and paste the <strong>job description text</strong></span>
+                        </div>
+
+                        <!-- Step 2 -->
+                        <div class="welcome-step">
+                            <div class="welcome-step-number">2</div>
+                            <div class="welcome-step-text">
+                                Go to the job posting, <span class="highlight">select all</span> the text, <span class="highlight">copy it</span>, and <span class="highlight">paste it</span> into the Job Description box
                             </div>
-                            <div class="welcome-step">
-                                <span class="welcome-step-number">3</span>
-                                <span class="welcome-step-text">Add the <strong>company website URL</strong></span>
+                        </div>
+
+                        <!-- Step 3 -->
+                        <div class="welcome-step">
+                            <div class="welcome-step-number">3</div>
+                            <div class="welcome-step-text">
+                                Type or paste the <span class="bold">company's website URL</span>
                             </div>
-                            <div class="welcome-step">
-                                <span class="welcome-step-number">4</span>
-                                <span class="welcome-step-text">Click <strong>"Start My Interview Prep"</strong> to generate your prep packet</span>
+                        </div>
+
+                        <!-- Step 4 (Pro only: Type Selection) -->
+                        <div class="welcome-step hidden" id="step4Welcome">
+                            <div class="welcome-step-number">4</div>
+                            <div class="welcome-step-text">
+                                <span class="bold">Select your interview type</span> from the dropdown menu (Quick Prep, Full Mock, or Premium Audio Mock)
                             </div>
-                            <div class="welcome-step">
-                                <span class="welcome-step-number">5</span>
-                                <span class="welcome-step-text">Click <strong>"Complete Session"</strong> to receive your results via email</span>
+                        </div>
+
+                        <!-- Step 4/5: Start Button -->
+                        <div class="welcome-step" id="startStepWelcome">
+                            <div class="welcome-step-number" id="startStepNumber">4</div>
+                            <div class="welcome-step-text" id="startStepText">
+                                Click <span class="bold">"Start My Interview Prep"</span> — the button will unlock once steps 1-3 are done
+                            </div>
+                        </div>
+
+                        <!-- Step 5/6 (Audio only: Voice Button) -->
+                        <div class="welcome-step hidden" id="voiceStepWelcome">
+                            <div class="welcome-step-number voice" id="voiceStepNumber">5</div>
+                            <div class="welcome-step-text">
+                                Click <span class="bold">"Start Voice Interview"</span> to begin your conversation with Sarah, your AI interviewer
+                            </div>
+                        </div>
+
+                        <!-- Final Step: Complete Session -->
+                        <div class="welcome-step" id="finalStepWelcome">
+                            <div class="welcome-step-number" id="finalStepNumber">5</div>
+                            <div class="welcome-step-text" id="finalStepText">
+                                Once the Quick Prep interview content is displayed on screen, click <span class="bold">"Complete Session"</span> to receive your full results via email
                             </div>
                         </div>
                     </div>
+
+                    <!-- Sarah Tips (Audio Mock only) -->
+                    <div class="sarah-tips" id="sarahTips">
+                        <div class="sarah-tips-title">
+                            🎙️ Tips for Your Voice Interview with Sarah
+                        </div>
+                        <ul>
+                            <li>Find a quiet space with minimal background noise</li>
+                            <li>Speak clearly and at a natural pace</li>
+                            <li>Use the STAR method: Situation, Task, Action, Result</li>
+                            <li>Take a brief pause before answering to collect your thoughts</li>
+                            <li>Sarah will guide you through each question — just respond naturally</li>
+                        </ul>
+                    </div>
                 </div>
 
-                <div class="chat-input-container">
-                    <textarea class="chat-input" id="chatInput" placeholder="Type a follow-up question..." rows="1"></textarea>
-                    <button class="send-btn" id="sendBtn">Send</button>
-                </div>
-            </section>
+                <!-- Results Container -->
+                <div class="results-container" id="resultsContainer"></div>
+
+                <!-- ElevenLabs Widget Container -->
+                <div id="elevenlabs-widget-container"></div>
+            </div>
+
+            <!-- Chat Input -->
+            <div class="chat-container">
+                <input 
+                    type="text"
+                    class="chat-input" 
+                    id="chatInput"
+                    placeholder="Type a follow-up question..."
+                    disabled
+                >
+                <button class="send-btn" id="sendBtn" disabled>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                    </svg>
+                </button>
+            </div>
         </main>
     </div>
 
+    <!-- ElevenLabs Convai Widget -->
+    <script src="https://elevenlabs.io/convai-widget/index.js" async></script>
+
     <script>
-        const urlParams = new URLSearchParams(window.location.search);
+        // ============================================
+        // CONFIGURATION
+        // ============================================
         
-        // Check for Stripe session_id and resolve it
-        const stripeSessionId = urlParams.get('session_id');
-        if (stripeSessionId) {
-            // Show a loading message while we resolve the session
-            document.body.innerHTML = `
-                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: 'Inter', sans-serif;">
-                    <div style="font-size: 48px; margin-bottom: 20px;">⏳</div>
-                    <h2 style="color: #2F6DF6; margin-bottom: 10px;">Setting up your session...</h2>
-                    <p style="color: #666;">Please wait while we prepare your interview coach.</p>
-                </div>
-            `;
-            
-            // Call API to resolve the Stripe session
-            fetch('/api/resolve-stripe-session?session_id=' + encodeURIComponent(stripeSessionId))
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success && data.redirectUrl) {
-                        // Redirect to the proper session URL with fresh_purchase flag
-                        const redirectUrl = data.redirectUrl + '&fresh_purchase=true';
-                        window.location.href = redirectUrl;
-                    } else {
-                        // Show error
-                        document.body.innerHTML = `
-                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: 'Inter', sans-serif;">
-                                <div style="font-size: 48px; margin-bottom: 20px;">❌</div>
-                                <h2 style="color: #dc2626; margin-bottom: 10px;">Session Error</h2>
-                                <p style="color: #666; margin-bottom: 20px;">${data.error || 'Unable to load your session.'}</p>
-                                <p style="color: #666;">Please check your email for the session link, or contact support.</p>
-                            </div>
-                        `;
-                    }
-                })
-                .catch(error => {
-                    console.error('Session resolution error:', error);
-                    document.body.innerHTML = `
-                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: 'Inter', sans-serif;">
-                            <div style="font-size: 48px; margin-bottom: 20px;">❌</div>
-                            <h2 style="color: #dc2626; margin-bottom: 10px;">Connection Error</h2>
-                            <p style="color: #666; margin-bottom: 20px;">Unable to connect to the server.</p>
-                            <p style="color: #666;">Please check your email for the session link, or try again later.</p>
-                        </div>
-                    `;
-                });
-            
-            // Stop further script execution since we're redirecting
-            throw new Error('Redirecting after session resolution');
-        }
-        
-        const urlSessionType = urlParams.get('session_type');
-        const customerEmail = urlParams.get('email');
-        
-        const validSessionTypes = ['quick_prep', 'full_mock', 'audio_mock', 'pro'];
-        const sessionTypeLabels = {
-            'quick_prep': 'Quick Prep',
-            'full_mock': 'Full Mock Interview',
-            'audio_mock': 'Premium Audio Mock',
-            'pro': 'Interview Coach Pro'
+        const SESSION_CONFIG = {
+            quick_prep: {
+                badge: 'QUICK PREP',
+                badgeClass: 'quick_prep',
+                isAudioMock: false,
+                isPro: false,
+                finalStepText: 'Once the Quick Prep interview content is displayed on screen, click <span class="bold">"Complete Session"</span> to receive your full results via email'
+            },
+            full_mock: {
+                badge: 'FULL MOCK',
+                badgeClass: 'full_mock',
+                isAudioMock: false,
+                isPro: false,
+                finalStepText: 'Once all Full Mock interview questions have been completed and results displayed, click <span class="bold">"Complete Session"</span> to receive your full results via email'
+            },
+            audio_mock: {
+                badge: 'PREMIUM AUDIO MOCK',
+                badgeClass: 'audio_mock',
+                isAudioMock: true,
+                isPro: false,
+                finalStepText: 'Once all Audio Mock interview questions have been answered and results displayed, click <span class="bold">"Complete Session"</span> to receive your full results via email'
+            },
+            pro: {
+                badge: 'INTERVIEW COACH PRO',
+                badgeClass: 'pro',
+                isAudioMock: false,
+                isPro: true,
+                finalStepText: 'When finished, click <span class="bold">"Complete Session"</span> to receive your full results via email'
+            }
         };
+
+        // ============================================
+        // STATE
+        // ============================================
         
-        const landingPage = document.getElementById('landingPage');
-        const chatApp = document.getElementById('chatApp');
-        const loadingScreen = document.getElementById('loadingScreen');
-        const accessDeniedScreen = document.getElementById('accessDeniedScreen');
-        const transcriptScreen = document.getElementById('transcriptScreen');
-        
-        // Screen management functions
-        function showLoadingScreen() {
-            loadingScreen.classList.add('active');
-            landingPage.classList.remove('active');
-            chatApp.classList.remove('active');
-            accessDeniedScreen.classList.remove('active');
-            transcriptScreen.classList.remove('active');
-        }
-        
-        function showAccessDenied(message) {
-            document.getElementById('accessDeniedMessage').textContent = message || "You don't have any remaining sessions of this type.";
-            accessDeniedScreen.classList.add('active');
-            loadingScreen.classList.remove('active');
-            landingPage.classList.remove('active');
-            chatApp.classList.remove('active');
-            transcriptScreen.classList.remove('active');
-        }
-        
-        function showTranscript(transcript) {
-            const content = document.getElementById('transcriptContent');
-            content.innerHTML = formatTranscript(transcript);
-            transcriptScreen.classList.add('active');
-            loadingScreen.classList.remove('active');
-            landingPage.classList.remove('active');
-            chatApp.classList.remove('active');
-            accessDeniedScreen.classList.remove('active');
-        }
-        
-        function showLandingPage() {
-            landingPage.classList.add('active');
-            loadingScreen.classList.remove('active');
-            chatApp.classList.remove('active');
-            accessDeniedScreen.classList.remove('active');
-            transcriptScreen.classList.remove('active');
-        }
-        
-        function showChatApp() {
-            chatApp.classList.add('active');
-            loadingScreen.classList.remove('active');
-            landingPage.classList.remove('active');
-            accessDeniedScreen.classList.remove('active');
-            transcriptScreen.classList.remove('active');
-        }
-        
-        function formatTranscript(transcript) {
-            if (!transcript) return '<p>No transcript available.</p>';
-            return transcript
-                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                .replace(/### (.+)/g, '<h3>$1</h3>')
-                .replace(/## (.+)/g, '<h2>$1</h2>')
-                .replace(/\n/g, '<br>');
-        }
-        
-        // Check if this is a fresh purchase (just completed Stripe payment)
-        const isFreshPurchase = urlParams.get('fresh_purchase') === 'true';
-        
-        // Check session with backend
-        async function checkSession() {
-            const response = await fetch('/api/check-session', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: customerEmail,
-                    sessionType: urlSessionType
-                })
-            });
-            return await response.json();
-        }
-        
-        // Main initialization - FIXED: Instant access for fresh purchases
-        async function validateAndInitialize() {
-            if (!urlSessionType || !validSessionTypes.includes(urlSessionType)) {
-                showLandingPage();
-                return;
+        let sessionType = 'quick_prep';
+        let selectedProType = null;
+        let documentsProvided = { resume: false, jobDesc: false, companyUrl: false };
+        let documentsSaved = false;
+        let sessionStarted = false;
+        let voiceSessionStarted = false;
+        let customerEmail = '';
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            sessionType = urlParams.get('session_type') || 'quick_prep';
+            customerEmail = urlParams.get('email') || '';
+            
+            initializeUI();
+            setupEventListeners();
+        });
+
+        function initializeUI() {
+            const config = SESSION_CONFIG[sessionType] || SESSION_CONFIG.quick_prep;
+            
+            // Set badge
+            const badge = document.getElementById('sessionBadge');
+            badge.textContent = config.badge;
+            badge.className = 'session-badge ' + config.badgeClass;
+            
+            // Update page title
+            document.title = `Talendro™ Interview Coach - ${config.badge}`;
+            
+            // Show/hide Pro type selector
+            if (config.isPro) {
+                document.getElementById('typeSelectorGroup').classList.add('visible');
+                document.getElementById('step4Welcome').classList.remove('hidden');
+                updateProUI();
+            } else if (config.isAudioMock) {
+                setupAudioMockUI();
+            } else {
+                setupStandardUI();
             }
             
-            // ⭐ FIXED: If this is a fresh purchase, grant IMMEDIATE access
-            // Stripe already verified payment in the redirect flow - no need to wait for Zapier
-            if (isFreshPurchase) {
-                // Remove fresh_purchase param for clean URL
-                const cleanUrl = new URL(window.location.href);
-                cleanUrl.searchParams.delete('fresh_purchase');
-                window.history.replaceState({}, '', cleanUrl);
+            updateFinalStepText();
+        }
+
+        function setupStandardUI() {
+            document.getElementById('startPrepBtn').classList.remove('hidden');
+            document.getElementById('startHint').classList.remove('hidden');
+            document.getElementById('saveDocsBtn').classList.add('hidden');
+            document.getElementById('saveHint').classList.add('hidden');
+            document.getElementById('startVoiceBtn').classList.add('hidden');
+            document.getElementById('voiceHint').classList.add('hidden');
+            
+            document.getElementById('voiceStepWelcome').classList.add('hidden');
+            document.getElementById('startStepNumber').textContent = '4';
+            document.getElementById('startStepText').innerHTML = 'Click <span class="bold">"Start My Interview Prep"</span> — the button will unlock once steps 1-3 are done';
+            document.getElementById('finalStepNumber').textContent = '5';
+        }
+
+        function setupAudioMockUI() {
+            document.getElementById('startPrepBtn').classList.add('hidden');
+            document.getElementById('startHint').classList.add('hidden');
+            document.getElementById('saveDocsBtn').classList.remove('hidden');
+            document.getElementById('saveHint').classList.remove('hidden');
+            document.getElementById('startVoiceBtn').classList.remove('hidden');
+            document.getElementById('voiceHint').classList.remove('hidden');
+            
+            document.getElementById('voiceStepWelcome').classList.remove('hidden');
+            document.getElementById('startStepNumber').textContent = '4';
+            document.getElementById('startStepText').innerHTML = 'Click <span class="bold">"Save Documents"</span> to prepare for your voice interview';
+            document.getElementById('voiceStepNumber').textContent = '5';
+            document.getElementById('finalStepNumber').textContent = '6';
+            
+            document.getElementById('sarahTips').classList.add('visible');
+        }
+
+        function updateProUI() {
+            const isAudioSelected = selectedProType === 'audio_mock';
+            
+            if (isAudioSelected) {
+                document.getElementById('startPrepBtn').classList.add('hidden');
+                document.getElementById('startHint').classList.add('hidden');
+                document.getElementById('saveDocsBtn').classList.remove('hidden');
+                document.getElementById('saveHint').classList.remove('hidden');
+                document.getElementById('startVoiceBtn').classList.remove('hidden');
+                document.getElementById('voiceHint').classList.remove('hidden');
                 
-                // Grant immediate access - Zapier will update credits in background
-                showChatApp();
-                initializeChatApp();
-                return;
+                document.getElementById('voiceStepWelcome').classList.remove('hidden');
+                document.getElementById('startStepNumber').textContent = '5';
+                document.getElementById('startStepText').innerHTML = 'Click <span class="bold">"Save Documents"</span> to prepare for your voice interview';
+                document.getElementById('voiceStepNumber').textContent = '6';
+                document.getElementById('finalStepNumber').textContent = '7';
+                
+                document.getElementById('sarahTips').classList.add('visible');
+            } else {
+                document.getElementById('startPrepBtn').classList.remove('hidden');
+                document.getElementById('startHint').classList.remove('hidden');
+                document.getElementById('saveDocsBtn').classList.add('hidden');
+                document.getElementById('saveHint').classList.add('hidden');
+                document.getElementById('startVoiceBtn').classList.add('hidden');
+                document.getElementById('voiceHint').classList.add('hidden');
+                
+                document.getElementById('voiceStepWelcome').classList.add('hidden');
+                document.getElementById('startStepNumber').textContent = '5';
+                document.getElementById('startStepText').innerHTML = 'Click <span class="bold">"Start My Interview Prep"</span> to begin your selected interview session';
+                document.getElementById('finalStepNumber').textContent = '6';
+                
+                document.getElementById('sarahTips').classList.remove('visible');
             }
             
-            // Regular session check (not a fresh purchase - checking existing credits)
-            showLoadingScreen();
+            updateFinalStepText();
+        }
+
+        function updateFinalStepText() {
+            const finalStepText = document.getElementById('finalStepText');
+            const config = SESSION_CONFIG[sessionType];
             
-            try {
-                const result = await checkSession();
+            if (config.isPro && selectedProType) {
+                const selectedConfig = SESSION_CONFIG[selectedProType];
+                finalStepText.innerHTML = selectedConfig.finalStepText;
+            } else {
+                finalStepText.innerHTML = config.finalStepText;
+            }
+        }
+
+        function setupEventListeners() {
+            document.getElementById('resumeInput').addEventListener('input', handleResumeInput);
+            document.getElementById('jobDescInput').addEventListener('input', handleJobDescInput);
+            document.getElementById('companyUrlInput').addEventListener('input', handleCompanyUrlInput);
+            document.getElementById('interviewTypeSelect').addEventListener('change', handleTypeChange);
+            document.getElementById('startPrepBtn').addEventListener('click', handleStartPrep);
+            document.getElementById('saveDocsBtn').addEventListener('click', handleSaveDocs);
+            document.getElementById('startVoiceBtn').addEventListener('click', handleStartVoice);
+            document.getElementById('completeSessionBtn').addEventListener('click', handleCompleteSession);
+        }
+
+        // ============================================
+        // INPUT HANDLERS
+        // ============================================
+
+        function handleResumeInput(e) {
+            const hasContent = e.target.value.trim().length > 0;
+            documentsProvided.resume = hasContent;
+            updateInputStatus('resumeInput', 'resumeStatus', 'step1Circle', hasContent);
+            updateButtonStates();
+        }
+
+        function handleJobDescInput(e) {
+            const hasContent = e.target.value.trim().length > 0;
+            documentsProvided.jobDesc = hasContent;
+            updateInputStatus('jobDescInput', 'jobDescStatus', 'step2Circle', hasContent);
+            updateButtonStates();
+        }
+
+        function handleCompanyUrlInput(e) {
+            const hasContent = e.target.value.trim().length > 0;
+            documentsProvided.companyUrl = hasContent;
+            updateInputStatus('companyUrlInput', 'companyUrlStatus', 'step3Circle', hasContent);
+            updateButtonStates();
+        }
+
+        function handleTypeChange(e) {
+            selectedProType = e.target.value || null;
+            const circle = document.getElementById('step4Circle');
+            const status = document.getElementById('typeStatus');
+            const select = document.getElementById('interviewTypeSelect');
+
+            if (selectedProType) {
+                circle.classList.add('completed');
+                select.classList.add('has-selection');
+                const typeLabels = {
+                    'quick_prep': 'Quick Prep',
+                    'full_mock': 'Full Mock Interview',
+                    'audio_mock': 'Premium Audio Mock'
+                };
+                status.innerHTML = `<span class="status-dot provided"></span><span style="color: #10B981;">${typeLabels[selectedProType]} selected</span>`;
+            } else {
+                circle.classList.remove('completed');
+                select.classList.remove('has-selection');
+                status.innerHTML = '<span class="status-dot"></span><span>Select an interview type</span>';
+            }
+
+            updateProUI();
+            updateButtonStates();
+        }
+
+        function updateInputStatus(inputId, statusId, circleId, hasContent) {
+            const input = document.getElementById(inputId);
+            const status = document.getElementById(statusId);
+            const circle = document.getElementById(circleId);
+
+            if (hasContent) {
+                input.classList.add('has-content');
+                circle.classList.add('completed');
+                status.innerHTML = '<span class="status-dot provided"></span><span style="color: #10B981;">Provided</span>';
+            } else {
+                input.classList.remove('has-content');
+                circle.classList.remove('completed');
+                status.innerHTML = '<span class="status-dot"></span><span>Waiting for content</span>';
+            }
+        }
+
+        function updateButtonStates() {
+            const allDocsProvided = documentsProvided.resume && documentsProvided.jobDesc && documentsProvided.companyUrl;
+            const config = SESSION_CONFIG[sessionType];
+            
+            if (config.isPro) {
+                const typeSelect = document.getElementById('interviewTypeSelect');
+                const typeStatus = document.getElementById('typeStatus');
                 
-                if (result.error) {
-                    showAccessDenied(result.message || result.error);
-                    return;
-                }
-                
-                if (result.hasTranscript && result.transcript) {
-                    showTranscript(result.transcript);
-                    return;
-                }
-                
-                if (result.allowed) {
-                    showChatApp();
-                    initializeChatApp();
+                if (allDocsProvided) {
+                    typeSelect.disabled = false;
+                    if (!selectedProType) {
+                        typeStatus.innerHTML = '<span class="status-dot"></span><span>Select an interview type</span>';
+                    }
                 } else {
-                    showAccessDenied(result.message || "You don't have access to this session type.");
+                    typeSelect.disabled = true;
+                    typeStatus.innerHTML = '<span class="status-dot"></span><span>Complete steps 1-3 first</span>';
                 }
+            }
+
+            const isAudioFlow = config.isAudioMock || (config.isPro && selectedProType === 'audio_mock');
+            const canStart = config.isPro ? (allDocsProvided && selectedProType) : allDocsProvided;
+
+            if (isAudioFlow) {
+                const saveBtn = document.getElementById('saveDocsBtn');
+                const saveHint = document.getElementById('saveHint');
                 
-            } catch (error) {
-                console.error('Session validation error:', error);
-                showAccessDenied('Unable to verify session access. Please try again or contact support.');
+                if (canStart && !documentsSaved) {
+                    saveBtn.disabled = false;
+                    saveHint.style.display = 'none';
+                } else if (documentsSaved) {
+                    saveBtn.disabled = true;
+                    saveHint.style.display = 'none';
+                } else {
+                    saveBtn.disabled = true;
+                    saveHint.style.display = 'flex';
+                    saveHint.querySelector('span:last-child').textContent = config.isPro ? 'Select interview type first' : 'Complete steps 1-3 first';
+                }
+
+                const voiceBtn = document.getElementById('startVoiceBtn');
+                const voiceHint = document.getElementById('voiceHint');
+                
+                if (documentsSaved && !voiceSessionStarted) {
+                    voiceBtn.disabled = false;
+                    voiceHint.style.display = 'none';
+                } else if (voiceSessionStarted) {
+                    voiceBtn.disabled = true;
+                    voiceHint.style.display = 'none';
+                } else {
+                    voiceBtn.disabled = true;
+                    voiceHint.style.display = 'flex';
+                }
+
+                const completeBtn = document.getElementById('completeSessionBtn');
+                const completeHint = document.getElementById('completeHint');
+                
+                if (voiceSessionStarted) {
+                    completeBtn.disabled = false;
+                    completeHint.style.display = 'none';
+                } else {
+                    completeBtn.disabled = true;
+                    completeHint.style.display = 'flex';
+                    completeHint.querySelector('span:last-child').textContent = 'Complete your voice interview first';
+                }
+            } else {
+                const startBtn = document.getElementById('startPrepBtn');
+                const startHint = document.getElementById('startHint');
+                
+                if (canStart && !sessionStarted) {
+                    startBtn.disabled = false;
+                    startHint.style.display = 'none';
+                } else if (sessionStarted) {
+                    startBtn.disabled = true;
+                    startHint.style.display = 'none';
+                } else {
+                    startBtn.disabled = true;
+                    startHint.style.display = 'flex';
+                    startHint.querySelector('span:last-child').textContent = config.isPro ? 'Select interview type first' : 'Complete steps 1-3 first';
+                }
+
+                const completeBtn = document.getElementById('completeSessionBtn');
+                const completeHint = document.getElementById('completeHint');
+                
+                if (sessionStarted) {
+                    completeBtn.disabled = false;
+                    completeHint.style.display = 'none';
+                } else {
+                    completeBtn.disabled = true;
+                    completeHint.style.display = 'flex';
+                    completeHint.querySelector('span:last-child').textContent = 'Start your session first';
+                }
             }
         }
-        
-        validateAndInitialize();
-        
-        function initializeChatApp() {
-            const sessionId = 'session_' + Math.random().toString(36).substr(2, 9);
-            
-            const chatMessages = document.getElementById('chatMessages');
-            const chatInput = document.getElementById('chatInput');
-            const sendBtn = document.getElementById('sendBtn');
-            const sessionType = document.getElementById('sessionType');
-            const sessionBadge = document.getElementById('sessionBadge');
-            const sessionTypeDisplay = document.getElementById('sessionTypeDisplay');
-            const completeSessionBtn = document.getElementById('completeSessionBtn');
-            const startPrepBtn = document.getElementById('startPrepBtn');
-            
-            const resumeInput = document.getElementById('resume');
-            const jdInput = document.getElementById('jobDescription');
-            const urlInput = document.getElementById('companyUrl');
-            
-            const resumeStatus = document.getElementById('resumeStatus');
-            const resumeStatusText = document.getElementById('resumeStatusText');
-            const jdStatus = document.getElementById('jdStatus');
-            const jdStatusText = document.getElementById('jdStatusText');
-            const urlStatus = document.getElementById('urlStatus');
-            const urlStatusText = document.getElementById('urlStatusText');
-            
-            let documents = { resume: '', jobDescription: '', companyUrl: '' };
-            let isLoading = false;
-            let conversationHistory = [];
-            
-            sessionType.value = urlSessionType;
-            sessionTypeDisplay.textContent = sessionTypeLabels[urlSessionType];
-            sessionBadge.textContent = sessionTypeLabels[urlSessionType].toUpperCase();
-            
-            // Full Mock Interview customization
-            if (urlSessionType === 'full_mock') {
-                const welcomeMessage = document.getElementById('welcomeMessage');
-                if (welcomeMessage) {
-                    welcomeMessage.innerHTML = `
-                        <h2>🎯 Full Mock Interview</h2>
-                        <div class="welcome-steps">
-                            <div class="welcome-step">
-                                <span class="welcome-step-number">1</span>
-                                <span class="welcome-step-text">Paste your <strong>résumé text</strong> in the sidebar</span>
-                            </div>
-                            <div class="welcome-step">
-                                <span class="welcome-step-number">2</span>
-                                <span class="welcome-step-text">Paste the <strong>job description</strong> you're interviewing for</span>
-                            </div>
-                            <div class="welcome-step">
-                                <span class="welcome-step-number">3</span>
-                                <span class="welcome-step-text">Enter the <strong>company website URL</strong></span>
-                            </div>
-                            <div class="welcome-step">
-                                <span class="welcome-step-number">4</span>
-                                <span class="welcome-step-text">Click <strong>"Start My Mock Interview"</strong> to begin your 10-question interview</span>
-                            </div>
-                            <div class="welcome-step">
-                                <span class="welcome-step-number">5</span>
-                                <span class="welcome-step-text">Answer each question, receive feedback, then <strong>"Complete Session"</strong> for your full score</span>
-                            </div>
-                        </div>
-                        <p style="margin-top: 20px; color: #666; font-size: 14px;">💡 <em>Pro tip: Type your answers in the chat below, or use your device's voice-to-text to speak naturally — just like a real interview!</em></p>
-                    `;
-                }
+
+        // ============================================
+        // ACTION HANDLERS
+        // ============================================
+
+        function getActiveSessionType() {
+            const config = SESSION_CONFIG[sessionType];
+            return config.isPro ? selectedProType : sessionType;
+        }
+
+        async function handleStartPrep() {
+            const startBtn = document.getElementById('startPrepBtn');
+            startBtn.disabled = true;
+            startBtn.innerHTML = '⏳ Preparing...';
+
+            try {
+                const activeType = getActiveSessionType();
                 
-                // Update button text for Full Mock
-                if (startPrepBtn) {
-                    startPrepBtn.innerHTML = '🎯 Start My Mock Interview';
-                }
+                const response = await fetch('/api/save-documents', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: customerEmail,
+                        sessionType: activeType,
+                        resume: document.getElementById('resumeInput').value,
+                        jobDescription: document.getElementById('jobDescInput').value,
+                        companyUrl: document.getElementById('companyUrlInput').value
+                    })
+                });
+
+                if (!response.ok) throw new Error('Failed to save documents');
+
+                sessionStarted = true;
+                startBtn.innerHTML = '✓ Session Started';
+                startBtn.style.background = '#10B981';
                 
-                // Update chat input placeholder for Full Mock
-                const chatInputEl = document.getElementById('chatInput');
-                if (chatInputEl) {
-                    chatInputEl.placeholder = 'Type your answer...';
-                }
+                updateButtonStates();
+                await startInterviewSession();
+
+            } catch (error) {
+                console.error('Error starting prep:', error);
+                startBtn.disabled = false;
+                startBtn.innerHTML = '🚀 Start My Interview Prep';
+                alert('Failed to start session. Please try again.');
             }
-            
-            if (urlSessionType === 'audio_mock') {
-                const welcomeMessage = document.getElementById('welcomeMessage');
-                if (welcomeMessage) {
-                    welcomeMessage.innerHTML = `
-                        <h2>🎙️ Premium Audio Mock Interview</h2>
-                        <div class="welcome-steps">
-                            <div class="welcome-step">
-                                <span class="welcome-step-number">1</span>
-                                <span class="welcome-step-text">Paste your <strong>résumé text</strong> in the sidebar</span>
-                            </div>
-                            <div class="welcome-step">
-                                <span class="welcome-step-number">2</span>
-                                <span class="welcome-step-text">Paste the <strong>job description</strong> in the sidebar</span>
-                            </div>
-                            <div class="welcome-step">
-                                <span class="welcome-step-number">3</span>
-                                <span class="welcome-step-text">Enter the <strong>company URL</strong> in the sidebar</span>
-                            </div>
-                            <div class="welcome-step">
-                                <span class="welcome-step-number">4</span>
-                                <span class="welcome-step-text">Click <strong>"📋 Save Documents & Prepare"</strong> in the sidebar</span>
-                            </div>
-                            <div class="welcome-step">
-                                <span class="welcome-step-number">5</span>
-                                <span class="welcome-step-text">Click <strong>"🎙️ Start Voice Interview"</strong> below to begin speaking</span>
-                            </div>
-                        </div>
-                        <p style="margin-top: 20px; color: #666; font-size: 14px;">💡 <em>Tip: Use headphones for the best experience. Allow microphone access when prompted.</em></p>
-                    `;
+        }
+
+        async function startInterviewSession() {
+            document.getElementById('chatInput').disabled = false;
+            document.getElementById('sendBtn').disabled = false;
+
+            const resultsContainer = document.getElementById('resultsContainer');
+            resultsContainer.innerHTML = '<div style="text-align: center; padding: 40px;"><p style="color: #64748B;">🔄 Generating your personalized interview prep...</p></div>';
+            resultsContainer.classList.add('visible');
+            document.getElementById('welcomeSection').style.display = 'none';
+
+            try {
+                const activeType = getActiveSessionType();
+                
+                const response = await fetch('/api/generate-prep', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: customerEmail,
+                        sessionType: activeType,
+                        resume: document.getElementById('resumeInput').value,
+                        jobDescription: document.getElementById('jobDescInput').value,
+                        companyUrl: document.getElementById('companyUrlInput').value
+                    })
+                });
+
+                if (!response.ok) throw new Error('Failed to generate prep');
+
+                const data = await response.json();
+                displayResults(data);
+
+            } catch (error) {
+                console.error('Error generating prep:', error);
+                resultsContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: #EF4444;"><p>❌ Failed to generate prep. Please try again.</p></div>';
+            }
+        }
+
+        async function handleSaveDocs() {
+            const saveBtn = document.getElementById('saveDocsBtn');
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '⏳ Saving...';
+
+            try {
+                const response = await fetch('/api/save-documents', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: customerEmail,
+                        sessionType: 'audio_mock',
+                        resume: document.getElementById('resumeInput').value,
+                        jobDescription: document.getElementById('jobDescInput').value,
+                        companyUrl: document.getElementById('companyUrlInput').value
+                    })
+                });
+
+                if (!response.ok) throw new Error('Failed to save documents');
+
+                documentsSaved = true;
+                saveBtn.innerHTML = '✓ Documents Saved';
+                saveBtn.style.background = '#10B981';
+                
+                updateButtonStates();
+
+            } catch (error) {
+                console.error('Error saving documents:', error);
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '💾 Save Documents';
+                alert('Failed to save documents. Please try again.');
+            }
+        }
+
+        async function handleStartVoice() {
+            const voiceBtn = document.getElementById('startVoiceBtn');
+            voiceBtn.disabled = true;
+            voiceBtn.innerHTML = '⏳ Connecting...';
+
+            try {
+                const response = await fetch('/api/signed-url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: customerEmail,
+                        resume: document.getElementById('resumeInput').value,
+                        jobDescription: document.getElementById('jobDescInput').value,
+                        companyUrl: document.getElementById('companyUrlInput').value
+                    })
+                });
+
+                if (!response.ok) throw new Error('Failed to get signed URL');
+
+                const data = await response.json();
+                
+                const widgetContainer = document.getElementById('elevenlabs-widget-container');
+                widgetContainer.innerHTML = `<elevenlabs-convai agent-id="${data.agentId}" signed-url="${data.signedUrl}"></elevenlabs-convai>`;
+                widgetContainer.classList.add('visible');
+
+                voiceSessionStarted = true;
+                voiceBtn.innerHTML = '🎙️ Voice Session Active';
+                voiceBtn.style.background = '#10B981';
+
+                document.getElementById('welcomeSection').style.display = 'none';
+
+                updateButtonStates();
+
+            } catch (error) {
+                console.error('Error starting voice:', error);
+                voiceBtn.disabled = false;
+                voiceBtn.innerHTML = '🎙️ Start Voice Interview';
+                alert('Failed to connect. Please try again.');
+            }
+        }
+
+        async function handleCompleteSession() {
+            const completeBtn = document.getElementById('completeSessionBtn');
+            completeBtn.disabled = true;
+            completeBtn.innerHTML = '⏳ Completing...';
+
+            try {
+                const config = SESSION_CONFIG[sessionType];
+                const isAudioFlow = config.isAudioMock || (config.isPro && selectedProType === 'audio_mock');
+                
+                if (isAudioFlow) {
+                    const widgetContainer = document.getElementById('elevenlabs-widget-container');
+                    widgetContainer.innerHTML = '';
+                    widgetContainer.classList.remove('visible');
                 }
+
+                const activeType = getActiveSessionType();
+
+                const response = await fetch('/api/complete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: customerEmail,
+                        sessionType: activeType
+                    })
+                });
+
+                if (!response.ok) throw new Error('Failed to complete session');
+
+                completeBtn.innerHTML = '✓ Complete!';
+
+                const resultsContainer = document.getElementById('resultsContainer');
+                resultsContainer.classList.add('visible');
                 
-                // Audio Mock: Use ElevenLabs widget with transcript capture
-                const script = document.createElement('script');
-                script.src = 'https://unpkg.com/@elevenlabs/convai-widget-embed';
-                script.async = true;
-                document.head.appendChild(script);
-                
-                // Create audio controls container
-                const audioControls = document.createElement('div');
-                audioControls.id = 'audioControls';
-                audioControls.style.cssText = 'display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 24px; background: #f8fafc; border-radius: 12px; margin: 20px 0;';
-                audioControls.innerHTML = `
-                    <div id="audioStatus" style="font-size: 16px; color: #666; text-align: center;">
-                        <span id="connectionStatus">⚪ Ready to start</span>
-                    </div>
-                    <button id="startVoiceBtn" style="background: linear-gradient(135deg, #2F6DF6, #00C4CC); color: white; border: none; padding: 16px 32px; border-radius: 8px; font-size: 18px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                        🎙️ Start Voice Interview
-                    </button>
-                    <button id="endVoiceBtn" style="background: #dc2626; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; display: none;">
-                        ⏹️ End Call
-                    </button>
-                    <div id="voiceTranscript" style="width: 100%; max-height: 300px; overflow-y: auto; background: white; border-radius: 8px; padding: 16px; display: none; border: 1px solid #e2e8f0;">
-                        <h4 style="margin-bottom: 12px; color: #374151;">Live Transcript</h4>
-                        <div id="transcriptContent" style="font-size: 14px; line-height: 1.6;"></div>
+                const completionMessage = `
+                    <div style="background: #ECFDF5; border: 1px solid #10B981; border-radius: 12px; padding: 24px; margin-top: 24px; text-align: center;">
+                        <h3 style="color: #059669; margin-bottom: 8px;">✓ Session Complete!</h3>
+                        <p style="color: #047857;">Your full interview prep results have been sent to <strong>${customerEmail}</strong></p>
                     </div>
                 `;
                 
-                chatMessages.appendChild(audioControls);
-                
-                // Hide chat input for audio mock
-                document.querySelector('.chat-input-container').style.display = 'none';
-                
-                // Audio Mock state
-                let audioConversation = null;
-                let audioTranscript = [];
-                
-                // Start voice interview
-                document.getElementById('startVoiceBtn').addEventListener('click', async function() {
-                    const startBtn = this;
-                    const endBtn = document.getElementById('endVoiceBtn');
-                    const statusEl = document.getElementById('connectionStatus');
-                    const transcriptBox = document.getElementById('voiceTranscript');
-                    const transcriptContent = document.getElementById('transcriptContent');
-                    
-                    startBtn.disabled = true;
-                    startBtn.innerHTML = '⏳ Connecting...';
-                    statusEl.textContent = '🟡 Connecting to AI coach...';
-                    
-                    try {
-                        // Get signed URL from server
-                        const response = await fetch('/api/signed-url');
-                        const data = await response.json();
-                        
-                        if (!data.signedUrl) {
-                            throw new Error('Failed to get signed URL');
-                        }
-                        
-                        // Load ElevenLabs SDK
-                        const { Conversation } = await import('https://unpkg.com/@elevenlabs/client@latest/+esm');
-                        
-                        // Start conversation with transcript capture
-                        audioConversation = await Conversation.startSession({
-                            signedUrl: data.signedUrl,
-                            onConnect: () => {
-                                statusEl.textContent = '🟢 Connected - Speak now!';
-                                startBtn.style.display = 'none';
-                                endBtn.style.display = 'block';
-                                transcriptBox.style.display = 'block';
-                                
-                                // Add to conversation history for session tracking
-                                conversationHistory.push({
-                                    role: 'system',
-                                    content: 'Voice interview session started'
-                                });
-                            },
-                            onDisconnect: () => {
-                                statusEl.textContent = '⚪ Call ended';
-                                startBtn.style.display = 'block';
-                                startBtn.disabled = false;
-                                startBtn.innerHTML = '🎙️ Start Voice Interview';
-                                endBtn.style.display = 'none';
-                            },
-                            onMessage: (message) => {
-                                // Capture transcript messages
-                                if (message.type === 'transcript') {
-                                    const role = message.role === 'user' ? 'user' : 'assistant';
-                                    const text = message.text || message.message;
-                                    
-                                    if (text && message.isFinal !== false) {
-                                        audioTranscript.push({ role, content: text });
-                                        conversationHistory.push({ role, content: text });
-                                        
-                                        // Update live transcript display
-                                        const msgDiv = document.createElement('div');
-                                        msgDiv.style.cssText = role === 'user' 
-                                            ? 'background: #e0f2fe; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px;'
-                                            : 'background: #f0fdf4; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px;';
-                                        msgDiv.innerHTML = `<strong>${role === 'user' ? 'You' : 'Coach'}:</strong> ${text}`;
-                                        transcriptContent.appendChild(msgDiv);
-                                        transcriptContent.scrollTop = transcriptContent.scrollHeight;
-                                    }
-                                }
-                            },
-                            onError: (error) => {
-                                console.error('Audio conversation error:', error);
-                                statusEl.textContent = '🔴 Error: ' + (error.message || 'Connection failed');
-                                startBtn.style.display = 'block';
-                                startBtn.disabled = false;
-                                startBtn.innerHTML = '🎙️ Start Voice Interview';
-                                endBtn.style.display = 'none';
-                            }
-                        });
-                        
-                    } catch (error) {
-                        console.error('Failed to start audio conversation:', error);
-                        statusEl.textContent = '🔴 Failed to connect. Please try again.';
-                        startBtn.disabled = false;
-                        startBtn.innerHTML = '🎙️ Start Voice Interview';
-                    }
-                });
-                
-                // End voice call
-                document.getElementById('endVoiceBtn').addEventListener('click', async function() {
-                    if (audioConversation) {
-                        try {
-                            await audioConversation.endSession();
-                        } catch (e) {
-                            console.log('Session end:', e);
-                        }
-                        audioConversation = null;
-                    }
-                });
-                
-                // Update button text for Audio Mock
-                if (startPrepBtn) {
-                    startPrepBtn.innerHTML = '📋 Save Documents & Prepare';
-                }
-            }
-            
-            if (startPrepBtn) {
-                startPrepBtn.addEventListener('click', function() {
-                    documents.resume = resumeInput.value.trim();
-                    documents.jobDescription = jdInput.value.trim();
-                    documents.companyUrl = urlInput.value.trim();
-                    
-                    if (documents.resume) {
-                        resumeStatus.classList.add('active');
-                        resumeStatusText.textContent = 'Saved';
-                    }
-                    if (documents.jobDescription) {
-                        jdStatus.classList.add('active');
-                        jdStatusText.textContent = 'Saved';
-                    }
-                    if (documents.companyUrl) {
-                        urlStatus.classList.add('active');
-                        urlStatusText.textContent = 'Saved';
-                    }
-                    
-                    startPrepBtn.disabled = true;
-                    if (urlSessionType === 'full_mock') {
-                        startPrepBtn.innerHTML = '⏳ Starting your interview...';
-                    } else if (urlSessionType === 'audio_mock') {
-                        startPrepBtn.innerHTML = '✅ Documents Saved - Start Voice Call Below';
-                        startPrepBtn.style.background = '#10B981';
-                    } else {
-                        startPrepBtn.innerHTML = '⏳ Generating your prep packet...';
-                    }
-                    
-                    if (urlSessionType === 'full_mock' || urlSessionType === 'audio_mock') {
-                        fetch('/api/start-session', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                email: customerEmail,
-                                sessionType: urlSessionType
-                            })
-                        }).catch(err => console.log('Start session tracking:', err));
-                    }
-                    
-                    // For audio_mock, don't call the text-based chat - voice button handles it
-                    if (urlSessionType !== 'audio_mock') {
-                        sendStartMessage();
-                    }
-                });
-            }
-            
-            function sendStartMessage() {
-                // Use different start message based on session type
-                const message = urlSessionType === 'full_mock' 
-                    ? 'Start my mock interview' 
-                    : 'Start my interview prep';
-                    
-                isLoading = true;
-                sendBtn.disabled = true;
-                
-                const welcome = document.querySelector('.welcome-message');
-                if (welcome) welcome.remove();
-                
-                // Track in history for transcript, but don't display in UI
-                conversationHistory.push({ role: 'user', content: message });
-                showTyping();
-                
-                fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        message: message,
-                        sessionId: sessionId,
-                        sessionType: sessionType.value,
-                        documents: documents,
-                        customerEmail: customerEmail
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    hideTyping();
-                    if (data.error) {
-                        addMessage('Sorry, there was an error. Please try again.', 'assistant');
-                        // Reset button so they can try again
-                        startPrepBtn.disabled = false;
-                        if (urlSessionType === 'full_mock') {
-                            startPrepBtn.innerHTML = '🎯 Start My Mock Interview';
-                        } else {
-                            startPrepBtn.innerHTML = '🚀 Start My Interview Prep';
-                        }
-                    } else {
-                        addMessage(data.message, 'assistant');
-                        // Show completion/started state based on session type
-                        if (urlSessionType === 'full_mock') {
-                            startPrepBtn.innerHTML = '🎯 Interview in Progress';
-                            startPrepBtn.style.background = '#2F6DF6';
-                        } else {
-                            startPrepBtn.innerHTML = '✅ Prep Complete';
-                            startPrepBtn.style.background = '#10B981';
-                        }
-                    }
-                })
-                .catch(error => {
-                    hideTyping();
-                    addMessage('Sorry, there was a connection error. Please try again.', 'assistant');
-                    // Reset button so they can try again
-                    startPrepBtn.disabled = false;
-                    if (urlSessionType === 'full_mock') {
-                        startPrepBtn.innerHTML = '🎯 Start My Mock Interview';
-                    } else {
-                        startPrepBtn.innerHTML = '🚀 Start My Interview Prep';
-                    }
-                })
-                .finally(() => {
-                    isLoading = false;
-                    sendBtn.disabled = false;
-                    chatInput.focus();
-                });
-            }
-            
-            function addMessage(content, role) {
-                const welcome = document.querySelector('.welcome-message');
-                if (welcome) welcome.remove();
-                
-                conversationHistory.push({ role: role, content: content });
-                
-                const messageDiv = document.createElement('div');
-                messageDiv.className = `message ${role}`;
-                
-                if (role === 'assistant') {
-                    content = content
-                        .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-                        .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-                        .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-                        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                        .replace(/\*(.+?)\*/g, '<em>$1</em>')
-                        .replace(/^- (.+)$/gm, '<li>$1</li>')
-                        .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
-                        .replace(/\n\n/g, '</p><p>')
-                        .replace(/\n/g, '<br>');
-                    messageDiv.innerHTML = '<p>' + content + '</p>';
+                if (resultsContainer.innerHTML.trim() === '') {
+                    resultsContainer.innerHTML = completionMessage;
                 } else {
-                    messageDiv.textContent = content;
+                    resultsContainer.innerHTML += completionMessage;
                 }
-                
-                chatMessages.appendChild(messageDiv);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            } catch (error) {
+                console.error('Error completing session:', error);
+                completeBtn.disabled = false;
+                completeBtn.innerHTML = 'Complete Session';
+                alert('Failed to complete session. Please try again.');
             }
-            
-            async function completeSession() {
-                if (conversationHistory.length === 0) {
-                    alert('No session to complete. Start your interview prep first.');
-                    return;
-                }
-                
-                completeSessionBtn.disabled = true;
-                completeSessionBtn.textContent = 'Completing...';
-                
-                try {
-                    let transcriptToSave;
-                    
-                    // For Full Mock and Audio Mock, generate a polished debrief document
-                    if (sessionType.value === 'full_mock' || sessionType.value === 'audio_mock') {
-                        completeSessionBtn.textContent = 'Generating your debrief...';
-                        
-                        const debriefResponse = await fetch('/api/generate-debrief', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                conversationHistory: conversationHistory,
-                                documents: documents,
-                                sessionType: sessionType.value
-                            })
-                        });
-                        
-                        const debriefData = await debriefResponse.json();
-                        
-                        if (debriefData.success && debriefData.debrief) {
-                            transcriptToSave = debriefData.debrief;
-                        } else {
-                            // Fallback to raw transcript if debrief generation fails
-                            transcriptToSave = conversationHistory.map(msg => {
-                                const role = msg.role === 'user' ? '[USER]' : '[COACH]';
-                                return `${role}: ${msg.content}`;
-                            }).join('\n\n');
-                        }
-                    } else {
-                        // For other session types, use raw transcript
-                        transcriptToSave = conversationHistory.map(msg => {
-                            const role = msg.role === 'user' ? '[USER]' : '[COACH]';
-                            return `${role}: ${msg.content}`;
-                        }).join('\n\n');
-                    }
-                
-                    completeSessionBtn.textContent = 'Saving...';
-                    
-                    await fetch('/api/save-transcript', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            email: customerEmail,
-                            sessionType: sessionType.value,
-                            transcript: transcriptToSave
-                        })
-                    });
-                    
-                    const response = await fetch('/api/complete', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            email: customerEmail,
-                            sessionType: sessionType.value,
-                            sessionId: sessionId,
-                            transcript: transcriptToSave,
-                            documents: documents
-                        })
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        completeSessionBtn.textContent = 'Session Complete!';
-                        completeSessionBtn.style.background = '#00C4CC';
-                        addMessage('Your session is complete! You will receive an email shortly with your personalized Interview Debrief Report. Thank you for using Talendro Interview Coach!', 'assistant');
-                        chatInput.disabled = true;
-                        sendBtn.disabled = true;
-                    } else {
-                        throw new Error(data.error || 'Failed to complete session');
-                    }
-                } catch (error) {
-                    console.error('Complete session error:', error);
-                    completeSessionBtn.disabled = false;
-                    completeSessionBtn.textContent = 'Complete Session';
-                    alert('Error completing session. Please try again.');
-                }
+        }
+
+        function displayResults(data) {
+            const resultsContainer = document.getElementById('resultsContainer');
+            let html = '';
+
+            if (data.companyInsights) {
+                html += `<div style="margin-bottom: 32px;"><h2 style="font-size: 18px; font-weight: 600; color: #3B82F6; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #E2E8F0;">🏢 Company Insights</h2><div style="background: #F8FAFC; border-radius: 8px; padding: 16px;"><p style="color: #475569; line-height: 1.6;">${data.companyInsights}</p></div></div>`;
             }
-            
-            completeSessionBtn.addEventListener('click', completeSession);
-            
-            function showTyping() {
-                const typing = document.createElement('div');
-                typing.className = 'typing-indicator';
-                typing.id = 'typingIndicator';
-                typing.innerHTML = '<span></span><span></span><span></span>';
-                chatMessages.appendChild(typing);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }
-            
-            function hideTyping() {
-                const typing = document.getElementById('typingIndicator');
-                if (typing) typing.remove();
-            }
-            
-            async function sendMessage() {
-                const message = chatInput.value.trim();
-                if (!message || isLoading) return;
-                
-                isLoading = true;
-                sendBtn.disabled = true;
-                chatInput.value = '';
-                chatInput.style.height = 'auto';
-                
-                // Get history BEFORE adding new message (for API call)
-                const historyForApi = [...conversationHistory];
-                
-                addMessage(message, 'user');
-                showTyping();
-                
-                fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        message: message,
-                        sessionId: sessionId,
-                        sessionType: sessionType.value,
-                        documents: documents,
-                        customerEmail: customerEmail,
-                        conversationHistory: historyForApi
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    hideTyping();
-                    if (data.error) {
-                        addMessage('Sorry, there was an error. Please try again.', 'assistant');
-                    } else {
-                        addMessage(data.message, 'assistant');
-                    }
-                })
-                .catch(error => {
-                    hideTyping();
-                    addMessage('Sorry, there was a connection error. Please try again.', 'assistant');
-                })
-                .finally(() => {
-                    isLoading = false;
-                    sendBtn.disabled = false;
-                    chatInput.focus();
+
+            if (data.questions && data.questions.length > 0) {
+                html += `<div style="margin-bottom: 32px;"><h2 style="font-size: 18px; font-weight: 600; color: #3B82F6; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #E2E8F0;">📝 Interview Questions</h2>`;
+                data.questions.forEach((q, index) => {
+                    html += `<div style="background: #F8FAFC; border-radius: 8px; padding: 16px; margin-bottom: 12px;"><div style="font-size: 12px; font-weight: 600; color: #94A3B8; text-transform: uppercase; margin-bottom: 8px;">Question ${index + 1}</div><p style="color: #1E293B; line-height: 1.5;">${q.question}</p>${q.guidance ? `<div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #E2E8F0; font-size: 13px; color: #64748B;"><strong>Guidance:</strong> ${q.guidance}</div>` : ''}</div>`;
                 });
+                html += '</div>';
             }
-            
-            sendBtn.addEventListener('click', sendMessage);
-            
-            chatInput.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                }
-            });
-            
-            chatInput.addEventListener('input', function() {
-                chatInput.style.height = 'auto';
-                chatInput.style.height = Math.min(chatInput.scrollHeight, 150) + 'px';
-            });
+
+            if (data.roleAlignment) {
+                html += `<div style="margin-bottom: 32px;"><h2 style="font-size: 18px; font-weight: 600; color: #3B82F6; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #E2E8F0;">🎯 Role Alignment</h2><div style="background: #F8FAFC; border-radius: 8px; padding: 16px;"><p style="color: #475569; line-height: 1.6;">${data.roleAlignment}</p></div></div>`;
+            }
+
+            resultsContainer.innerHTML = html;
         }
     </script>
 </body>
