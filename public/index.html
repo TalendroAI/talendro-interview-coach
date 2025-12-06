@@ -1113,19 +1113,17 @@
             try {
                 const activeType = getActiveSessionType();
                 
-                const response = await fetch('/api/save-documents', {
+                // Step 1: Start session tracking
+                const startResponse = await fetch('/api/start-session', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         email: customerEmail,
-                        sessionType: activeType,
-                        resume: document.getElementById('resumeInput').value,
-                        jobDescription: document.getElementById('jobDescInput').value,
-                        companyUrl: document.getElementById('companyUrlInput').value
+                        sessionType: activeType
                     })
                 });
 
-                if (!response.ok) throw new Error('Failed to save documents');
+                if (!startResponse.ok) throw new Error('Failed to start session');
 
                 sessionStarted = true;
                 startBtn.innerHTML = '✓ Session Started';
@@ -1154,22 +1152,26 @@
             try {
                 const activeType = getActiveSessionType();
                 
-                const response = await fetch('/api/generate-prep', {
+                // Use /api/chat to generate interview prep content
+                const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        email: customerEmail,
+                        message: 'Please begin my interview preparation session.',
                         sessionType: activeType,
-                        resume: document.getElementById('resumeInput').value,
-                        jobDescription: document.getElementById('jobDescInput').value,
-                        companyUrl: document.getElementById('companyUrlInput').value
+                        customerEmail: customerEmail,
+                        documents: {
+                            resume: document.getElementById('resumeInput').value,
+                            jobDescription: document.getElementById('jobDescInput').value,
+                            companyUrl: document.getElementById('companyUrlInput').value
+                        }
                     })
                 });
 
                 if (!response.ok) throw new Error('Failed to generate prep');
 
                 const data = await response.json();
-                displayResults(data);
+                displayChatResponse(data.message);
 
             } catch (error) {
                 console.error('Error generating prep:', error);
@@ -1183,15 +1185,13 @@
             saveBtn.innerHTML = '⏳ Saving...';
 
             try {
-                const response = await fetch('/api/save-documents', {
+                // Start session tracking for audio_mock
+                const response = await fetch('/api/start-session', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         email: customerEmail,
-                        sessionType: 'audio_mock',
-                        resume: document.getElementById('resumeInput').value,
-                        jobDescription: document.getElementById('jobDescInput').value,
-                        companyUrl: document.getElementById('companyUrlInput').value
+                        sessionType: 'audio_mock'
                     })
                 });
 
@@ -1306,27 +1306,21 @@
             }
         }
 
-        function displayResults(data) {
+        function displayChatResponse(message) {
             const resultsContainer = document.getElementById('resultsContainer');
-            let html = '';
-
-            if (data.companyInsights) {
-                html += `<div style="margin-bottom: 32px;"><h2 style="font-size: 18px; font-weight: 600; color: #3B82F6; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #E2E8F0;">🏢 Company Insights</h2><div style="background: #F8FAFC; border-radius: 8px; padding: 16px;"><p style="color: #475569; line-height: 1.6;">${data.companyInsights}</p></div></div>`;
-            }
-
-            if (data.questions && data.questions.length > 0) {
-                html += `<div style="margin-bottom: 32px;"><h2 style="font-size: 18px; font-weight: 600; color: #3B82F6; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #E2E8F0;">📝 Interview Questions</h2>`;
-                data.questions.forEach((q, index) => {
-                    html += `<div style="background: #F8FAFC; border-radius: 8px; padding: 16px; margin-bottom: 12px;"><div style="font-size: 12px; font-weight: 600; color: #94A3B8; text-transform: uppercase; margin-bottom: 8px;">Question ${index + 1}</div><p style="color: #1E293B; line-height: 1.5;">${q.question}</p>${q.guidance ? `<div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #E2E8F0; font-size: 13px; color: #64748B;"><strong>Guidance:</strong> ${q.guidance}</div>` : ''}</div>`;
-                });
-                html += '</div>';
-            }
-
-            if (data.roleAlignment) {
-                html += `<div style="margin-bottom: 32px;"><h2 style="font-size: 18px; font-weight: 600; color: #3B82F6; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #E2E8F0;">🎯 Role Alignment</h2><div style="background: #F8FAFC; border-radius: 8px; padding: 16px;"><p style="color: #475569; line-height: 1.6;">${data.roleAlignment}</p></div></div>`;
-            }
-
-            resultsContainer.innerHTML = html;
+            
+            // Convert markdown-style formatting to HTML
+            let html = message
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/\n/g, '<br>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>');
+            
+            resultsContainer.innerHTML = `
+                <div style="background: #F8FAFC; border-radius: 12px; padding: 24px;">
+                    <p style="color: #1E293B; line-height: 1.8; font-size: 15px;">${html}</p>
+                </div>
+            `;
         }
     </script>
 </body>
