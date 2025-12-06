@@ -36,7 +36,7 @@ const PRODUCT_TO_SESSION_TYPE = {
 // Credentials loaded from environment variable
 const GOOGLE_CREDENTIALS = JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}');
 const SPREADSHEET_ID = process.env.GOOGLE_SHEET_ID || '1nLXvn83ziFGpMNgBfbHE0rKCZe5PkxGHzXwGtAnKvrs';
-const TRANSCRIPT_FOLDER_ID = '120416leJohPp-_nXmNzaJ5GiSXmLQCzL';
+const TRANSCRIPT_FOLDER_ID = '0AI6UfXTCoTc3Uk9PVA';
 const SHEET_NAME = 'Sheet1';
 
 // Column mapping - includes Doc URL columns
@@ -125,7 +125,8 @@ async function createTranscriptDoc(email, sessionType, transcript) {
         mimeType: 'application/vnd.google-apps.document',
         parents: [TRANSCRIPT_FOLDER_ID]
       },
-      fields: 'id'
+      fields: 'id',
+      supportsAllDrives: true
     });
     
     const documentId = createResponse.data.id;
@@ -170,7 +171,8 @@ async function createTranscriptDoc(email, sessionType, transcript) {
       requestBody: {
         role: 'reader',
         type: 'anyone'
-      }
+      },
+      supportsAllDrives: true
     });
     
     // Get the document URL
