@@ -1801,6 +1801,11 @@
             
             // Session-specific welcome messages and button text
             if (urlSessionType === 'quick_prep') {
+                const chatInputContainer = document.querySelector('.chat-input-container');
+                if (chatInputContainer) {
+                    chatInputContainer.style.display = 'none';
+                }
+
                 const welcomeMessage = document.getElementById('welcomeMessage');
                 if (welcomeMessage) {
                     welcomeMessage.innerHTML = `
