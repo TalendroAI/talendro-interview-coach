@@ -581,15 +581,7 @@ app.post('/api/save-transcript', async (req, res) => {
     const docUrl = await createTranscriptDoc(email, sessionType, transcript);
     
     switch (sessionType) {
-      case 'quick_prep':
-        await updateMultipleCells(userData.rowNum, [
-          { column: COLUMNS.QUICK_PREP_TRANSCRIPT, value: transcript.substring(0, 50000) },
-          { column: COLUMNS.QUICK_PREP_GENERATED_AT, value: now },
-          { column: COLUMNS.QUICK_PREP_DOC_URL, value: docUrl || '' }
-        ]);
-        break;
-        
-      case 'full_mock':
+     case 'full_mock':
         await updateMultipleCells(userData.rowNum, [
           { column: COLUMNS.FULL_MOCK_TRANSCRIPT, value: transcript.substring(0, 50000) },
           { column: COLUMNS.FULL_MOCK_STATUS, value: 'completed' },
