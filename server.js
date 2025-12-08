@@ -879,20 +879,20 @@ Style:
 - Use headings, numbered lists, and bullets so it reads like a premium coaching report.
 `;
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch(ANTHROPIC_API_URL, {
       method: 'POST',
       headers: {
         'x-api-key': anthropicApiKey,
-        'anthropic-version': '2023-06-01',
+        'anthropic-version': ANTHROPIC_VERSION,
         'content-type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-latest',
+        model: ANTHROPIC_MODEL,
         max_tokens: 6000,
         messages: [{ role: 'user', content: debriefPrompt }]
       })
     });
-
+    
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
       console.error('Anthropic API error (debrief):', error);
@@ -933,10 +933,10 @@ app.post('/api/chat', async (req, res) => {
     }
 
     const systemPrompt =
-      (typeof SYSTEM_PROMPTS !== 'undefined' && SYSTEM_PROMPTS[sessionType]) ||
-      (typeof SYSTEM_PROMPTS !== 'undefined' && SYSTEM_PROMPTS.quick_prep) ||
+      SYSTEM_PROMPTS[sessionType] ||
+      SYSTEM_PROMPTS.quick_prep ||
       'You are Talendro Interview Coach. Be concise, practical, and specific.';
-
+    
     // Build context from documents (only added once)
     let context = '';
     if (documents) {
