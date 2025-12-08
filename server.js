@@ -1054,6 +1054,41 @@ app.get('*', (req, res) => {
 });
 
 // ============================================
+// COMPLETE SESSION ENDPOINT
+// ============================================
+
+app.post('/api/complete', async (req, res) => {
+  try {
+    const { email, sessionType, sessionId, transcript, documents } = req.body;
+
+    if (!email || !sessionType || !transcript) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Send completion email to the user
+    const completionMessage = `
+Hi ${email},
+
+Your ${sessionType.replace('_', ' ')} session is complete!
+
+Your personalized interview prep packet is ready.
+If this were full mock or audio mock, your full debrief would be attached.
+
+Thank you for using Talendro Interview Coach!
+`;
+
+// Placeholder for email sending (disabled to prevent errors)
+console.log(`Session complete for ${email}. (Email sending temporarily disabled.)`);
+
+    res.json({ success: true });
+
+  } catch (error) {
+    console.error('Error in /api/complete:', error);
+    res.status(500).json({ error: 'Failed to complete session' });
+  }
+});
+
+// ============================================
 // START SERVER
 // ============================================
 
