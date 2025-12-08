@@ -574,7 +574,6 @@ app.post('/api/save-transcript', async (req, res) => {
     }
 
     if (!sheets) {
-      // If Sheets isn't configured, just acknowledge success so the frontend doesn't break
       return res.json({ success: true, savedAt: new Date().toISOString() });
     }
 
@@ -594,12 +593,13 @@ app.post('/api/save-transcript', async (req, res) => {
     const sessionLabel = sessionTypeLabels[sessionType] || sessionType;
 
     const escapeHtml = (str) =>
-      String(str ?? '')
+      String(str)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
 
     const safeTranscript = escapeHtml(transcript);
+
     const safeEmail = email.replace(/[^a-zA-Z0-9.@_-]/g, '');
     const timestampSlug = now.replace(/[:.]/g, '-');
     const s3Key = `sessions/users/${safeEmail}/${timestampSlug}-${sessionType}.html`;
@@ -723,6 +723,8 @@ app.post('/api/save-transcript', async (req, res) => {
           ContentType: 'text/html; charset=utf-8'
         })
       );
+
+      // Public URL (bucket policy already allows s3:GetObject)
       docUrl = `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/${s3Key}`;
     } catch (err) {
       console.error('Error uploading transcript HTML to S3:', err);
@@ -756,27 +758,27 @@ app.post('/api/save-transcript', async (req, res) => {
         break;
     }
 
-    return res.json({
+    res.json({
       success: true,
       savedAt: now,
-      docUrl
+      docUrl: docUrl
     });
   } catch (error) {
     console.error('Error saving transcript:', error);
-    return res.status(500).json({ error: 'Failed to save transcript' });
+    res.status(500).json({ error: 'Failed to save transcript' });
   }
 });
 
 // ============================================
-// GENERATE POLISHED INTERVIEW DEBRIEF (FULL MOCK)
+// GENERATE POLISHED INTERVIEW DEBRIEF (Full Mock / Audio Mock)
 // ============================================
 
 app.post('/api/generate-debrief', async (req, res) => {
   try {
-    const { transcript, email } = req.body;
+    const { conversationHistory, documents, sessionType } = req.body;
 
-    if (!transcript) {
-      return res.status(400).json({ error: 'Transcript required' });
+    if (!conversationHistory || conversationHistory.length === 0) {
+      return res.status(400).json({ error: 'Conversation history required' });
     }
 
     const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
@@ -784,36 +786,83 @@ app.post('/api/generate-debrief', async (req, res) => {
       return res.status(500).json({ error: 'Anthropic API key not configured' });
     }
 
+    // Format conversation for the prompt
+    const conversationText = conversationHistory
+      .map((msg) => {
+        const role = msg.role === 'user' ? 'CANDIDATE' : 'INTERVIEWER';
+        return `${role}: ${msg.content}`;
+      })
+      .join('\n\n');
+
+    // Session label
+    const sessionTypeLabel =
+      sessionType === 'audio_mock'
+        ? 'Premium Audio Mock Interview'
+        : 'Full Mock Interview';
+
+    const interviewerMessages = conversationHistory.filter(
+      (msg) => msg.role === 'assistant'
+    );
+    const questionCount = Math.max(interviewerMessages.length, 5);
+
+    const resume = documents?.resume || 'Not provided';
+    const jobDescription = documents?.jobDescription || 'Not provided';
+    const companyUrl = documents?.companyUrl || 'Not provided';
+
     const debriefPrompt = `
 You are Talendro™ Interview Coach, a world-class executive interview coach.
 
-The following is a full mock interview transcript with a VP-level candidate.
+A candidate has just completed a ${sessionTypeLabel}.
+You are creating a professional Interview Debrief Document for them.
 
-Your job is to create a structured, highly actionable debrief document for the candidate.
+Use the information below:
 
-TRANSCRIPT (verbatim):
---------------------------------
-${transcript}
---------------------------------
+RESUME:
+${resume}
 
-Using this transcript, produce a Talendro-styled debrief with:
+JOB DESCRIPTION:
+${jobDescription}
 
-1) An overall assessment
-2) The 3–5 biggest strengths you observed
-3) The 3–5 most important improvement areas
-4) A detailed, question-by-question breakdown:
-   - The question
-   - What they did well
+COMPANY WEBSITE:
+${companyUrl}
+
+MOCK INTERVIEW TRANSCRIPT:
+${conversationText}
+
+There were approximately ${questionCount} interview questions.
+
+Create a beautifully formatted debrief document with:
+
+1. **Overall Assessment**
+   - 2–4 sentences summarizing how the candidate performed.
+
+2. **Key Strengths (3–5 bullet points)**
+   - Be specific and tie to their answers and behaviors.
+
+3. **Top Improvement Areas (3–5 bullet points)**
+   - Focus on what will actually move the needle in real interviews.
+
+4. **Question-by-Question Breakdown**
+   For each major question you can infer from the transcript:
+   - The question (or best reconstruction of it)
+   - What the candidate did well
    - What could be improved
-   - A suggested upgraded answer
-5) A short "Before Your Interview" checklist
-6) A short "During Your Interview" checklist
-7) Final encouragement and motivation
+   - A suggested upgraded / ideal answer.
 
-Write in clear, concise, professional language suitable for a senior-level candidate.
-Use headings, numbered lists, and bullets so it reads like a premium coaching report.
+5. **Before Your Interview**
+   - A short checklist (4–7 items) of what this candidate should do in the days/hours before their interview.
 
-Now generate the full debrief.
+6. **During Your Interview**
+   - A short checklist (4–7 items) of what to remember in the room / on the call.
+
+7. **Final Thoughts**
+   - 2–3 sentences of encouragement and motivation.
+   - Be direct, supportive, and confidence-building.
+
+Style:
+- Write for a senior professional / executive-level candidate.
+- Be concise but specific.
+- Use headings, numbered lists, and bullets so it reads like a premium coaching report.
 `;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -824,7 +873,7 @@ Now generate the full debrief.
         'content-type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-3-5-sonnet-latest',
         max_tokens: 6000,
         messages: [{ role: 'user', content: debriefPrompt }]
       })
@@ -870,8 +919,11 @@ app.post('/api/chat', async (req, res) => {
     }
 
     const systemPrompt =
-      SYSTEM_PROMPTS[sessionType] || SYSTEM_PROMPTS.quick_prep;
+      (typeof SYSTEM_PROMPTS !== 'undefined' && SYSTEM_PROMPTS[sessionType]) ||
+      (typeof SYSTEM_PROMPTS !== 'undefined' && SYSTEM_PROMPTS.quick_prep) ||
+      'You are Talendro Interview Coach. Be concise, practical, and specific.';
 
+    // Build context from documents (only added once)
     let context = '';
     if (documents) {
       if (documents.resume) {
@@ -881,7 +933,7 @@ app.post('/api/chat', async (req, res) => {
         context += `\n\nJOB DESCRIPTION:\n${documents.jobDescription}`;
       }
       if (documents.companyUrl) {
-        context += `\n\nCOMPANY WEBSITE: ${documents.companyUrl}`;
+        context += `\n\nCOMPANY WEBSITE URL: ${documents.companyUrl}`;
       }
     }
 
@@ -927,7 +979,7 @@ app.post('/api/chat', async (req, res) => {
       const error = await response.json().catch(() => ({}));
       console.error('Anthropic API error (chat):', error);
       throw new Error(
-        `API error: ${error.error?.message || response.statusText}`
+        `Anthropic API error: ${error.error?.message || response.statusText}`
       );
     }
 
@@ -950,10 +1002,9 @@ app.post('/api/chat', async (req, res) => {
 
 app.post('/api/webhook/session-complete', async (req, res) => {
   try {
-    const { email, sessionType, transcript, feedback } = req.body;
+    const { email, sessionType, transcript, feedback, docUrl } = req.body;
 
-    const zapierWebhookUrl =
-      'https://hooks.zapier.com/hooks/catch/9843127/uko6xa9/';
+    const zapierWebhookUrl = 'https://hooks.zapier.com/hooks/catch/9843127/uko6xa9/';
 
     await fetch(zapierWebhookUrl, {
       method: 'POST',
@@ -963,14 +1014,15 @@ app.post('/api/webhook/session-complete', async (req, res) => {
         sessionType,
         transcript,
         feedback,
+        docUrl,
         completedAt: new Date().toISOString()
       })
     });
 
-    return res.json({ success: true });
+    res.json({ success: true });
   } catch (error) {
-    console.error('Webhook error:', error);
-    return res.status(500).json({ error: 'Webhook failed' });
+    console.error('Webhook error (session-complete):', error);
+    res.status(500).json({ error: 'Webhook failed' });
   }
 });
 
