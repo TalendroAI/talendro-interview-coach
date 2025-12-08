@@ -3,6 +3,13 @@ const cors = require('cors');
 const path = require('path');
 const { google } = require('googleapis');
 
+// AWS S3 client for uploading styled transcript documents
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+
+const S3_BUCKET = process.env.SESSION_DOCS_BUCKET || 'talendro-coaching-sessions';
+const S3_REGION = process.env.AWS_REGION || 'us-east-2';
+
+const s3Client = new S3Client({ region: S3_REGION });
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
@@ -555,62 +562,213 @@ app.post('/api/start-session', async (req, res) => {
 });
 
 // ============================================
-// SAVE TRANSCRIPT - CREATES GOOGLE DOC
+// SAVE TRANSCRIPT - CREATE TALENDRO-STYLED HTML IN S3
 // ============================================
 
 app.post('/api/save-transcript', async (req, res) => {
   try {
     const { email, sessionType, transcript } = req.body;
-    
+
     if (!email || !sessionType || !transcript) {
       return res.status(400).json({ error: 'Email, session type, and transcript required' });
     }
-    
+
     if (!sheets) {
       return res.json({ success: true, savedAt: new Date().toISOString() });
     }
-    
+
     const userData = await getUserData(email);
     if (!userData) {
       return res.status(404).json({ error: 'User not found' });
     }
-    
+
     const now = new Date().toISOString();
-    
-    // Create Google Doc with transcript
-    const docUrl = await createTranscriptDoc(email, sessionType, transcript);
-    
+
+    // ---- Build Talendro-styled HTML ----
+    const sessionTypeLabels = {
+      quick_prep: 'Quick Prep Session',
+      full_mock: 'Full Mock Interview',
+      audio_mock: 'Audio Mock Interview'
+    };
+    const sessionLabel = sessionTypeLabels[sessionType] || sessionType;
+
+    const escapeHtml = (str) =>
+      String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    const safeTranscript = escapeHtml(transcript);
+
+    const safeEmail = email.replace(/[^a-zA-Z0-9.@_-]/g, '');
+    const timestampSlug = now.replace(/[:.]/g, '-');
+    const s3Key = `sessions/users/${safeEmail}/${timestampSlug}-${sessionType}.html`;
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>${sessionLabel} – Talendro Interview Coach</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      margin: 0;
+      padding: 32px;
+      background: #020617;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #e5e7eb;
+    }
+    .card {
+      max-width: 880px;
+      margin: 0 auto;
+      background: #020617;
+      border-radius: 18px;
+      padding: 32px 32px 40px;
+      border: 1px solid #1f2937;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.7);
+    }
+    .logo {
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-size: 12px;
+      color: #a4f400;
+    }
+    .logo span {
+      color: #2f6df6;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(15, 118, 110, 0.15);
+      color: #6ee7b7;
+      font-size: 11px;
+      margin-top: 8px;
+    }
+    h1 {
+      font-size: 24px;
+      margin: 20px 0 6px;
+    }
+    h2 {
+      font-size: 16px;
+      margin: 22px 0 10px;
+      color: #e5e7eb;
+    }
+    .meta {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-bottom: 12px;
+    }
+    .section {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid #111827;
+    }
+    pre {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-family: inherit;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #e5e7eb;
+    }
+    .footer {
+      margin-top: 28px;
+      font-size: 12px;
+      color: #6b7280;
+    }
+    a {
+      color: #93c5fd;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo"><span>Talendro™</span> Interview Coach</div>
+    <div class="pill">Precision Matches. Faster Results.</div>
+
+    <h1>${sessionLabel} Coaching Notes</h1>
+
+    <div class="meta">
+      Sent to: ${escapeHtml(email)}<br/>
+      Session completed: ${escapeHtml(
+        new Date(now).toLocaleString('en-US', { timeZone: 'UTC' })
+      )} UTC
+    </div>
+
+    <div class="section">
+      <h2>Coaching Transcript</h2>
+      <pre>${safeTranscript}</pre>
+    </div>
+
+    <div class="footer">
+      This read-only document captures your Talendro™ Interview Coach session.
+    </div>
+  </div>
+</body>
+</html>`;
+
+    // ---- Upload HTML to S3 ----
+    let docUrl = null;
+    try {
+      await s3Client.send(
+        new PutObjectCommand({
+          Bucket: S3_BUCKET,
+          Key: s3Key,
+          Body: html,
+          ContentType: 'text/html; charset=utf-8'
+        })
+      );
+
+      // Public URL (bucket policy already allows s3:GetObject)
+      docUrl = `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/${s3Key}`;
+    } catch (err) {
+      console.error('Error uploading transcript HTML to S3:', err);
+    }
+
+    // ---- Update Google Sheet (no transcript text) ----
     switch (sessionType) {
-     case 'full_mock':
+      case 'quick_prep':
         await updateMultipleCells(userData.rowNum, [
-          { column: COLUMNS.FULL_MOCK_TRANSCRIPT, value: transcript.substring(0, 50000) },
+          { column: COLUMNS.QUICK_PREP_GENERATED_AT, value: now },
+          { column: COLUMNS.QUICK_PREP_DOC_URL, value: docUrl || '' }
+        ]);
+        break;
+
+      case 'full_mock':
+        await updateMultipleCells(userData.rowNum, [
           { column: COLUMNS.FULL_MOCK_STATUS, value: 'completed' },
           { column: COLUMNS.FULL_MOCK_DOC_URL, value: docUrl || '' }
         ]);
         break;
-        
+
       case 'audio_mock':
         await updateMultipleCells(userData.rowNum, [
-          { column: COLUMNS.AUDIO_MOCK_TRANSCRIPT, value: transcript.substring(0, 50000) },
           { column: COLUMNS.AUDIO_MOCK_STATUS, value: 'completed' },
           { column: COLUMNS.AUDIO_MOCK_DOC_URL, value: docUrl || '' }
         ]);
         break;
+
+      default:
+        // Unknown session type – don't blow up, just log it
+        console.warn('Unknown sessionType in save-transcript:', sessionType);
+        break;
     }
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       savedAt: now,
-      docUrl: docUrl 
+      docUrl: docUrl
     });
   } catch (error) {
     console.error('Error saving transcript:', error);
     res.status(500).json({ error: 'Failed to save transcript' });
   }
 });
-
-// Generate polished interview debrief for Full Mock
-app.post('/api/generate-debrief', async (req, res) => {
   try {
     const { conversationHistory, documents, sessionType } = req.body;
     
