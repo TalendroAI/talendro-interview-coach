@@ -9,10 +9,12 @@ const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const S3_BUCKET = process.env.SESSION_DOCS_BUCKET || 'talendro-coaching-sessions';
 const S3_REGION = process.env.AWS_REGION || 'us-east-2';
 
-// Anthropic configuration
+// ---------------------------------------------
+// Anthropic Configuration (FINAL, CORRECT BLOCK)
+// ---------------------------------------------
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const ANTHROPIC_VERSION = '2023-06-01';
-const ANTHROPIC_MODEL = 'claude-3-sonnet-20240229';
+const ANTHROPIC_MODEL = 'claude-sonnet-4-20250514';  // VALID MODEL
 
 // Basic system prompts per session type
 const SYSTEM_PROMPTS = {
