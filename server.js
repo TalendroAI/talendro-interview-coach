@@ -574,6 +574,7 @@ app.post('/api/save-transcript', async (req, res) => {
     }
 
     if (!sheets) {
+      // If Sheets isn't configured, just acknowledge success so the frontend doesn't break
       return res.json({ success: true, savedAt: new Date().toISOString() });
     }
 
@@ -593,13 +594,12 @@ app.post('/api/save-transcript', async (req, res) => {
     const sessionLabel = sessionTypeLabels[sessionType] || sessionType;
 
     const escapeHtml = (str) =>
-      String(str)
+      String(str ?? '')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
 
     const safeTranscript = escapeHtml(transcript);
-
     const safeEmail = email.replace(/[^a-zA-Z0-9.@_-]/g, '');
     const timestampSlug = now.replace(/[:.]/g, '-');
     const s3Key = `sessions/users/${safeEmail}/${timestampSlug}-${sessionType}.html`;
@@ -723,8 +723,6 @@ app.post('/api/save-transcript', async (req, res) => {
           ContentType: 'text/html; charset=utf-8'
         })
       );
-
-      // Public URL (bucket policy already allows s3:GetObject)
       docUrl = `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/${s3Key}`;
     } catch (err) {
       console.error('Error uploading transcript HTML to S3:', err);
@@ -754,181 +752,74 @@ app.post('/api/save-transcript', async (req, res) => {
         break;
 
       default:
-        // Unknown session type – don't blow up, just log it
         console.warn('Unknown sessionType in save-transcript:', sessionType);
         break;
     }
 
-    res.json({
+    return res.json({
       success: true,
       savedAt: now,
-      docUrl: docUrl
+      docUrl
     });
   } catch (error) {
     console.error('Error saving transcript:', error);
-    res.status(500).json({ error: 'Failed to save transcript' });
+    return res.status(500).json({ error: 'Failed to save transcript' });
   }
 });
+
+// ============================================
+// GENERATE POLISHED INTERVIEW DEBRIEF (FULL MOCK)
+// ============================================
+
+app.post('/api/generate-debrief', async (req, res) => {
   try {
-    const { conversationHistory, documents, sessionType } = req.body;
-    
-    if (!conversationHistory || conversationHistory.length === 0) {
-      return res.status(400).json({ error: 'Conversation history required' });
+    const { transcript, email } = req.body;
+
+    if (!transcript) {
+      return res.status(400).json({ error: 'Transcript required' });
     }
-    
-    // Format conversation for the prompt
-    const conversationText = conversationHistory.map(msg => {
-      const role = msg.role === 'user' ? 'CANDIDATE' : 'INTERVIEWER';
-      return `${role}: ${msg.content}`;
-    }).join('\n\n');
-    
-    // Determine session type label
-    const sessionTypeLabel = sessionType === 'audio_mock' 
-      ? 'Premium Audio Mock Interview' 
-      : 'Full Mock Interview';
-    
-    // Count questions (approximate based on interviewer messages)
-    const interviewerMessages = conversationHistory.filter(msg => msg.role === 'assistant');
-    const questionCount = Math.max(interviewerMessages.length, 5);
-    
-    // Extract document info
-    const resume = documents?.resume || 'Not provided';
-    const jobDescription = documents?.jobDescription || 'Not provided';
-    const companyUrl = documents?.companyUrl || 'Not provided';
-    
-    const debriefPrompt = `You are creating a professional Interview Debrief Document for a candidate who just completed a mock interview session.
 
-Based on the mock interview transcript below, create a beautifully formatted debrief document.
+    const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+    if (!anthropicApiKey) {
+      return res.status(500).json({ error: 'Anthropic API key not configured' });
+    }
 
-## INTERVIEW TRANSCRIPT:
-${conversationText}
+    const debriefPrompt = `
+You are Talendro™ Interview Coach, a world-class executive interview coach.
 
-## CONTEXT:
-- Company URL: ${companyUrl}
-- Job Description: ${jobDescription}
+The following is a full mock interview transcript with a VP-level candidate.
 
----
+Your job is to create a structured, highly actionable debrief document for the candidate.
 
-Create a comprehensive Interview Debrief Document with this EXACT structure:
+TRANSCRIPT (verbatim):
+--------------------------------
+${transcript}
+--------------------------------
 
-# 🎯 Interview Debrief Report
+Using this transcript, produce a Talendro-styled debrief with:
 
-## Session Overview
-- **Date:** ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-- **Session Type:** ${sessionTypeLabel}
-- **Questions Completed:** ${questionCount}
+1) An overall assessment
+2) The 3–5 biggest strengths you observed
+3) The 3–5 most important improvement areas
+4) A detailed, question-by-question breakdown:
+   - The question
+   - What they did well
+   - What could be improved
+   - A suggested upgraded answer
+5) A short "Before Your Interview" checklist
+6) A short "During Your Interview" checklist
+7) Final encouragement and motivation
 
----
+Write in clear, concise, professional language suitable for a senior-level candidate.
+Use headings, numbered lists, and bullets so it reads like a premium coaching report.
 
-## 📊 Overall Performance Score: [X]/10
-
-[Write 2-3 sentences summarizing their overall performance]
-
----
-
-## ✅ Top 3 Strengths
-
-### 1. [Strength Title]
-[Specific example from their answers demonstrating this strength]
-
-### 2. [Strength Title]
-[Specific example from their answers demonstrating this strength]
-
-### 3. [Strength Title]
-[Specific example from their answers demonstrating this strength]
-
----
-
-## 🎯 Top 3 Areas for Improvement
-
-### 1. [Area Title]
-**What happened:** [Brief description]
-**How to improve:** [Specific, actionable advice]
-
-### 2. [Area Title]
-**What happened:** [Brief description]
-**How to improve:** [Specific, actionable advice]
-
-### 3. [Area Title]
-**What happened:** [Brief description]
-**How to improve:** [Specific, actionable advice]
-
----
-
-## 📝 Question-by-Question Breakdown
-
-### Question 1: Opening
-**Question Asked:** [The question]
-**Your Response Summary:** [2-3 sentence summary of their answer]
-**Assessment:** [Strong / Good / Needs Work] - [Brief feedback]
-
-### Question 2: Experience
-**Question Asked:** [The question]
-**Your Response Summary:** [2-3 sentence summary of their answer]
-**Assessment:** [Strong / Good / Needs Work] - [Brief feedback]
-
-[Continue for all questions in the transcript...]
-
----
-
-## 💬 Key Phrases to Use
-
-1. **"[Powerful phrase]"** - [Why it works]
-2. **"[Another phrase]"** - [Why it works]
-3. **"[Another phrase]"** - [Why it works]
-
----
-
-## ⚠️ Phrases to Avoid
-
-1. ❌ "[Weak phrase they used]" → ✅ "[Better alternative]"
-2. ❌ "[Another weak phrase]" → ✅ "[Better alternative]"
-
----
-
-## 📚 Bonus Practice Questions
-
-Practice these additional questions to continue improving:
-
-### Experience-Based
-1. [Additional experience question]
-2. [Additional experience question]
-
-### Behavioral (STAR Method)
-1. [Additional behavioral question]
-2. [Additional behavioral question]
-
-### Role-Specific
-1. [Additional technical/strategic question]
-2. [Additional technical/strategic question]
-
----
-
-## 🚀 Your Action Plan
-
-1. **This Week:** [Specific action to take]
-2. **Before Your Interview:** [Specific action to take]
-3. **During Your Interview:** [Key thing to remember]
-
----
-
-## Final Thoughts
-
-[2-3 sentences of encouragement and motivation. End on a positive, confidence-building note.]
-
----
-
-*Generated by Talendro™ Interview Coach*
-*Your partner in interview success*
-
----
-
-IMPORTANT: Create all 10 question breakdowns. Be specific and reference their actual answers. Make this document valuable and actionable.`;
+Now generate the full debrief.
+`;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'x-api-key': anthropicApiKey,
         'anthropic-version': '2023-06-01',
         'content-type': 'application/json'
       },
@@ -940,473 +831,22 @@ IMPORTANT: Create all 10 question breakdowns. Be specific and reference their ac
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = await response.json().catch(() => ({}));
+      console.error('Anthropic API error (debrief):', error);
       throw new Error(`Anthropic API error: ${error.error?.message || 'Unknown error'}`);
     }
 
     const data = await response.json();
-    const debrief = data.content[0].text;
+    const debriefText = data.content?.[0]?.text || '';
 
-    res.json({ success: true, debrief });
+    return res.json({
+      success: true,
+      debrief: debriefText
+    });
   } catch (error) {
     console.error('Error generating debrief:', error);
-    res.status(500).json({ error: 'Failed to generate debrief' });
+    return res.status(500).json({ error: 'Failed to generate debrief' });
   }
-});
-
-app.get('/api/transcript/:email/:sessionType', async (req, res) => {
-  try {
-    const { email, sessionType } = req.params;
-    
-    if (!sheets) {
-      return res.json({ transcript: '', generatedAt: '', docUrl: '' });
-    }
-    
-    const userData = await getUserData(email);
-    if (!userData) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    
-    let transcript = '';
-    let generatedAt = '';
-    let docUrl = '';
-    
-    switch (sessionType) {
-      case 'quick_prep':
-        transcript = userData.quickPrepTranscript;
-        generatedAt = userData.quickPrepGeneratedAt;
-        docUrl = userData.quickPrepDocUrl;
-        break;
-      case 'full_mock':
-        transcript = userData.fullMockTranscript;
-        generatedAt = userData.fullMockStartedAt;
-        docUrl = userData.fullMockDocUrl;
-        break;
-      case 'audio_mock':
-        transcript = userData.audioMockTranscript;
-        generatedAt = userData.audioMockStartedAt;
-        docUrl = userData.audioMockDocUrl;
-        break;
-    }
-    
-    res.json({ transcript, generatedAt, docUrl });
-  } catch (error) {
-    console.error('Error getting transcript:', error);
-    res.status(500).json({ error: 'Failed to get transcript' });
-  }
-});
-
-// ============================================
-// COMPLETE SESSION ENDPOINT (Zapier webhook)
-// ============================================
-
-app.post('/api/complete', async (req, res) => {
-  try {
-    const { email, sessionType, sessionId, transcript, documents } = req.body;
-    
-    // Build transcript text from conversation history
-    const transcriptText = Array.isArray(transcript) 
-      ? transcript.map(msg => {
-          const role = msg.role === 'user' ? '[USER]' : '[COACH]';
-          return `${role}: ${msg.content}`;
-        }).join('\n\n')
-      : transcript;
-    
-    // Get the doc URL from user data (it was created in save-transcript)
-    let docUrl = '';
-    if (sheets) {
-      const userData = await getUserData(email);
-      if (userData) {
-        switch (sessionType) {
-          case 'quick_prep':
-            docUrl = userData.quickPrepDocUrl;
-            break;
-          case 'full_mock':
-            docUrl = userData.fullMockDocUrl;
-            break;
-          case 'audio_mock':
-            docUrl = userData.audioMockDocUrl;
-            break;
-        }
-      }
-    }
-    
-    // Send to Zapier webhook - includes docUrl
-    const zapierWebhookUrl = 'https://hooks.zapier.com/hooks/catch/9843127/uko6xa9/';
-    
-    await fetch(zapierWebhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: email,
-        sessionType: sessionType,
-        sessionId: sessionId,
-        transcript: transcriptText,
-        documents: documents,
-        docUrl: docUrl,
-        completedAt: new Date().toISOString()
-      })
-    });
-    
-    res.json({ success: true, docUrl: docUrl });
-  } catch (error) {
-    console.error('Complete session error:', error);
-    res.status(500).json({ error: 'Failed to complete session' });
-  }
-});
-
-// ============================================
-// ELEVENLABS CONFIGURATION
-// ============================================
-
-app.get('/api/config', (req, res) => {
-  res.json({ 
-    agentId: process.env.ELEVENLABS_AGENT_ID || 'agent_01jwpkjy1xeyxdh51gbqy62wd0'
-  });
-});
-
-// ============================================
-// ELEVENLABS SIGNED URL WITH CUSTOMER CONTEXT
-// ============================================
-
-app.post('/api/signed-url', async (req, res) => {
-  try {
-    const apiKey = process.env.ELEVENLABS_API_KEY;
-    const agentId = process.env.ELEVENLABS_AGENT_ID || 'agent_01jwpkjy1xeyxdh51gbqy62wd0';
-    
-    if (!apiKey) {
-      return res.status(500).json({ error: 'ElevenLabs API key not configured' });
-    }
-
-    // Get customer documents from request body
-    const { resume, jobDescription, companyUrl } = req.body;
-    
-    // Build dynamic prompt context with customer's actual data
-    const dynamicContext = `
-=== CANDIDATE INFORMATION (USE THIS FOR ALL QUESTIONS) ===
-
-CANDIDATE'S RESUME:
-${resume || 'Not provided - ask general interview questions'}
-
-TARGET JOB DESCRIPTION:
-${jobDescription || 'Not provided - ask general interview questions'}
-
-TARGET COMPANY URL:
-${companyUrl || 'Not provided'}
-
-=== END CANDIDATE INFORMATION ===
-
-CRITICAL INSTRUCTIONS:
-1. You HAVE the candidate's information above. Use it to personalize ALL your questions.
-2. Reference specific details from their resume when asking questions.
-3. Tailor questions to the specific job description provided.
-4. DO NOT ask the candidate to tell you about themselves or what role they're applying for - you already know this.
-5. Start by acknowledging you've reviewed their materials and jump straight into the interview.
-`;
-
-    // Get signed URL from ElevenLabs
-    const response = await fetch(
-      `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agentId}`,
-      {
-        method: 'GET',
-        headers: {
-          'xi-api-key': apiKey,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`Failed to get signed URL: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    
-    // Return both the signed URL and the dynamic context for the frontend
-    res.json({ 
-      signedUrl: data.signed_url,
-      dynamicContext: dynamicContext
-    });
-  } catch (error) {
-    console.error('Error getting signed URL:', error);
-    res.status(500).json({ error: 'Failed to get signed URL' });
-  }
-});
-
-// Keep the old GET endpoint for backwards compatibility
-app.get('/api/signed-url', async (req, res) => {
-  try {
-    const apiKey = process.env.ELEVENLABS_API_KEY;
-    const agentId = process.env.ELEVENLABS_AGENT_ID || 'agent_01jwpkjy1xeyxdh51gbqy62wd0';
-    
-    if (!apiKey) {
-      return res.status(500).json({ error: 'ElevenLabs API key not configured' });
-    }
-
-    const response = await fetch(
-      `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agentId}`,
-      {
-        method: 'GET',
-        headers: {
-          'xi-api-key': apiKey,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`Failed to get signed URL: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    res.json({ signedUrl: data.signed_url });
-  } catch (error) {
-    console.error('Error getting signed URL:', error);
-    res.status(500).json({ error: 'Failed to get signed URL' });
-  }
-});
-
-// ============================================
-// SYSTEM PROMPTS
-// ============================================
-
-const SYSTEM_PROMPTS = {
-  quick_prep: `You are an expert interview coach providing a Quick Prep session.
-
-CRITICAL: When the user has provided a resume and/or job description, DO NOT ask clarifying questions. Immediately deliver the prep packet using whatever information is available.
-
-DELIVER THE FOLLOWING SECTIONS IN THIS EXACT ORDER AND FORMAT:
-
----
-
-# QUICK INTERVIEW PREP PACKET
-
-## 1. Company Quick Facts
-- [Bullet point 1 about the company]
-- [Bullet point 2 about the company]
-- [Bullet point 3 about the company]
-
-## 2. Role Alignment Summary
-[One paragraph explaining how the candidate's background aligns with this specific role]
-
-## 3. Most Likely Interview Questions
-
-### Strategic/Leadership Questions:
-1. "[Question 1]"
-2. "[Question 2]"
-3. "[Question 3]"
-4. "[Question 4]"
-
-### Experience-Based Questions:
-1. "[Question 1]"
-2. "[Question 2]"
-3. "[Question 3]"
-4. "[Question 4]"
-
-### Behavioral Questions:
-1. "[Question 1]"
-2. "[Question 2]"
-3. "[Question 3]"
-4. "[Question 4]"
-
-### Culture Fit Questions:
-1. "[Question 1]"
-2. "[Question 2]"
-3. "[Question 3]"
-4. "[Question 4]"
-
-## 4. Sample Answers
-
-### For Strategic/Leadership:
-**Question:** [Restate question 1 from above]
-**Sample Answer:** [Detailed STAR-method answer using their actual resume details - Situation, Task, Action, Result]
-
-### For Experience-Based:
-**Question:** [Restate question 1 from above]
-**Sample Answer:** [Detailed STAR-method answer using their actual resume details]
-
-### For Behavioral:
-**Question:** [Restate question 1 from above]
-**Sample Answer:** [Detailed STAR-method answer using their actual resume details]
-
-### For Culture Fit:
-**Question:** [Restate question 1 from above]
-**Sample Answer:** [Detailed STAR-method answer using their actual resume details]
-
-## 5. Questions to Ask the Interviewer
-1. [Thoughtful question tailored to this role/company]
-2. [Thoughtful question tailored to this role/company]
-3. [Thoughtful question tailored to this role/company]
-
-## 6. Red Flags to Address
-- [Any gap or concern they should be prepared to explain]
-- [Another potential concern, if applicable]
-
----
-
-RULES:
-- Follow this EXACT structure every time
-- Always provide exactly 4 questions per category (16 total questions)
-- Always provide exactly 4 sample answers (one per category)
-- Always provide exactly 3 questions to ask the interviewer
-- Use markdown headers exactly as shown (## for main sections, ### for subsections)
-- Do NOT skip any section
-- Do NOT add extra sections
-- Do NOT ask clarifying questions if resume/job description provided`,
-
-  full_mock: `You are an expert interview coach conducting a Full Mock Interview session. You will role-play as a professional interviewer for the target company.
-
-## INTERVIEW STRUCTURE (EXACTLY 10 QUESTIONS)
-
-You will conduct a realistic mock interview with EXACTLY 10 questions in this order:
-
-1. **Opening/Icebreaker** (1 question): "Tell me about yourself" or similar
-2. **Experience-Based** (3 questions): Questions about their specific background
-3. **Behavioral** (3 questions): STAR-method situational questions
-4. **Role-Specific** (2 questions): Technical or strategic questions for this role
-5. **Closing** (1 question): "Why this company?" or "What questions do you have?"
-
-## YOUR FIRST MESSAGE
-
-When the user starts the session, introduce yourself and begin:
-
-"Hello! I'm [Interviewer Name], and I'll be conducting your interview today for the [Job Title] position at [Company]. 
-
-I have your resume in front of me and I'm excited to learn more about your background. This will be a realistic interview simulation - answer as you would in a real interview.
-
-Let's begin.
-
-**Question 1 of 10:**
-[Ask your opening question - typically 'Tell me about yourself and why you're interested in this role.']"
-
-## AFTER EACH USER RESPONSE
-
-Provide this EXACT format:
-
-"**Feedback:** [2-3 sentences of specific, constructive feedback on their answer. What was strong? What could be improved? Be encouraging but honest.]
-
-**Question [X] of 10:**
-[Your next interview question]"
-
-## TRACKING QUESTIONS
-
-Always show "Question X of 10" so the user knows their progress.
-
-## AFTER QUESTION 10 (FINAL SUMMARY)
-
-After the user answers question 10, provide this EXACT format:
-
----
-
-# 🎯 MOCK INTERVIEW COMPLETE
-
-## Overall Performance Score: [X]/10
-
-## Your Top 3 Strengths:
-1. [Specific strength with example from their answers]
-2. [Specific strength with example from their answers]
-3. [Specific strength with example from their answers]
-
-## Top 3 Areas for Improvement:
-1. [Specific area with actionable advice]
-2. [Specific area with actionable advice]
-3. [Specific area with actionable advice]
-
-## Question-by-Question Recap:
-- **Q1 (Opening):** [Brief assessment - Strong/Good/Needs Work]
-- **Q2 (Experience):** [Brief assessment]
-- **Q3 (Experience):** [Brief assessment]
-- **Q4 (Experience):** [Brief assessment]
-- **Q5 (Behavioral):** [Brief assessment]
-- **Q6 (Behavioral):** [Brief assessment]
-- **Q7 (Behavioral):** [Brief assessment]
-- **Q8 (Role-Specific):** [Brief assessment]
-- **Q9 (Role-Specific):** [Brief assessment]
-- **Q10 (Closing):** [Brief assessment]
-
-## Key Phrases to Use:
-- "[Powerful phrase they used or should use]"
-- "[Another strong phrase]"
-- "[Another strong phrase]"
-
-## Phrases to Avoid:
-- "[Weak phrase they used]" → Instead say: "[Better alternative]"
-- "[Another weak phrase]" → Instead say: "[Better alternative]"
-
-## Final Recommendation:
-[2-3 sentences of encouragement and next steps. End on a positive, motivating note.]
-
-## 📚 Bonus Practice Questions
-Practice these additional questions on your own to strengthen your interview skills:
-
-### Experience-Based:
-- [Additional experience question related to their background]
-- [Another experience question]
-
-### Behavioral (STAR Method):
-- [Additional behavioral question]
-- [Another behavioral question]
-
-### Role-Specific:
-- [Additional technical/strategic question for this role]
-- [Another role-specific question]
-
----
-
-## RULES:
-- Ask EXACTLY 10 questions, no more, no less
-- Always show "Question X of 10" progress
-- Give feedback after EVERY answer (except after Q10, give full summary instead)
-- Keep feedback concise (2-3 sentences) to maintain interview flow
-- Be encouraging but honest - this helps them improve
-- Personalize questions based on their resume and target job
-- Do NOT ask clarifying questions about their documents - use what's provided
-- Stay in character as a professional interviewer throughout`,
-
-  audio_mock: `You are SARAH, a professional interview coach for TALENDRO™ Interview Coach. You are conducting a realistic Premium Audio Mock Interview.
-
-CRITICAL: The candidate has ALREADY provided their resume, job description, and target company. This information will be provided to you at the start of the conversation. You MUST use this information to personalize your questions.
-
-YOUR BEHAVIOR:
-1. You ALREADY KNOW the candidate's background from their resume. Reference it specifically.
-2. You ALREADY KNOW the job they want. Tailor questions to that role.
-3. Speak at a calm, measured pace. Do not rush.
-4. Ask ONE question at a time and wait for their complete response.
-5. After each response, provide brief verbal feedback (30 seconds max), then move to the next question.
-6. Be warm, professional, and encouraging.
-7. DO NOT ask "tell me about yourself and the role you're applying for" - you already know this.
-
-INTERVIEW STRUCTURE (16 questions total):
-1. Opening (2 questions) - Start with something like "I've reviewed your background at [their company from resume]. Tell me what excites you most about this [target role] opportunity."
-2. Behavioral questions using STAR method (6 questions) - Reference their actual experience
-3. Role-specific questions based on the job description (5 questions)
-4. Company culture fit questions (3 questions)
-
-FIRST MESSAGE:
-"Hi! I'm Sarah, your interview coach today. I've reviewed your resume and the [job title] position you're targeting. I can see you have experience in [something from their resume]. Let's make this feel like the real thing - I'll ask you 16 questions and give you feedback along the way. Ready to begin?"
-
-Then immediately ask your first real question based on their materials.
-
-At the end, provide a verbal summary of:
-- Their overall performance (score out of 10)
-- Top 3 strengths with examples
-- 2-3 specific areas to improve
-- Words of encouragement`,
-
-  pro: `You are an expert interview coach for a Pro subscriber with unlimited access.
-
-You have full flexibility to:
-- Conduct mock interviews
-- Review and improve their answers
-- Provide quick prep for specific companies
-- Coach on salary negotiation
-- Help with any interview-related questions
-
-Adapt to what they need in each session. Be a comprehensive interview preparation partner.`
-};
-
-app.get('/api/system-prompt/:sessionType', (req, res) => {
-  const { sessionType } = req.params;
-  const prompt = SYSTEM_PROMPTS[sessionType] || SYSTEM_PROMPTS.quick_prep;
-  res.json({ systemPrompt: prompt });
 });
 
 // ============================================
@@ -1426,16 +866,12 @@ app.post('/api/chat', async (req, res) => {
     const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
 
     if (!anthropicApiKey) {
-      return res
-        .status(500)
-        .json({ error: 'Anthropic API key not configured' });
+      return res.status(500).json({ error: 'Anthropic API key not configured' });
     }
 
-    // Get the system prompt for this session type
     const systemPrompt =
       SYSTEM_PROMPTS[sessionType] || SYSTEM_PROMPTS.quick_prep;
 
-    // Build context from documents (only added to first message)
     let context = '';
     if (documents) {
       if (documents.resume) {
@@ -1449,12 +885,9 @@ app.post('/api/chat', async (req, res) => {
       }
     }
 
-    // Build the messages array
     let messages = [];
 
-    // If conversation history provided (multi-turn), use it
     if (conversationHistory && conversationHistory.length > 0) {
-      // Add context to the first user message only
       messages = conversationHistory.map((msg, index) => {
         if (index === 0 && msg.role === 'user' && context) {
           return {
@@ -1465,16 +898,12 @@ app.post('/api/chat', async (req, res) => {
         return { role: msg.role, content: msg.content };
       });
 
-      // Add the new message
       messages.push({ role: 'user', content: message });
     } else {
-      // Single message (first message or quick_prep style)
       messages = [
         {
           role: 'user',
-          content: context
-            ? `${message}\n\n---\nCONTEXT:${context}`
-            : message
+          content: context ? `${message}\n\n---\nCONTEXT:${context}` : message
         }
       ];
     }
@@ -1496,7 +925,7 @@ app.post('/api/chat', async (req, res) => {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      console.error('Anthropic API error:', error);
+      console.error('Anthropic API error (chat):', error);
       throw new Error(
         `API error: ${error.error?.message || response.statusText}`
       );
