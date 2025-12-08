@@ -331,25 +331,28 @@ async function validateSession(email, sessionType) {
   }
   
   switch (sessionType) {
-    case 'quick_prep':
-      if (userData.quickPrepTranscript) {
-        return {
-          allowed: false,
-          reason: 'completed',
-          showTranscript: true,
-          transcript: userData.quickPrepTranscript,
-          generatedAt: userData.quickPrepGeneratedAt,
-          docUrl: userData.quickPrepDocUrl
-        };
-      }
+    case 'quick_prep': {
+      // If they have no Quick Prep sessions left (and aren’t Pro), block.
       if (userData.quickPrepRemaining <= 0 && !userData.isPro) {
-        return {
+        const result = {
           allowed: false,
           reason: 'No Quick Prep sessions remaining. Please purchase another session.',
           showTranscript: false
         };
+
+        // If we have a stored doc URL for their last Quick Prep, we can surface it.
+        if (userData.quickPrepDocUrl) {
+          result.showTranscript = true;
+          result.docUrl = userData.quickPrepDocUrl;
+          result.generatedAt = userData.quickPrepGeneratedAt;
+        }
+
+        return result;
       }
+
+      // They still have Quick Prep sessions available → let them in.
       return { allowed: true };
+    }
       
     case 'full_mock':
       if (userData.fullMockTranscript && userData.fullMockStatus === 'completed') {
