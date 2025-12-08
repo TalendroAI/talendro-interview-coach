@@ -1415,17 +1415,26 @@ app.get('/api/system-prompt/:sessionType', (req, res) => {
 
 app.post('/api/chat', async (req, res) => {
   try {
-    const { message, sessionType, documents, customerEmail, conversationHistory } = req.body;
-    
+    const {
+      message,
+      sessionType,
+      documents,
+      customerEmail,
+      conversationHistory
+    } = req.body;
+
     const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
-    
+
     if (!anthropicApiKey) {
-      return res.status(500).json({ error: 'Anthropic API key not configured' });
+      return res
+        .status(500)
+        .json({ error: 'Anthropic API key not configured' });
     }
-    
+
     // Get the system prompt for this session type
-    const systemPrompt = SYSTEM_PROMPTS[sessionType] || SYSTEM_PROMPTS.quick_prep;
-    
+    const systemPrompt =
+      SYSTEM_PROMPTS[sessionType] || SYSTEM_PROMPTS.quick_prep;
+
     // Build context from documents (only added to first message)
     let context = '';
     if (documents) {
@@ -1439,10 +1448,10 @@ app.post('/api/chat', async (req, res) => {
         context += `\n\nCOMPANY WEBSITE: ${documents.companyUrl}`;
       }
     }
-    
+
     // Build the messages array
     let messages = [];
-    
+
     // If conversation history provided (multi-turn), use it
     if (conversationHistory && conversationHistory.length > 0) {
       // Add context to the first user message only
@@ -1455,7 +1464,7 @@ app.post('/api/chat', async (req, res) => {
         }
         return { role: msg.role, content: msg.content };
       });
-      
+
       // Add the new message
       messages.push({ role: 'user', content: message });
     } else {
@@ -1463,11 +1472,13 @@ app.post('/api/chat', async (req, res) => {
       messages = [
         {
           role: 'user',
-          content: context ? `${message}\n\n---\nCONTEXT:${context}` : message
+          content: context
+            ? `${message}\n\n---\nCONTEXT:${context}`
+            : message
         }
       ];
     }
-    
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -1476,26 +1487,31 @@ app.post('/api/chat', async (req, res) => {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-3-5-sonnet-latest',
         max_tokens: 4096,
         system: systemPrompt,
-        messages: messages
+        messages
       })
     });
-    
+
     if (!response.ok) {
-      const error = await response.json();
+      const error = await response.json().catch(() => ({}));
       console.error('Anthropic API error:', error);
-      throw new Error(`API error: ${error.error?.message || 'Unknown error'}`);
+      throw new Error(
+        `API error: ${error.error?.message || response.statusText}`
+      );
     }
-    
+
     const data = await response.json();
-    const assistantMessage = data.content[0].text;
-    
-    res.json({ message: assistantMessage });
+    const assistantMessage =
+      data.content && data.content[0] && data.content[0].text
+        ? data.content[0].text
+        : '';
+
+    return res.json({ message: assistantMessage });
   } catch (error) {
     console.error('Chat error:', error);
-    res.status(500).json({ error: 'Failed to get AI response' });
+    return res.status(500).json({ error: 'Failed to get AI response' });
   }
 });
 
@@ -1506,9 +1522,10 @@ app.post('/api/chat', async (req, res) => {
 app.post('/api/webhook/session-complete', async (req, res) => {
   try {
     const { email, sessionType, transcript, feedback } = req.body;
-    
-    const zapierWebhookUrl = 'https://hooks.zapier.com/hooks/catch/9843127/uko6xa9/';
-    
+
+    const zapierWebhookUrl =
+      'https://hooks.zapier.com/hooks/catch/9843127/uko6xa9/';
+
     await fetch(zapierWebhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1520,11 +1537,11 @@ app.post('/api/webhook/session-complete', async (req, res) => {
         completedAt: new Date().toISOString()
       })
     });
-    
-    res.json({ success: true });
+
+    return res.json({ success: true });
   } catch (error) {
     console.error('Webhook error:', error);
-    res.status(500).json({ error: 'Webhook failed' });
+    return res.status(500).json({ error: 'Webhook failed' });
   }
 });
 
