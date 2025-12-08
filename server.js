@@ -8,7 +8,21 @@ const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 
 const S3_BUCKET = process.env.SESSION_DOCS_BUCKET || 'talendro-coaching-sessions';
 const S3_REGION = process.env.AWS_REGION || 'us-east-2';
+// Anthropic configuration
+const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
+const ANTHROPIC_VERSION = '2023-06-01';
+const ANTHROPIC_MODEL =
+  process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022';
 
+// Basic system prompts per session type
+const SYSTEM_PROMPTS = {
+  quick_prep:
+    'You are Talendro™ Interview Coach. Give concise, highly practical interview prep tailored to the candidate, focusing on recruiter reality and executive-level expectations.',
+  full_mock:
+    'You are Talendro™ Interview Coach running a full mock interview. Ask structured, behavioral questions, probe deeply, and give tight, recruiter-grade feedback.',
+  audio_mock:
+    'You are Talendro™ Interview Coach running a premium audio mock interview. Keep answers conversational, coach tone and pacing, and give clear, specific feedback.'
+};
 const s3Client = new S3Client({ region: S3_REGION });
 const app = express();
 app.use(cors());
@@ -960,21 +974,21 @@ app.post('/api/chat', async (req, res) => {
       ];
     }
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch(ANTHROPIC_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': anthropicApiKey,
-        'anthropic-version': '2023-06-01'
+        'anthropic-version': ANTHROPIC_VERSION
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-latest',
+        model: ANTHROPIC_MODEL,
         max_tokens: 4096,
         system: systemPrompt,
         messages
       })
     });
-
+    
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
       console.error('Anthropic API error (chat):', error);
