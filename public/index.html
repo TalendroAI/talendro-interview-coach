@@ -1411,11 +1411,11 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="companyUrl"><span class="field-number" id="step3Number">3</span> Company Website URL <span style="color: #9CA3AF; font-weight: normal;">(optional)</span></label>
+                        <label for="companyUrl"><span class="field-number" id="step3Number">3</span> Company Website URL</label>
                         <input type="url" id="companyUrl" placeholder="https://company.com">
                         <div class="status-indicator">
                             <span class="status-dot" id="urlStatus"></span>
-                            <span id="urlStatusText">Optional but recommended</span>
+                            <span id="urlStatusText">Waiting for content</span>
                         </div>
                     </div>
 
@@ -1485,7 +1485,7 @@
                         <div class="welcome-steps">
                             <div class="welcome-step">
                                 <span class="welcome-step-number">1</span>
-                                <span class="welcome-step-text">Open your résumé file, press <span class="highlight-keyword">Ctrl+A</span> (select all), then <span class="highlight-keyword">Ctrl+C</span> (copy), then <span class="highlight-keyword">Ctrl+V</span> (paste) into the Résumé box</span>
+                                <span class="welcome-step-text">Open your résumé file, press <span class="highlight-keyword">Ctrl+A</span> (Mac: <span class="highlight-keyword">⌘+A</span>) to select all, then <span class="highlight-keyword">Ctrl+C</span> (Mac: <span class="highlight-keyword">⌘+C</span>) to copy, then <span class="highlight-keyword">Ctrl+V</span> (Mac: <span class="highlight-keyword">⌘+V</span>) to paste into the Résumé box</span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">2</span>
@@ -1493,7 +1493,7 @@
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">3</span>
-                                <span class="welcome-step-text">Type or paste the <strong>company's website URL</strong> (optional but recommended)</span>
+                                <span class="welcome-step-text">Type or paste the <strong>company's website URL</strong></span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">4</span>
@@ -1501,7 +1501,7 @@
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">5</span>
-                                <span class="welcome-step-text">When finished, click <strong>"Complete Session"</strong> to receive your results via email</span>
+                                <span class="welcome-step-text">Once the Quick Prep interview content is displayed on screen, click <strong>"Complete Session"</strong> to receive your full results via email</span>
                             </div>
                         </div>
                     </div>
@@ -1809,7 +1809,7 @@
                         <div class="welcome-steps">
                             <div class="welcome-step">
                                 <span class="welcome-step-number">1</span>
-                                <span class="welcome-step-text">Open your résumé file, press <span class="highlight-keyword">Ctrl+A</span> (select all), then <span class="highlight-keyword">Ctrl+C</span> (copy), then <span class="highlight-keyword">Ctrl+V</span> (paste) into the Résumé box</span>
+                                <span class="welcome-step-text">Open your résumé file, press <span class="highlight-keyword">Ctrl+A</span> (Mac: <span class="highlight-keyword">⌘+A</span>) to select all, then <span class="highlight-keyword">Ctrl+C</span> (Mac: <span class="highlight-keyword">⌘+C</span>) to copy, then <span class="highlight-keyword">Ctrl+V</span> (Mac: <span class="highlight-keyword">⌘+V</span>) to paste into the Résumé box</span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">2</span>
@@ -1817,7 +1817,7 @@
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">3</span>
-                                <span class="welcome-step-text">Type or paste the <strong>company's website URL</strong> (optional but recommended)</span>
+                                <span class="welcome-step-text">Type or paste the <strong>company's website URL</strong></span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">4</span>
@@ -1830,6 +1830,8 @@
                         </div>
                     `;
                 }
+                // Hide follow-up question input for quick_prep
+                document.querySelector('.chat-input-container').style.display = 'none';
             }
             
             // Full Mock Interview customization
@@ -1841,7 +1843,7 @@
                         <div class="welcome-steps">
                             <div class="welcome-step">
                                 <span class="welcome-step-number">1</span>
-                                <span class="welcome-step-text">Open your résumé, press <span class="highlight-keyword">Ctrl+A</span> (select all), <span class="highlight-keyword">Ctrl+C</span> (copy), <span class="highlight-keyword">Ctrl+V</span> (paste) into the Résumé box</span>
+                                <span class="welcome-step-text">Open your résumé, press <span class="highlight-keyword">Ctrl+A</span> (Mac: <span class="highlight-keyword">⌘+A</span>) to select all, <span class="highlight-keyword">Ctrl+C</span> (Mac: <span class="highlight-keyword">⌘+C</span>) to copy, <span class="highlight-keyword">Ctrl+V</span> (Mac: <span class="highlight-keyword">⌘+V</span>) to paste into the Résumé box</span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">2</span>
@@ -1849,7 +1851,7 @@
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">3</span>
-                                <span class="welcome-step-text">Enter the <strong>company website URL</strong> (optional but recommended)</span>
+                                <span class="welcome-step-text">Enter the <strong>company website URL</strong></span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">4</span>
@@ -1876,7 +1878,7 @@
                         <div class="welcome-steps">
                             <div class="welcome-step">
                                 <span class="welcome-step-number">1</span>
-                                <span class="welcome-step-text">Open your résumé, press <span class="highlight-keyword">Ctrl+A</span> (select all), <span class="highlight-keyword">Ctrl+C</span> (copy), <span class="highlight-keyword">Ctrl+V</span> (paste) into the Résumé box</span>
+                                <span class="welcome-step-text">Open your résumé, press <span class="highlight-keyword">Ctrl+A</span> (Mac: <span class="highlight-keyword">⌘+A</span>) to select all, <span class="highlight-keyword">Ctrl+C</span> (Mac: <span class="highlight-keyword">⌘+C</span>) to copy, <span class="highlight-keyword">Ctrl+V</span> (Mac: <span class="highlight-keyword">⌘+V</span>) to paste into the Résumé box</span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">2</span>
@@ -1884,7 +1886,7 @@
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">3</span>
-                                <span class="welcome-step-text">Enter the <strong>company website URL</strong> (optional but recommended)</span>
+                                <span class="welcome-step-text">Enter the <strong>company website URL</strong></span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">4</span>
@@ -1940,7 +1942,7 @@
                         <div class="welcome-steps">
                             <div class="welcome-step">
                                 <span class="welcome-step-number">1</span>
-                                <span class="welcome-step-text">Open your résumé, press <span class="highlight-keyword">Ctrl+A</span> (select all), <span class="highlight-keyword">Ctrl+C</span> (copy), <span class="highlight-keyword">Ctrl+V</span> (paste) into the Résumé box</span>
+                                <span class="welcome-step-text">Open your résumé, press <span class="highlight-keyword">Ctrl+A</span> (Mac: <span class="highlight-keyword">⌘+A</span>) to select all, <span class="highlight-keyword">Ctrl+C</span> (Mac: <span class="highlight-keyword">⌘+C</span>) to copy, <span class="highlight-keyword">Ctrl+V</span> (Mac: <span class="highlight-keyword">⌘+V</span>) to paste into the Résumé box</span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">2</span>
@@ -1948,7 +1950,7 @@
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">3</span>
-                                <span class="welcome-step-text">Enter the <strong>company website URL</strong> (optional but recommended)</span>
+                                <span class="welcome-step-text">Enter the <strong>company website URL</strong></span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">4</span>
@@ -1987,7 +1989,7 @@
                                 step5Container.style.display = 'none';
                                 step5Number.textContent = '6';
                                 completeStepNumber.textContent = '6';
-                                document.querySelector('.chat-input-container').style.display = 'block';
+                                document.querySelector('.chat-input-container').style.display = 'none';
                                 
                                 // Update welcome message for Quick Prep
                                 const welcomeMsg = document.getElementById('welcomeMessage');
@@ -1997,7 +1999,7 @@
                                         <div class="welcome-steps">
                                             <div class="welcome-step">
                                                 <span class="welcome-step-number">1</span>
-                                                <span class="welcome-step-text">Open your résumé, press <span class="highlight-keyword">Ctrl+A</span> (select all), <span class="highlight-keyword">Ctrl+C</span> (copy), <span class="highlight-keyword">Ctrl+V</span> (paste) into the Résumé box</span>
+                                                <span class="welcome-step-text">Open your résumé, press <span class="highlight-keyword">Ctrl+A</span> (Mac: <span class="highlight-keyword">⌘+A</span>) to select all, <span class="highlight-keyword">Ctrl+C</span> (Mac: <span class="highlight-keyword">⌘+C</span>) to copy, <span class="highlight-keyword">Ctrl+V</span> (Mac: <span class="highlight-keyword">⌘+V</span>) to paste into the Résumé box</span>
                                             </div>
                                             <div class="welcome-step">
                                                 <span class="welcome-step-number">2</span>
@@ -2005,7 +2007,7 @@
                                             </div>
                                             <div class="welcome-step">
                                                 <span class="welcome-step-number">3</span>
-                                                <span class="welcome-step-text">Enter the <strong>company website URL</strong> (optional but recommended)</span>
+                                                <span class="welcome-step-text">Enter the <strong>company website URL</strong></span>
                                             </div>
                                             <div class="welcome-step">
                                                 <span class="welcome-step-number">4</span>
@@ -2038,7 +2040,7 @@
                                         <div class="welcome-steps">
                                             <div class="welcome-step">
                                                 <span class="welcome-step-number">1</span>
-                                                <span class="welcome-step-text">Open your résumé, press <span class="highlight-keyword">Ctrl+A</span> (select all), <span class="highlight-keyword">Ctrl+C</span> (copy), <span class="highlight-keyword">Ctrl+V</span> (paste) into the Résumé box</span>
+                                                <span class="welcome-step-text">Open your résumé, press <span class="highlight-keyword">Ctrl+A</span> (Mac: <span class="highlight-keyword">⌘+A</span>) to select all, <span class="highlight-keyword">Ctrl+C</span> (Mac: <span class="highlight-keyword">⌘+C</span>) to copy, <span class="highlight-keyword">Ctrl+V</span> (Mac: <span class="highlight-keyword">⌘+V</span>) to paste into the Résumé box</span>
                                             </div>
                                             <div class="welcome-step">
                                                 <span class="welcome-step-number">2</span>
@@ -2046,7 +2048,7 @@
                                             </div>
                                             <div class="welcome-step">
                                                 <span class="welcome-step-number">3</span>
-                                                <span class="welcome-step-text">Enter the <strong>company website URL</strong> (optional but recommended)</span>
+                                                <span class="welcome-step-text">Enter the <strong>company website URL</strong></span>
                                             </div>
                                             <div class="welcome-step">
                                                 <span class="welcome-step-number">4</span>
@@ -2079,7 +2081,7 @@
                                         <div class="welcome-steps">
                                             <div class="welcome-step">
                                                 <span class="welcome-step-number">1</span>
-                                                <span class="welcome-step-text">Open your résumé, press <span class="highlight-keyword">Ctrl+A</span> (select all), <span class="highlight-keyword">Ctrl+C</span> (copy), <span class="highlight-keyword">Ctrl+V</span> (paste) into the Résumé box</span>
+                                                <span class="welcome-step-text">Open your résumé, press <span class="highlight-keyword">Ctrl+A</span> (Mac: <span class="highlight-keyword">⌘+A</span>) to select all, <span class="highlight-keyword">Ctrl+C</span> (Mac: <span class="highlight-keyword">⌘+C</span>) to copy, <span class="highlight-keyword">Ctrl+V</span> (Mac: <span class="highlight-keyword">⌘+V</span>) to paste into the Résumé box</span>
                                             </div>
                                             <div class="welcome-step">
                                                 <span class="welcome-step-number">2</span>
@@ -2087,7 +2089,7 @@
                                             </div>
                                             <div class="welcome-step">
                                                 <span class="welcome-step-number">3</span>
-                                                <span class="welcome-step-text">Enter the <strong>company website URL</strong> (optional but recommended)</span>
+                                                <span class="welcome-step-text">Enter the <strong>company website URL</strong></span>
                                             </div>
                                             <div class="welcome-step">
                                                 <span class="welcome-step-number">4</span>
