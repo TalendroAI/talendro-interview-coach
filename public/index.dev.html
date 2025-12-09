@@ -2464,7 +2464,7 @@
                     alert('No session to complete. Start your interview prep first.');
                     return;
                 }
-                
+
                 // Disconnect audio conversation if active
                 if (audioConversation) {
                     try {
@@ -2475,46 +2475,48 @@
                         console.log('Audio disconnect:', err);
                     }
                 }
-                
+
                 completeSessionBtn.disabled = true;
                 completeSessionBtn.textContent = 'Completing...';
                 completeStatus.textContent = '🟡 Processing...';
-                
+
                 try {
+                    completeSessionBtn.textContent = 'Generating debrief...';
+
+                    // 1) Call our new debrief endpoint for ALL session types
+                    const debriefResponse = await fetch('/api/generate-debrief', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            conversationHistory,
+                            documents,
+                            sessionType: sessionType.value
+                        })
+                    });
+
+                    const debriefData = await debriefResponse.json();
+
                     let transcriptToSave;
-                    
-                    if (sessionType.value === 'full_mock' || sessionType.value === 'audio_mock') {
-                        completeSessionBtn.textContent = 'Generating debrief...';
-                        
-                        const debriefResponse = await fetch('/api/generate-debrief', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                conversationHistory: conversationHistory,
-                                documents: documents,
-                                sessionType: sessionType.value
-                            })
-                        });
-                        
-                        const debriefData = await debriefResponse.json();
-                        
-                        if (debriefData.success && debriefData.debrief) {
-                            transcriptToSave = debriefData.debrief;
-                        } else {
-                            transcriptToSave = conversationHistory.map(msg => {
+
+                    if (debriefData.success && debriefData.transcriptJson) {
+                        // Save the pretty JSON transcript (can be rendered nicely later)
+                        transcriptToSave = JSON.stringify(debriefData.transcriptJson, null, 2);
+                    } else if (debriefData.success && debriefData.debrief) {
+                        // Fallback to text field
+                        transcriptToSave = debriefData.debrief;
+                    } else {
+                        // Last resort: raw chat log
+                        transcriptToSave = conversationHistory
+                            .map(msg => {
                                 const role = msg.role === 'user' ? '[USER]' : '[COACH]';
                                 return `${role}: ${msg.content}`;
-                            }).join('\n\n');
-                        }
-                    } else {
-                        transcriptToSave = conversationHistory.map(msg => {
-                            const role = msg.role === 'user' ? '[USER]' : '[COACH]';
-                            return `${role}: ${msg.content}`;
-                        }).join('\n\n');
+                            })
+                            .join('\n\n');
                     }
-                
+
                     completeSessionBtn.textContent = 'Saving...';
-                    
+
+                    // 2) Save transcript to S3 + Sheet (your existing API)
                     await fetch('/api/save-transcript', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -2524,7 +2526,8 @@
                             transcript: transcriptToSave
                         })
                     });
-                    
+
+                    // 3) Zapier webhook / session-complete integration
                     const response = await fetch('/api/complete', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -2533,19 +2536,22 @@
                             sessionType: sessionType.value,
                             sessionId: sessionId,
                             transcript: transcriptToSave,
-                            documents: documents
+                            documents
                         })
                     });
-                    
+
                     const data = await response.json();
-                    
+
                     if (data.success) {
                         completeSessionBtn.textContent = '✅ Complete!';
                         completeSessionBtn.style.background = '#00C4CC';
                         completeStepNumber.classList.add('completed');
                         completeStatus.className = 'btn-status unlocked';
                         completeStatus.textContent = '✓ Check your email for results!';
-                        addMessage('Your session is complete! You will receive an email shortly with your personalized Interview Debrief Report. Thank you for using Talendro Interview Coach!', 'assistant');
+                        addMessage(
+                            'Your session is complete! You will receive an email shortly with your personalized Interview Debrief Report. Thank you for using Talendro Interview Coach!',
+                            'assistant'
+                        );
                         chatInput.disabled = true;
                         sendBtn.disabled = true;
                     } else {

@@ -617,192 +617,270 @@ app.post('/api/save-transcript', async (req, res) => {
   }
 });
 
-// Generate polished interview debrief for Full Mock
+function buildTranscriptUserPrompt({
+  sessionType,
+  resumeText,
+  jobDescription,
+  companyUrl,
+  conversationHistory
+}) {
+  return `
+You will generate a transcript using the JSON schema below.
+
+SCHEMA (keys + meaning):
+${JSON.stringify({
+  header: {
+    session_type: 'string',
+    candidate_name: 'string | null',
+    role_title: 'string | null',
+    company_name: 'string | null',
+    industry: 'string | null',
+    session_date: 'string | null'
+  },
+  executive_summary: 'string',
+  company_intel: {
+    quick_facts: ['string'],
+    business_model_summary: 'string',
+    culture_insights: 'string',
+    what_they_value_in_candidates: ['string']
+  },
+  industry_intel: {
+    overview: 'string',
+    key_trends: ['string'],
+    challenges: ['string'],
+    opportunities: ['string'],
+    top_performer_traits: ['string']
+  },
+  role_alignment: {
+    fit_summary: 'string',
+    top_differentiators: ['string'],
+    risk_areas: ['string'],
+    positioning_recommendations: 'string'
+  },
+  question_bank: {
+    core_role: ['string'],
+    behavioral: ['string'],
+    leadership: ['string'],
+    cross_functional: ['string'],
+    culture_fit: ['string'],
+    strategic_vision: ['string'],
+    technical: ['string'],
+    blind_spot: ['string']
+  },
+  sample_answers: {
+    tell_me_about_yourself: 'string',
+    why_this_company: 'string',
+    behavioral_example: 'string',
+    strategic_answer: 'string',
+    role_specific_answer: 'string'
+  },
+  interviewer_questions: {
+    business_strategy: ['string'],
+    team_and_leadership: ['string'],
+    culture: ['string'],
+    success_metrics: ['string'],
+    risk_and_opportunity: ['string']
+  },
+  red_flags: [
+    {
+      issue: 'string',
+      likely_interviewer_concern: 'string',
+      mitigation_strategy: 'string',
+      proof_points_to_share: ['string']
+    }
+  ],
+  positioning_strategy: {
+    narrative_theme: 'string',
+    power_messages: ['string'],
+    signature_story: 'string',
+    closing_strategy: 'string',
+    elevator_pitch: 'string'
+  },
+  action_plan: ['string']
+}, null, 2)}
+
+INPUT CONTEXT
+-------------
+SESSION TYPE: ${sessionType}
+
+RESUME:
+${resumeText || '(none provided)'}
+
+JOB DESCRIPTION:
+${jobDescription || '(none provided)'}
+
+COMPANY URL:
+${companyUrl || '(none provided)'}
+
+CONVERSATION HISTORY:
+${conversationHistory
+  .map(m => `${m.role.toUpperCase()}: ${m.content}`)
+  .join('\n\n')}
+
+INSTRUCTIONS
+------------
+1. Fill all required keys in the schema.
+2. Follow the depth rules from the system prompt based on the session type.
+3. If some information is missing (e.g., industry), make a reasonable, conservative
+   inference from the job description and conversation, but do NOT invent extreme
+   specifics (exact revenue, headcount, etc.).
+4. Return ONLY a single JSON object matching the schema, no surrounding text.
+`;
+}
+
+async function generateTranscriptWithBlueprint({
+  sessionType,
+  resumeText,
+  jobDescription,
+  companyUrl,
+  conversationHistory
+}) {
+  const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+  if (!anthropicApiKey) {
+    throw new Error('Missing ANTHROPIC_API_KEY');
+  }
+  if (!ANTHROPIC_MODEL) {
+    throw new Error('Missing ANTHROPIC_MODEL env var');
+  }
+
+  const userPrompt = buildTranscriptUserPrompt({
+    sessionType,
+    resumeText,
+    jobDescription,
+    companyUrl,
+    conversationHistory
+  });
+
+  const response = await fetch(ANTHROPIC_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': anthropicApiKey,
+      'anthropic-version': ANTHROPIC_VERSION
+    },
+    body: JSON.stringify({
+      model: ANTHROPIC_MODEL,
+      max_tokens: 4096,
+      system: TRANSCRIPT_SYSTEM_PROMPT,
+      messages: [
+        {
+          role: 'user',
+          content: userPrompt
+        }
+      ]
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    console.error('Anthropic API error (transcript):', error);
+    throw new Error(
+      error?.error?.message || 'Anthropic API error while generating transcript'
+    );
+  }
+
+  const data = await response.json();
+  const content = data?.content?.[0]?.text || '';
+
+  let parsed;
+  try {
+    parsed = JSON.parse(content);
+  } catch (err) {
+    console.error('Failed to parse transcript JSON from Anthropic:', err, content);
+    throw new Error('Invalid transcript JSON from Anthropic');
+  }
+
+  return parsed;
+}
+
+// Anthropic configuration (for chat + transcript engine)
+const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
+const ANTHROPIC_VERSION = '2023-06-01';
+
+// IMPORTANT: set ANTHROPIC_MODEL in Render env to the exact model string
+// from your Anthropic account (e.g. claude-3-5-sonnet-20241022 or similar)
+const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL;
+
+// System prompt for Transcript Engine
+const TRANSCRIPT_SYSTEM_PROMPT = `
+You are Talendro™ Interview Coach Transcript Engine.
+
+Your job is to turn a coaching session into a DEEP, HIGH-VALUE interview prep transcript
+that feels like it came from a $500/hour executive interview coach.
+
+ALWAYS return valid, minified JSON that strictly matches the schema described in the
+user message. Do NOT wrap it in markdown. Do NOT add comments. Do NOT add extra keys.
+
+Brand voice:
+- Confident but human
+- Plain English, no buzzword salad
+- Very concrete, very practical
+- Recruiter- and executive-aware (you understand how hiring managers think)
+
+General rules:
+- You ONLY know what is in the candidate's résumé, job description, and company URL
+  and conversation; you do NOT have internet access. When you talk about the company
+  or industry, infer from those sources — don't hallucinate fake financials.
+- Use bullet lists where the schema expects arrays.
+- Keep paragraphs tight and scannable.
+- Make the candidate sound sharp but authentic. No generic fluff.
+
+Depth by session type:
+- quick_prep:
+  - Shorter, punchy versions of each field.
+  - 3–4 questions per question category, 2–3 categories can be empty if not relevant.
+  - Only these sample answers MUST be filled: tell_me_about_yourself, why_this_company,
+    behavioral_example. Others may be shorter.
+- full_mock:
+  - Fill every section fully, 4–6 questions per category where relevant.
+  - 3–5 sentences for executive_summary, company_intel, industry_intel, role_alignment.
+- audio_mock:
+  - Same depth as full_mock, but phrase sample answers in slightly more conversational,
+    spoken style (complete sentences, fewer nested clauses).
+`;
+
+// ============================================
+// GENERATE POLISHED INTERVIEW DEBRIEF (all session types)
+// ============================================
+
 app.post('/api/generate-debrief', async (req, res) => {
   try {
-    const { conversationHistory, documents, sessionType } = req.body;
-    
-    if (!conversationHistory || conversationHistory.length === 0) {
-      return res.status(400).json({ error: 'Conversation history required' });
+    const { conversationHistory, documents, sessionType } = req.body || {};
+
+    if (!sessionType || !conversationHistory || !Array.isArray(conversationHistory)) {
+      return res
+        .status(400)
+        .json({ success: false, error: 'Missing required fields for debrief' });
     }
-    
-    // Format conversation for the prompt
-    const conversationText = conversationHistory.map(msg => {
-      const role = msg.role === 'user' ? 'CANDIDATE' : 'INTERVIEWER';
-      return `${role}: ${msg.content}`;
-    }).join('\n\n');
-    
-    // Determine session type label
-    const sessionTypeLabel = sessionType === 'audio_mock' 
-      ? 'Premium Audio Mock Interview' 
-      : 'Full Mock Interview';
-    
-    // Count questions (approximate based on interviewer messages)
-    const interviewerMessages = conversationHistory.filter(msg => msg.role === 'assistant');
-    const questionCount = Math.max(interviewerMessages.length, 5);
-    
-    // Extract document info
-    const resume = documents?.resume || 'Not provided';
-    const jobDescription = documents?.jobDescription || 'Not provided';
-    const companyUrl = documents?.companyUrl || 'Not provided';
-    
-    const debriefPrompt = `You are creating a professional Interview Debrief Document for a candidate who just completed a mock interview session.
 
-Based on the mock interview transcript below, create a beautifully formatted debrief document.
+    const resumeText = documents?.resume || '';
+    const jobDescription = documents?.jobDescription || '';
+    const companyUrl = documents?.companyUrl || '';
 
-## INTERVIEW TRANSCRIPT:
-${conversationText}
-
-## CONTEXT:
-- Company URL: ${companyUrl}
-- Job Description: ${jobDescription}
-
----
-
-Create a comprehensive Interview Debrief Document with this EXACT structure:
-
-# 🎯 Interview Debrief Report
-
-## Session Overview
-- **Date:** ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-- **Session Type:** ${sessionTypeLabel}
-- **Questions Completed:** ${questionCount}
-
----
-
-## 📊 Overall Performance Score: [X]/10
-
-[Write 2-3 sentences summarizing their overall performance]
-
----
-
-## ✅ Top 3 Strengths
-
-### 1. [Strength Title]
-[Specific example from their answers demonstrating this strength]
-
-### 2. [Strength Title]
-[Specific example from their answers demonstrating this strength]
-
-### 3. [Strength Title]
-[Specific example from their answers demonstrating this strength]
-
----
-
-## 🎯 Top 3 Areas for Improvement
-
-### 1. [Area Title]
-**What happened:** [Brief description]
-**How to improve:** [Specific, actionable advice]
-
-### 2. [Area Title]
-**What happened:** [Brief description]
-**How to improve:** [Specific, actionable advice]
-
-### 3. [Area Title]
-**What happened:** [Brief description]
-**How to improve:** [Specific, actionable advice]
-
----
-
-## 📝 Question-by-Question Breakdown
-
-### Question 1: Opening
-**Question Asked:** [The question]
-**Your Response Summary:** [2-3 sentence summary of their answer]
-**Assessment:** [Strong / Good / Needs Work] - [Brief feedback]
-
-### Question 2: Experience
-**Question Asked:** [The question]
-**Your Response Summary:** [2-3 sentence summary of their answer]
-**Assessment:** [Strong / Good / Needs Work] - [Brief feedback]
-
-[Continue for all questions in the transcript...]
-
----
-
-## 💬 Key Phrases to Use
-
-1. **"[Powerful phrase]"** - [Why it works]
-2. **"[Another phrase]"** - [Why it works]
-3. **"[Another phrase]"** - [Why it works]
-
----
-
-## ⚠️ Phrases to Avoid
-
-1. ❌ "[Weak phrase they used]" → ✅ "[Better alternative]"
-2. ❌ "[Another weak phrase]" → ✅ "[Better alternative]"
-
----
-
-## 📚 Bonus Practice Questions
-
-Practice these additional questions to continue improving:
-
-### Experience-Based
-1. [Additional experience question]
-2. [Additional experience question]
-
-### Behavioral (STAR Method)
-1. [Additional behavioral question]
-2. [Additional behavioral question]
-
-### Role-Specific
-1. [Additional technical/strategic question]
-2. [Additional technical/strategic question]
-
----
-
-## 🚀 Your Action Plan
-
-1. **This Week:** [Specific action to take]
-2. **Before Your Interview:** [Specific action to take]
-3. **During Your Interview:** [Key thing to remember]
-
----
-
-## Final Thoughts
-
-[2-3 sentences of encouragement and motivation. End on a positive, confidence-building note.]
-
----
-
-*Generated by Talendro™ Interview Coach*
-*Your partner in interview success*
-
----
-
-IMPORTANT: Create all 10 question breakdowns. Be specific and reference their actual answers. Make this document valuable and actionable.`;
-
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 6000,
-        messages: [{ role: 'user', content: debriefPrompt }]
-      })
+    const transcriptJson = await generateTranscriptWithBlueprint({
+      sessionType,
+      resumeText,
+      jobDescription,
+      companyUrl,
+      conversationHistory
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`Anthropic API error: ${error.error?.message || 'Unknown error'}`);
-    }
+    // Pretty text version (for S3/email or UI)
+    const transcriptPretty = JSON.stringify(transcriptJson, null, 2);
 
-    const data = await response.json();
-    const debrief = data.content[0].text;
-
-    res.json({ success: true, debrief });
+    return res.json({
+      success: true,
+      transcriptJson,
+      debrief: transcriptPretty
+    });
   } catch (error) {
     console.error('Error generating debrief:', error);
-    res.status(500).json({ error: 'Failed to generate debrief' });
+    return res
+      .status(500)
+      .json({ success: false, error: 'Failed to generate debrief transcript' });
   }
 });
+
 
 app.get('/api/transcript/:email/:sessionType', async (req, res) => {
   try {
