@@ -1195,6 +1195,14 @@
     </style>
 </head>
 <body>
+    <!-- CALL DROPPED ALERT BANNER (HIDDEN BY DEFAULT) -->
+    <div id="callDroppedBanner" 
+         style="display:none; width:100%; background:#B91C1C; color:white; 
+                padding:10px 16px; text-align:center; font-family:Inter, sans-serif;
+                font-size:14px; font-weight:500;">
+        🔴 Your voice interview connection was lost. Click "Start Voice Interview" to resume.
+    </div>
+
     <!-- LOADING SCREEN -->
     <div class="loading-screen" id="loadingScreen">
         <div class="loading-spinner"></div>
@@ -1234,10 +1242,18 @@
 
         <section class="hero">
             <div class="hero-content">
-                <span class="hero-badge">AI Interview Coaching Platform • Built by Veteran Recruiters</span>
-                <h1>Transform Your Interview Performance With Elite, AI-Driven Coaching</h1>
-                <p>Unlock recruiter-grade coaching that analyzes your background, the job, the company, and your interview responses — delivering targeted insights and personalized guidance that outperform traditional prep at a fraction of the cost.</p>
-                <a href="#pricing" class="hero-btn">Start Your Coaching Session</a>
+                <span class="hero-badge">🚀 Interview Coach • Built by Veteran Recruiters</span>
+                <h1>Get Instant Interview Feedback.<br><em>Improve Your Answers Today.</em></h1>
+                <p style="font-family: 'DM Serif Display', serif; font-style: italic; font-size: 22px; color: var(--vibrant-aqua); margin-bottom: 16px;">AI-powered mock interviews starting at $12</p>
+                <p>Personalized preparation using your résumé, job description, and target company.</p>
+                
+                <!-- Video Demo -->
+                <div style="max-width: 640px; margin: 32px auto; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+                    <iframe src="https://drive.google.com/file/d/15KGmcxrzUUjsXOpKnDe2-VGZkLEhAf3C/preview" width="100%" height="360" style="border: none; display: block;" allow="autoplay" allowfullscreen></iframe>
+                </div>
+                <p style="font-size: 14px; color: var(--warm-gray); margin-top: 8px;">Watch how it works in 20 seconds</p>
+                
+                <a href="#pricing" class="hero-btn">Choose Your Prep Level</a>
                 <div class="hero-stats">
                     <div class="stat">
                         <div class="stat-number">80%</div>
@@ -1281,8 +1297,14 @@
                 <h2>Choose Your Coaching Plan</h2>
                 <p>From fast targeted sessions to comprehensive coaching — find the plan that matches your interview timeline.</p>
             </div>
+            <p style="text-align: center; font-size: 18px; margin-bottom: 40px;">
+                <span style="color: var(--warm-gray);">Not sure which to choose?</span> 
+                <span style="color: var(--talendro-blue); font-weight: 600;">Start with Quick Coaching ($12)</span>
+                <span style="color: var(--warm-gray);"> — it's the fastest way to feel more confident.</span>
+            </p>
             <div class="pricing-grid">
-                <div class="pricing-card">
+                <div class="pricing-card" style="border: 2px solid var(--vibrant-aqua); position: relative;">
+                    <span style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--vibrant-aqua); color: white; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 600;">BEST TO START</span>
                     <div class="card-title">Quick Coaching Session</div>
                     <div class="card-description">A lightning-fast, insight-rich preparation report that analyzes your background, the job, and the company, then delivers likely questions, polished sample answers, and recruiter-style guidance—in minutes and at a fraction of traditional coaching costs.</div>
                     <div class="price">$12</div>
@@ -1292,7 +1314,7 @@
                         <li>Personalized talking points based on your background</li>
                         <li>A polished recruiter-style prep packet delivered in minutes</li>
                     </ul>
-                    <a href="https://buy.stripe.com/cNi3cu7jh6ZA81jbYXcV203" class="pricing-btn secondary">Start Quick Coaching</a>
+                    <a href="https://buy.stripe.com/cNi3cu7jh6ZA81jbYXcV203" class="pricing-btn primary">Start Quick Coaching – $12</a>
                 </div>
                 <div class="pricing-card featured">
                     <div class="card-title">Text-Based Coaching Session</div>
@@ -1339,6 +1361,17 @@
                         <a href="https://buy.stripe.com/14AdR87jh6ZA5TbaUTcV207" class="pricing-btn secondary" style="background: transparent; border-color: rgba(255,255,255,0.3); color: var(--white);">$199/quarter (save 16%)</a>
                     </div>
                 </div>
+            </div>
+            
+            <!-- 100% Peace-of-Mind Guarantee -->
+            <div style="max-width: 800px; margin: 48px auto 0; background: linear-gradient(135deg, rgba(0,196,204,0.1) 0%, rgba(0,196,204,0.05) 100%); border: 1px solid rgba(0,196,204,0.3); border-radius: 16px; padding: 32px 40px; text-align: center;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px;">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--vibrant-aqua)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    <h3 style="font-family: 'Montserrat', sans-serif; font-size: 24px; font-weight: 700; color: var(--talendro-slate); margin: 0;">100% Peace-of-Mind Guarantee</h3>
+                </div>
+                <p style="font-size: 18px; color: var(--warm-gray); max-width: 600px; margin: 0 auto;">
+                    If you don't feel more confident after your first session, email us within 24 hours and we'll refund every penny. <strong style="color: var(--talendro-slate);">No questions asked.</strong>
+                </p>
             </div>
         </section>
 
@@ -1441,7 +1474,7 @@
                             <button class="start-prep-btn sidebar-start-btn" id="startPrepBtn" disabled>
                                 🚀 Start My Interview Prep
                             </button>
-                            <div class="btn-status locked" id="step4Status">🔒 Complete steps 1-2 first</div>
+                            <div class="btn-status locked" id="step4Status">🔒 Complete steps 1-3 first</div>
                         </div>
                     </div>
 
@@ -1497,7 +1530,7 @@
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">4</span>
-                                <span class="welcome-step-text">Click <strong>"Start My Interview Prep"</strong> — the button will unlock once steps 1-2 are done</span>
+                                <span class="welcome-step-text">Click <strong>"Start My Interview Prep"</strong> — the button will unlock once steps 1-3 are done</span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">5</span>
@@ -1517,6 +1550,19 @@
 
 
     <script>
+        // ----- DROPPED CALL BANNER CONTROLS -----
+        let audioEndingForCompletion = false;
+        
+        function showCallDroppedBanner() {
+            const banner = document.getElementById("callDroppedBanner");
+            if (banner) banner.style.display = "block";
+        }
+
+        function hideCallDroppedBanner() {
+            const banner = document.getElementById("callDroppedBanner");
+            if (banner) banner.style.display = "none";
+        }
+
         const urlParams = new URLSearchParams(window.location.search);
         
         // Check for Stripe session_id and resolve it
@@ -1560,7 +1606,20 @@
         }
         
         const urlSessionType = urlParams.get('session_type');
-        const customerEmail = urlParams.get('email');
+
+        // Sanitize email from URL, e.g. "1. Customer Details Email: greg@talendro.com"
+        function sanitizeEmail(raw) {
+            if (!raw) return '';
+            try {
+                raw = decodeURIComponent(raw);
+            } catch (e) {
+                // ignore decode errors
+            }
+            const match = raw.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+            return match ? match[0] : raw.trim();
+        }
+
+        const customerEmail = sanitizeEmail(urlParams.get('email'));
         
         const validSessionTypes = ['quick_prep', 'full_mock', 'audio_mock', 'pro'];
         const sessionTypeLabels = {
@@ -1779,7 +1838,8 @@
                 }
                 
                 // Update step 4 (Start button)
-                if (hasResume && hasJD) {
+                // Require ALL THREE: résumé, job description, and company URL
+                if (hasResume && hasJD && hasURL) {
                     startPrepBtn.disabled = false;
                     step4Number.classList.remove('disabled');
                     step4Status.className = 'btn-status unlocked';
@@ -1788,7 +1848,7 @@
                     startPrepBtn.disabled = true;
                     step4Number.classList.add('disabled');
                     step4Status.className = 'btn-status locked';
-                    step4Status.textContent = '🔒 Complete steps 1-2 first';
+                    step4Status.textContent = '🔒 Complete steps 1-3 first';
                 }
             }
             
@@ -1821,7 +1881,7 @@
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">4</span>
-                                <span class="welcome-step-text">Click <strong>"Start My Interview Prep"</strong> — the button will unlock once steps 1-2 are done</span>
+                                <span class="welcome-step-text">Click <strong>"Start My Interview Prep"</strong> — the button will unlock once steps 1-3 are done</span>
                             </div>
                             <div class="welcome-step">
                                 <span class="welcome-step-number">5</span>
@@ -2015,7 +2075,7 @@
                                             </div>
                                             <div class="welcome-step">
                                                 <span class="welcome-step-number">5</span>
-                                                <span class="welcome-step-text">Click <strong>"Start Quick Prep"</strong> — the button will unlock once steps 1-2 are done</span>
+                                                <span class="welcome-step-text">Click <strong>"Start Quick Prep"</strong> — the button will unlock once steps 1-3 are done</span>
                                             </div>
                                             <div class="welcome-step">
                                                 <span class="welcome-step-number">6</span>
@@ -2175,7 +2235,7 @@
                     } else {
                         startPrepBtn.disabled = true;
                         step4Status.className = 'btn-status locked';
-                        step4Status.textContent = '🔒 Complete steps 1-2 first';
+                        step4Status.textContent = '🔒 Complete steps 1-3 first';
                     }
                 };
             }
@@ -2187,6 +2247,7 @@
             
             if (startVoiceBtn) {
                 startVoiceBtn.addEventListener('click', async function() {
+                    hideCallDroppedBanner(); // Remove alert when user restarts interview
                     startVoiceBtn.disabled = true;
                     startVoiceBtn.innerHTML = '⏳ Connecting...';
                     step5Status.textContent = '🟡 Connecting to AI coach...';
@@ -2243,10 +2304,27 @@
                                 }
                             },
                             onDisconnect: () => {
-                                step5Status.textContent = '⚪ Call ended';
+                                if (audioEndingForCompletion) {
+                                    // Intentional stop from "Complete Session"
+                                    step5Status.textContent = '⚪ Call ended';
+                                    hideCallDroppedBanner();
+                                    return;
+                                }
+
+                                // Unexpected drop — show banner + lock the session
+                                showCallDroppedBanner();
+
+                                step5Number.classList.remove('completed');
+                                step5Status.className = 'btn-status locked';
+                                step5Status.textContent = '🔴 Call ended early – click to restart';
+
                                 startVoiceBtn.disabled = false;
                                 startVoiceBtn.innerHTML = '🎙️ Start Voice Interview';
                                 startVoiceBtn.style.background = 'linear-gradient(135deg, #10B981, #059669)';
+
+                                completeSessionBtn.disabled = true;
+                                completeStepNumber.classList.add('disabled');
+                                completeStatus.textContent = '🔒 Restart voice interview to complete';
                             },
                             onMessage: (message) => {
                                 if (message.type === 'transcript') {
