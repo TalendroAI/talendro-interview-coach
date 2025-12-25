@@ -2,12 +2,12 @@ export function LandingFooter() {
   return (
     <footer className="bg-background border-t border-border py-8">
       <div className="container">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center text-center md:text-left">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 text-center md:text-left">
           <p className="text-muted-foreground text-sm">
             © 2025 Talendro™. All rights reserved.
           </p>
           
-          <p className="text-muted-foreground text-sm md:text-center whitespace-nowrap">
+          <p className="text-muted-foreground text-sm whitespace-nowrap">
             🇺🇸 American-Built • 🎖️ Veteran-Led • ✔ Recruiter-Tested
           </p>
           
