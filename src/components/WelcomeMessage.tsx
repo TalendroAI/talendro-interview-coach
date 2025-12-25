@@ -1,13 +1,14 @@
 import { SessionType, SESSION_CONFIGS } from '@/types/session';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface WelcomeMessageProps {
   sessionType: SessionType | null;
   userEmail: string | null;
+  isPaymentVerified?: boolean;
 }
 
-export function WelcomeMessage({ sessionType, userEmail }: WelcomeMessageProps) {
+export function WelcomeMessage({ sessionType, userEmail, isPaymentVerified = false }: WelcomeMessageProps) {
   const config = sessionType ? SESSION_CONFIGS[sessionType] : null;
 
   if (!config) {
@@ -51,6 +52,33 @@ export function WelcomeMessage({ sessionType, userEmail }: WelcomeMessageProps) 
           )}
         </div>
 
+        {/* Payment Status */}
+        <div className={`mb-6 p-4 rounded-lg border ${
+          isPaymentVerified 
+            ? 'bg-accent/50 border-accent' 
+            : 'bg-destructive/10 border-destructive/30'
+        }`}>
+          <div className="flex items-center gap-2">
+            {isPaymentVerified ? (
+              <>
+                <CheckCircle2 className="h-5 w-5 text-primary" />
+                <span className="font-medium text-foreground">Payment verified</span>
+              </>
+            ) : (
+              <>
+                <AlertCircle className="h-5 w-5 text-destructive" />
+                <span className="font-medium text-destructive">Payment required</span>
+              </>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            {isPaymentVerified 
+              ? 'Your session is ready to begin.' 
+              : 'Please complete your purchase to access this session.'
+            }
+          </p>
+        </div>
+
         <div className="bg-muted/50 rounded-xl p-6 border border-border">
           <h3 className="font-heading font-semibold text-foreground mb-4">
             What's included:
@@ -69,11 +97,13 @@ export function WelcomeMessage({ sessionType, userEmail }: WelcomeMessageProps) 
           </ul>
         </div>
 
-        <div className="mt-6 p-4 bg-accent/50 rounded-lg border border-accent">
-          <p className="text-sm text-accent-foreground">
-            <span className="font-semibold">Next step:</span> Fill in your documents on the left sidebar, then click "Start {config.name}" to begin.
-          </p>
-        </div>
+        {isPaymentVerified && (
+          <div className="mt-6 p-4 bg-accent/50 rounded-lg border border-accent">
+            <p className="text-sm text-accent-foreground">
+              <span className="font-semibold">Next step:</span> Fill in your documents on the left sidebar, then click "Start {config.name}" to begin.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

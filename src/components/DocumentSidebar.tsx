@@ -14,6 +14,7 @@ interface DocumentSidebarProps {
   isLoading: boolean;
   sessionType: SessionType | null;
   isSessionStarted: boolean;
+  isPaymentVerified?: boolean;
 }
 
 export function DocumentSidebar({
@@ -23,6 +24,7 @@ export function DocumentSidebar({
   isLoading,
   sessionType,
   isSessionStarted,
+  isPaymentVerified = false,
 }: DocumentSidebarProps) {
   const [expandedSection, setExpandedSection] = useState<'resume' | 'job' | 'company' | null>('resume');
   
@@ -31,7 +33,7 @@ export function DocumentSidebar({
   const isResumeComplete = documents.resume.trim().length > 50;
   const isJobComplete = documents.jobDescription.trim().length > 50;
   const isCompanyComplete = documents.companyUrl.trim().length > 5;
-  const allComplete = isResumeComplete && isJobComplete && isCompanyComplete;
+  const allComplete = isResumeComplete && isJobComplete;
 
   const toggleSection = (section: 'resume' | 'job' | 'company') => {
     setExpandedSection(expandedSection === section ? null : section);
@@ -41,6 +43,8 @@ export function DocumentSidebar({
     if (!sessionType) return 'default';
     return config?.badgeVariant || 'default';
   };
+
+  const canStart = allComplete && isPaymentVerified && !isSessionStarted && sessionType;
 
   return (
     <aside className="w-full lg:w-96 bg-card border-r border-border flex flex-col h-full">
@@ -185,7 +189,7 @@ export function DocumentSidebar({
           size="lg"
           className="w-full"
           onClick={onStartSession}
-          disabled={!allComplete || isLoading || isSessionStarted || !sessionType}
+          disabled={!canStart || isLoading}
         >
           {isLoading ? (
             <>
@@ -194,12 +198,20 @@ export function DocumentSidebar({
             </>
           ) : isSessionStarted ? (
             <>Session in Progress</>
+          ) : !isPaymentVerified ? (
+            <>Payment Required</>
           ) : (
             <>Start {config?.name || 'Session'}</>
           )}
         </Button>
         
-        {!allComplete && !isSessionStarted && (
+        {!isPaymentVerified && !isSessionStarted && (
+          <p className="text-xs text-destructive text-center mt-2">
+            Please complete your purchase to start
+          </p>
+        )}
+        
+        {isPaymentVerified && !allComplete && !isSessionStarted && (
           <p className="text-xs text-muted-foreground text-center mt-2">
             Please complete all required fields
           </p>

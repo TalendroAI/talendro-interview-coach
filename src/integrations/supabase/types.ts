@@ -14,7 +14,183 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          feedback: Json | null
+          id: string
+          question_number: number | null
+          role: string
+          session_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          feedback?: Json | null
+          id?: string
+          question_number?: number | null
+          role: string
+          session_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          feedback?: Json | null
+          id?: string
+          question_number?: number | null
+          role?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "coaching_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coaching_sessions: {
+        Row: {
+          company_url: string | null
+          completed_at: string | null
+          created_at: string
+          email: string
+          id: string
+          job_description: string | null
+          prep_packet: Json | null
+          profile_id: string | null
+          resume_text: string | null
+          session_type: Database["public"]["Enums"]["session_type"]
+          status: Database["public"]["Enums"]["session_status"]
+          stripe_checkout_session_id: string | null
+          stripe_payment_intent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_url?: string | null
+          completed_at?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          job_description?: string | null
+          prep_packet?: Json | null
+          profile_id?: string | null
+          resume_text?: string | null
+          session_type: Database["public"]["Enums"]["session_type"]
+          status?: Database["public"]["Enums"]["session_status"]
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_url?: string | null
+          completed_at?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          job_description?: string | null
+          prep_packet?: Json | null
+          profile_id?: string | null
+          resume_text?: string | null
+          session_type?: Database["public"]["Enums"]["session_type"]
+          status?: Database["public"]["Enums"]["session_status"]
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coaching_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          is_pro_subscriber: boolean | null
+          pro_subscription_end: string | null
+          stripe_customer_id: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name?: string | null
+          id?: string
+          is_pro_subscriber?: boolean | null
+          pro_subscription_end?: string | null
+          stripe_customer_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          id?: string
+          is_pro_subscriber?: boolean | null
+          pro_subscription_end?: string | null
+          stripe_customer_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      session_results: {
+        Row: {
+          created_at: string
+          email_sent: boolean | null
+          email_sent_at: string | null
+          id: string
+          improvements: Json | null
+          overall_score: number | null
+          recommendations: string | null
+          session_id: string
+          strengths: Json | null
+        }
+        Insert: {
+          created_at?: string
+          email_sent?: boolean | null
+          email_sent_at?: string | null
+          id?: string
+          improvements?: Json | null
+          overall_score?: number | null
+          recommendations?: string | null
+          session_id: string
+          strengths?: Json | null
+        }
+        Update: {
+          created_at?: string
+          email_sent?: boolean | null
+          email_sent_at?: string | null
+          id?: string
+          improvements?: Json | null
+          overall_score?: number | null
+          recommendations?: string | null
+          session_id?: string
+          strengths?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_results_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "coaching_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +199,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      session_status: "pending" | "active" | "completed" | "cancelled"
+      session_type: "quick_prep" | "full_mock" | "premium_audio" | "pro"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +327,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      session_status: ["pending", "active", "completed", "cancelled"],
+      session_type: ["quick_prep", "full_mock", "premium_audio", "pro"],
+    },
   },
 } as const
