@@ -1,19 +1,17 @@
-import { Link } from 'react-router-dom';
-
 export function LandingFooter() {
   return (
     <footer className="bg-background border-t border-border py-8">
       <div className="container">
-        <div className="flex flex-col items-center gap-4 text-center">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center text-center md:text-left">
           <p className="text-muted-foreground text-sm">
             © 2025 Talendro™. All rights reserved.
           </p>
           
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted-foreground text-sm md:text-center">
             🇺🇸 American-Built • 🎖️ Veteran-Led • ✔ Recruiter-Tested
           </p>
           
-          <div className="flex flex-wrap justify-center gap-6">
+          <div className="flex flex-wrap justify-center md:justify-end gap-4">
             <a href="#products" className="text-muted-foreground text-sm hover:text-primary transition-colors">
               Pricing
             </a>
