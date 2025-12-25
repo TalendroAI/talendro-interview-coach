@@ -31,6 +31,10 @@ export function FinalCTASection() {
           <p className="text-sm text-muted-foreground">
             Built by a recruiter. Powered by AI. Focused on getting you hired.
           </p>
+
+          <p className="text-sm text-muted-foreground mt-6">
+            🇺🇸 American-Built • 🎖️ Veteran-Led • ✔ Recruiter-Tested
+          </p>
         </div>
       </div>
     </section>
