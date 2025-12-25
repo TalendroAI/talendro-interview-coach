@@ -7,7 +7,7 @@ export function LandingFooter() {
             © 2025 Talendro™. All rights reserved.
           </p>
           
-          <p className="text-muted-foreground text-sm md:text-center">
+          <p className="text-muted-foreground text-sm md:text-center whitespace-nowrap">
             🇺🇸 American-Built • 🎖️ Veteran-Led • ✔ Recruiter-Tested
           </p>
           
