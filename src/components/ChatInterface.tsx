@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, User, Bot } from 'lucide-react';
+import { Send, User, Bot, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { SessionType, SESSION_CONFIGS } from '@/types/session';
+import { SessionType, SESSION_CONFIGS, DocumentInputs } from '@/types/session';
+import { sendAIMessage } from '@/services/api';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 interface Message {
@@ -15,14 +17,18 @@ interface Message {
 interface ChatInterfaceProps {
   sessionType: SessionType;
   isActive: boolean;
+  sessionId?: string;
+  documents: DocumentInputs;
 }
 
-export function ChatInterface({ sessionType, isActive }: ChatInterfaceProps) {
+export function ChatInterface({ sessionType, isActive, sessionId, documents }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const config = SESSION_CONFIGS[sessionType];
+  const { toast } = useToast();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -32,31 +38,43 @@ export function ChatInterface({ sessionType, isActive }: ChatInterfaceProps) {
     scrollToBottom();
   }, [messages]);
 
+  // Initialize the session with AI
   useEffect(() => {
-    if (isActive && messages.length === 0) {
-      // Add initial assistant message
+    if (isActive && !isInitialized && sessionId) {
+      initializeSession();
+    }
+  }, [isActive, isInitialized, sessionId]);
+
+  const initializeSession = async () => {
+    setIsLoading(true);
+    try {
+      const response = await sendAIMessage(
+        sessionId,
+        sessionType,
+        undefined,
+        documents.resume,
+        documents.jobDescription,
+        documents.companyUrl,
+        true
+      );
+
       const initialMessage: Message = {
-        id: '1',
+        id: Date.now().toString(),
         role: 'assistant',
-        content: getInitialMessage(sessionType),
+        content: response,
         timestamp: new Date(),
       };
       setMessages([initialMessage]);
-    }
-  }, [isActive, sessionType]);
-
-  const getInitialMessage = (type: SessionType): string => {
-    switch (type) {
-      case 'quick_prep':
-        return "I've analyzed your resume and the job description. I'm now generating your personalized interview prep packet. This will include tailored questions, suggested answers, and company insights. Please wait a moment...";
-      case 'full_mock':
-        return "Welcome to your mock interview! I'll be your interviewer today. I've reviewed your materials and prepared 10 tailored questions for this role. Answer naturally, and I'll provide feedback after each response. Ready for your first question?";
-      case 'premium_audio':
-        return "Welcome to your Premium Audio Interview session! Please click the microphone button to enable voice interaction. I'll conduct this interview as if we were speaking in person.";
-      case 'pro':
-        return "Welcome back, Pro member! You have unlimited access to all session types. What would you like to practice today? I can run a Quick Prep, Full Mock Interview, or Audio Session.";
-      default:
-        return "Hello! I'm your interview coach. How can I help you prepare today?";
+      setIsInitialized(true);
+    } catch (error) {
+      console.error('Error initializing session:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to start the coaching session. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -75,17 +93,30 @@ export function ChatInterface({ sessionType, isActive }: ChatInterfaceProps) {
     setInput('');
     setIsLoading(true);
 
-    // Simulate AI response (will be replaced with actual API call)
-    setTimeout(() => {
+    try {
+      const response = await sendAIMessage(
+        sessionId,
+        sessionType,
+        userMessage.content
+      );
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: "Thank you for your response. I'm processing your answer and preparing feedback. In the full implementation, this will be powered by Claude AI to provide personalized coaching based on your specific situation and goals.",
+        content: response,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to get a response. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -116,6 +147,15 @@ export function ChatInterface({ sessionType, isActive }: ChatInterfaceProps) {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {!isInitialized && isLoading && (
+          <div className="flex items-center justify-center py-8">
+            <div className="text-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+              <p className="text-muted-foreground">Preparing your personalized coaching session...</p>
+            </div>
+          </div>
+        )}
+
         {messages.map((message, index) => (
           <div
             key={message.id}
@@ -163,7 +203,7 @@ export function ChatInterface({ sessionType, isActive }: ChatInterfaceProps) {
           </div>
         ))}
         
-        {isLoading && (
+        {isLoading && isInitialized && (
           <div className="flex gap-3 animate-fade-in">
             <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
               <Bot className="h-4 w-4 text-primary-foreground" />
@@ -190,15 +230,19 @@ export function ChatInterface({ sessionType, isActive }: ChatInterfaceProps) {
             onKeyDown={handleKeyDown}
             placeholder="Type your response..."
             className="min-h-[50px] max-h-[150px] resize-none"
-            disabled={isLoading}
+            disabled={isLoading || !isInitialized}
           />
           <Button
             type="submit"
             size="icon"
-            disabled={!input.trim() || isLoading}
+            disabled={!input.trim() || isLoading || !isInitialized}
             className="h-[50px] w-[50px]"
           >
-            <Send className="h-4 w-4" />
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
           </Button>
         </div>
         <p className="text-xs text-muted-foreground mt-2 text-center">

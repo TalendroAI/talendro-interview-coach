@@ -1,17 +1,62 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { SESSION_CONFIGS, SessionType } from '@/types/session';
-import { ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
+import { createCheckout } from '@/services/api';
+import { useToast } from '@/hooks/use-toast';
+import { ArrowRight, CheckCircle2, Sparkles, Loader2 } from 'lucide-react';
 
 const sessionOrder: SessionType[] = ['quick_prep', 'full_mock', 'premium_audio', 'pro'];
 
 export default function Index() {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<SessionType | null>(null);
+  const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSessionSelect = (type: SessionType) => {
-    navigate(`/interview-coach?session_type=${type}&email=demo@example.com`);
+    setSelectedSession(type);
+    setIsCheckoutOpen(true);
   };
+
+  const handleCheckout = async () => {
+    if (!selectedSession || !email) {
+      toast({
+        title: 'Email required',
+        description: 'Please enter your email to continue.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const checkoutUrl = await createCheckout(selectedSession, email);
+      window.open(checkoutUrl, '_blank');
+      setIsCheckoutOpen(false);
+      toast({
+        title: 'Redirecting to checkout',
+        description: 'Complete your purchase in the new tab.',
+      });
+    } catch (error) {
+      console.error('Checkout error:', error);
+      toast({
+        title: 'Checkout failed',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const selectedConfig = selectedSession ? SESSION_CONFIGS[selectedSession] : null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -161,6 +206,65 @@ export default function Index() {
           </div>
         </div>
       </footer>
+
+      {/* Checkout Dialog */}
+      <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-heading">
+              {selectedConfig?.icon} {selectedConfig?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Enter your email to continue to checkout.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email address</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            
+            <div className="bg-muted rounded-lg p-4">
+              <div className="flex justify-between items-center">
+                <span className="font-medium">{selectedConfig?.name}</span>
+                <span className="font-heading font-bold text-lg">{selectedConfig?.price}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setIsCheckoutOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="default"
+              className="flex-1"
+              onClick={handleCheckout}
+              disabled={isLoading || !email}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Processing...
+                </>
+              ) : (
+                'Continue to Checkout'
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
