@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.send-results]
 verify_jwt = false
+
+[functions.elevenlabs-conversation-token]
+verify_jwt = false
