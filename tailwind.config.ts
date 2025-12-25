@@ -7,15 +7,15 @@ export default {
   theme: {
     container: {
       center: true,
-      padding: "2rem",
+      padding: "1rem",
       screens: {
-        "2xl": "1400px",
+        "2xl": "1200px",
       },
     },
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        heading: ['Lexend', 'system-ui', 'sans-serif'],
+        sans: ['Inter Tight', 'system-ui', '-apple-system', 'sans-serif'],
+        heading: ['Inter Tight', 'system-ui', '-apple-system', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -51,11 +51,12 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        brand: {
-          blue: "hsl(var(--brand-blue))",
-          aqua: "hsl(var(--brand-aqua))",
-          slate: "hsl(var(--brand-slate))",
-          light: "hsl(var(--brand-light))",
+        tal: {
+          blue: "hsl(var(--tal-blue))",
+          aqua: "hsl(var(--tal-aqua))",
+          lime: "hsl(var(--tal-lime))",
+          gray: "hsl(var(--tal-gray))",
+          navy: "hsl(var(--tal-navy))",
         },
         session: {
           quick: "hsl(var(--session-quick))",
@@ -75,14 +76,15 @@ export default {
         },
       },
       borderRadius: {
+        xl: "1.5rem",
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
       boxShadow: {
-        'brand': 'var(--shadow-md)',
-        'brand-lg': 'var(--shadow-lg)',
-        'glow': 'var(--shadow-glow)',
+        'soft': '0 18px 45px hsla(222, 47%, 11%, 0.08)',
+        'brand': '0 4px 12px hsla(223, 93%, 57%, 0.3)',
+        'brand-lg': '0 8px 25px hsla(223, 93%, 57%, 0.4)',
       },
       keyframes: {
         "accordion-down": {
