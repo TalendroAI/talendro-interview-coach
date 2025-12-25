@@ -45,10 +45,10 @@ export function DocumentSidebar({
   };
 
   return (
-    <aside className="w-full lg:w-[380px] bg-background border-r border-border flex flex-col h-full">
+    <aside className="w-full lg:w-[380px] bg-foreground border-r border-foreground/20 flex flex-col h-full">
       {/* YOUR DOCUMENTS Section */}
-      <div className="p-5 border-b border-border">
-        <h2 className="font-extrabold text-sm uppercase tracking-wide text-foreground">
+      <div className="p-5 border-b border-background/10">
+        <h2 className="font-extrabold text-sm uppercase tracking-wide text-background">
           Your Documents
         </h2>
       </div>
@@ -60,7 +60,7 @@ export function DocumentSidebar({
             <span className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
               1
             </span>
-            <Label htmlFor="resume" className="font-semibold text-foreground">
+            <Label htmlFor="resume" className="font-semibold text-background">
               Résumé
             </Label>
           </div>
@@ -69,15 +69,15 @@ export function DocumentSidebar({
             placeholder="Paste your résumé text here..."
             value={documents.resume}
             onChange={(e) => onDocumentsChange({ ...documents, resume: e.target.value })}
-            className="min-h-[120px] resize-none border-border bg-background"
+            className="min-h-[120px] resize-none border-background/20 bg-background/10 text-background placeholder:text-background/40 focus:border-primary"
             disabled={isSessionStarted}
           />
           <div className="flex items-center gap-1.5 text-xs">
             <span className={cn(
               "h-2 w-2 rounded-full",
-              isResumeComplete ? "bg-primary" : "bg-muted-foreground"
+              isResumeComplete ? "bg-secondary" : "bg-background/30"
             )} />
-            <span className="text-muted-foreground">
+            <span className="text-background/60">
               {isResumeComplete ? 'Provided' : 'Not provided'}
             </span>
           </div>
@@ -89,7 +89,7 @@ export function DocumentSidebar({
             <span className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
               2
             </span>
-            <Label htmlFor="jobDescription" className="font-semibold text-foreground">
+            <Label htmlFor="jobDescription" className="font-semibold text-background">
               Job Description
             </Label>
           </div>
@@ -98,15 +98,15 @@ export function DocumentSidebar({
             placeholder="Paste the job description text here..."
             value={documents.jobDescription}
             onChange={(e) => onDocumentsChange({ ...documents, jobDescription: e.target.value })}
-            className="min-h-[120px] resize-none border-border bg-background"
+            className="min-h-[120px] resize-none border-background/20 bg-background/10 text-background placeholder:text-background/40 focus:border-primary"
             disabled={isSessionStarted}
           />
           <div className="flex items-center gap-1.5 text-xs">
             <span className={cn(
               "h-2 w-2 rounded-full",
-              isJobComplete ? "bg-primary" : "bg-muted-foreground"
+              isJobComplete ? "bg-secondary" : "bg-background/30"
             )} />
-            <span className="text-muted-foreground">
+            <span className="text-background/60">
               {isJobComplete ? 'Provided' : 'Not provided'}
             </span>
           </div>
@@ -118,7 +118,7 @@ export function DocumentSidebar({
             <span className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
               3
             </span>
-            <Label htmlFor="companyUrl" className="font-semibold text-foreground">
+            <Label htmlFor="companyUrl" className="font-semibold text-background">
               Company Website URL
             </Label>
           </div>
@@ -128,15 +128,15 @@ export function DocumentSidebar({
             placeholder="https://company.com"
             value={documents.companyUrl}
             onChange={(e) => onDocumentsChange({ ...documents, companyUrl: e.target.value })}
-            className="border-border bg-background"
+            className="border-background/20 bg-background/10 text-background placeholder:text-background/40 focus:border-primary"
             disabled={isSessionStarted}
           />
           <div className="flex items-center gap-1.5 text-xs">
             <span className={cn(
               "h-2 w-2 rounded-full",
-              isCompanyComplete ? "bg-primary" : "bg-muted-foreground"
+              isCompanyComplete ? "bg-secondary" : "bg-background/30"
             )} />
-            <span className="text-muted-foreground">
+            <span className="text-background/60">
               {isCompanyComplete ? 'Provided' : 'Not provided'}
             </span>
           </div>
@@ -160,15 +160,15 @@ export function DocumentSidebar({
       </div>
 
       {/* YOUR SESSION Section */}
-      <div className="border-t border-border">
-        <div className="p-5 border-b border-border">
-          <h2 className="font-extrabold text-sm uppercase tracking-wide text-foreground">
+      <div className="border-t border-background/10">
+        <div className="p-5 border-b border-background/10">
+          <h2 className="font-extrabold text-sm uppercase tracking-wide text-background">
             Your Session
           </h2>
         </div>
         
         <div className="p-5 space-y-4">
-          <div className="p-3 rounded-lg border border-border bg-background">
+          <div className="p-3 rounded-lg border border-primary/30 bg-primary/10">
             <span className="text-primary font-semibold">
               {config?.name || 'Select a Session'}
             </span>
@@ -211,7 +211,7 @@ export function DocumentSidebar({
           )}
           
           {isPaymentVerified && !allComplete && !isSessionStarted && (
-            <p className="text-xs text-muted-foreground text-center">
+            <p className="text-xs text-background/60 text-center">
               Please complete all required fields
             </p>
           )}
