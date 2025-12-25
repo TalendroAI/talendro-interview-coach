@@ -26,6 +26,22 @@ export default function InterviewCoach() {
   const [isVerifying, setIsVerifying] = useState(true);
   const [isPaymentVerified, setIsPaymentVerified] = useState(false);
   const [sessionId, setSessionId] = useState<string | undefined>();
+  const [isDocumentsSaved, setIsDocumentsSaved] = useState(false);
+
+  // Check if documents are ready
+  const isResumeComplete = documents.resume.trim().length > 50;
+  const isJobComplete = documents.jobDescription.trim().length > 50;
+  const isDocumentsReady = isResumeComplete && isJobComplete && isDocumentsSaved;
+
+  const handleSaveDocuments = () => {
+    if (isResumeComplete && isJobComplete) {
+      setIsDocumentsSaved(true);
+      toast({
+        title: 'Documents saved!',
+        description: 'Your materials are ready. You can now start your session.',
+      });
+    }
+  };
 
   // Verify payment on page load
   useEffect(() => {
@@ -128,6 +144,8 @@ export default function InterviewCoach() {
           sessionType={sessionType} 
           userEmail={userEmail}
           isPaymentVerified={isPaymentVerified}
+          isReady={isDocumentsReady}
+          onStartSession={handleStartSession}
         />
       );
     }
@@ -166,6 +184,8 @@ export default function InterviewCoach() {
           sessionType={sessionType}
           isSessionStarted={isSessionStarted}
           isPaymentVerified={isPaymentVerified}
+          onSaveDocuments={handleSaveDocuments}
+          isDocumentsSaved={isDocumentsSaved}
         />
         
         {/* Main Content */}
