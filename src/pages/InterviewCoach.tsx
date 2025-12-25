@@ -133,7 +133,13 @@ export default function InterviewCoach() {
     }
 
     if (sessionType === 'premium_audio') {
-      return <AudioInterface isActive={isSessionStarted} />;
+      return (
+        <AudioInterface 
+          isActive={isSessionStarted} 
+          sessionId={sessionId}
+          documents={documents}
+        />
+      );
     }
 
     return (
