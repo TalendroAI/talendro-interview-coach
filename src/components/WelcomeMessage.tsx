@@ -1,5 +1,6 @@
 import { SessionType, SESSION_CONFIGS } from '@/types/session';
 import { Lightbulb } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface WelcomeMessageProps {
   sessionType: SessionType | null;
@@ -20,12 +21,10 @@ export function WelcomeMessage({
 
   if (!config) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex-1 flex items-center justify-center p-8 bg-hero">
         <div className="text-center max-w-md animate-slide-up">
-          <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center mx-auto mb-6">
-            <span className="text-3xl">🎯</span>
-          </div>
-          <h2 className="font-heading text-2xl font-bold text-foreground mb-3">
+          <div className="text-5xl mb-6">🎯</div>
+          <h2 className="text-2xl font-extrabold text-foreground mb-3">
             Welcome to Interview Coach
           </h2>
           <p className="text-muted-foreground">
@@ -116,12 +115,12 @@ export function WelcomeMessage({
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-8">
+    <div className="flex-1 flex flex-col items-center justify-center p-8 bg-hero">
       <div className="max-w-2xl w-full animate-slide-up">
         {/* Title */}
         <div className="text-center mb-10">
-          <h1 className="font-heading text-2xl md:text-3xl font-bold text-foreground flex items-center justify-center gap-3">
-            <span className="text-3xl">{instructions.icon}</span>
+          <h1 className="text-3xl md:text-4xl font-extrabold text-foreground flex items-center justify-center gap-3">
+            <span className="text-4xl">{instructions.icon}</span>
             {instructions.title}
           </h1>
         </div>
@@ -137,7 +136,7 @@ export function WelcomeMessage({
               <span className="flex items-center justify-center h-7 w-7 rounded-full bg-primary text-primary-foreground text-sm font-bold flex-shrink-0">
                 {step.num}
               </span>
-              <p className="text-foreground/90 text-base leading-relaxed pt-0.5">
+              <p className="text-foreground text-base leading-relaxed pt-0.5">
                 {renderText(step.text)}
               </p>
             </div>
@@ -153,31 +152,23 @@ export function WelcomeMessage({
         )}
 
         {/* Ready Status & CTA */}
-        <div className="bg-muted/30 rounded-xl border border-border p-6 text-center">
+        <div className="bg-background rounded-xl border border-border p-6 text-center shadow-soft">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <span className={`h-3 w-3 rounded-full ${isPaymentVerified && isReady ? 'bg-primary animate-pulse' : 'bg-muted-foreground/40'}`} />
-            <span className="text-muted-foreground">
+            <span className={`h-3 w-3 rounded-full ${isPaymentVerified && isReady ? 'bg-primary animate-pulse-subtle' : 'bg-muted-foreground'}`} />
+            <span className="text-muted-foreground font-medium">
               {isPaymentVerified && isReady ? 'Ready to start' : 'Complete the steps above'}
             </span>
           </div>
 
-          {sessionType === 'premium_audio' ? (
-            <button
-              onClick={onStartSession}
-              disabled={!isPaymentVerified || !isReady}
-              className="inline-flex items-center justify-center gap-2 px-8 py-3 rounded-lg bg-primary text-primary-foreground font-semibold text-base hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span>🎙️</span> Start Voice Interview
-            </button>
-          ) : (
-            <button
-              onClick={onStartSession}
-              disabled={!isPaymentVerified || !isReady}
-              className="inline-flex items-center justify-center gap-2 px-8 py-3 rounded-lg bg-primary text-primary-foreground font-semibold text-base hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span>{instructions.icon}</span> Start {config.name}
-            </button>
-          )}
+          <Button
+            size="lg"
+            onClick={onStartSession}
+            disabled={!isPaymentVerified || !isReady}
+            className="px-8 py-6 text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
+          >
+            <span className="mr-2">{sessionType === 'premium_audio' ? '🎙️' : instructions.icon}</span>
+            {sessionType === 'premium_audio' ? 'Start Voice Interview' : `Start ${config.name}`}
+          </Button>
         </div>
       </div>
     </div>

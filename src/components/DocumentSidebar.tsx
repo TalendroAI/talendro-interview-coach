@@ -1,4 +1,4 @@
-import { FileText, Briefcase, Building2, Save, Check } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -36,11 +36,6 @@ export function DocumentSidebar({
   const isCompanyComplete = documents.companyUrl.trim().length > 5;
   const allComplete = isResumeComplete && isJobComplete;
 
-  const getButtonVariant = () => {
-    if (!sessionType) return 'default';
-    return config?.badgeVariant || 'default';
-  };
-
   const canStart = allComplete && isPaymentVerified && !isSessionStarted && sessionType;
 
   const handleSaveDocuments = () => {
@@ -50,10 +45,10 @@ export function DocumentSidebar({
   };
 
   return (
-    <aside className="w-full lg:w-[380px] bg-card border-r border-border flex flex-col h-full">
+    <aside className="w-full lg:w-[380px] bg-background border-r border-border flex flex-col h-full">
       {/* YOUR DOCUMENTS Section */}
       <div className="p-5 border-b border-border">
-        <h2 className="font-heading font-semibold text-sm uppercase tracking-wide text-foreground">
+        <h2 className="font-extrabold text-sm uppercase tracking-wide text-foreground">
           Your Documents
         </h2>
       </div>
@@ -65,7 +60,7 @@ export function DocumentSidebar({
             <span className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
               1
             </span>
-            <Label htmlFor="resume" className="font-medium text-foreground">
+            <Label htmlFor="resume" className="font-semibold text-foreground">
               Résumé
             </Label>
           </div>
@@ -74,13 +69,13 @@ export function DocumentSidebar({
             placeholder="Paste your résumé text here..."
             value={documents.resume}
             onChange={(e) => onDocumentsChange({ ...documents, resume: e.target.value })}
-            className="min-h-[120px] resize-none bg-background"
+            className="min-h-[120px] resize-none border-border bg-background"
             disabled={isSessionStarted}
           />
           <div className="flex items-center gap-1.5 text-xs">
             <span className={cn(
               "h-2 w-2 rounded-full",
-              isResumeComplete ? "bg-primary" : "bg-muted-foreground/40"
+              isResumeComplete ? "bg-primary" : "bg-muted-foreground"
             )} />
             <span className="text-muted-foreground">
               {isResumeComplete ? 'Provided' : 'Not provided'}
@@ -94,7 +89,7 @@ export function DocumentSidebar({
             <span className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
               2
             </span>
-            <Label htmlFor="jobDescription" className="font-medium text-foreground">
+            <Label htmlFor="jobDescription" className="font-semibold text-foreground">
               Job Description
             </Label>
           </div>
@@ -103,13 +98,13 @@ export function DocumentSidebar({
             placeholder="Paste the job description text here..."
             value={documents.jobDescription}
             onChange={(e) => onDocumentsChange({ ...documents, jobDescription: e.target.value })}
-            className="min-h-[120px] resize-none bg-background"
+            className="min-h-[120px] resize-none border-border bg-background"
             disabled={isSessionStarted}
           />
           <div className="flex items-center gap-1.5 text-xs">
             <span className={cn(
               "h-2 w-2 rounded-full",
-              isJobComplete ? "bg-primary" : "bg-muted-foreground/40"
+              isJobComplete ? "bg-primary" : "bg-muted-foreground"
             )} />
             <span className="text-muted-foreground">
               {isJobComplete ? 'Provided' : 'Not provided'}
@@ -123,7 +118,7 @@ export function DocumentSidebar({
             <span className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
               3
             </span>
-            <Label htmlFor="companyUrl" className="font-medium text-foreground">
+            <Label htmlFor="companyUrl" className="font-semibold text-foreground">
               Company Website URL
             </Label>
           </div>
@@ -133,13 +128,13 @@ export function DocumentSidebar({
             placeholder="https://company.com"
             value={documents.companyUrl}
             onChange={(e) => onDocumentsChange({ ...documents, companyUrl: e.target.value })}
-            className="bg-background"
+            className="border-border bg-background"
             disabled={isSessionStarted}
           />
           <div className="flex items-center gap-1.5 text-xs">
             <span className={cn(
               "h-2 w-2 rounded-full",
-              isCompanyComplete ? "bg-primary" : "bg-muted-foreground/40"
+              isCompanyComplete ? "bg-primary" : "bg-muted-foreground"
             )} />
             <span className="text-muted-foreground">
               {isCompanyComplete ? 'Provided' : 'Not provided'}
@@ -153,9 +148,8 @@ export function DocumentSidebar({
             4
           </span>
           <Button
-            variant="default"
             size="lg"
-            className="flex-1 bg-primary hover:bg-primary/90"
+            className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm hover:shadow-md transition-all"
             onClick={handleSaveDocuments}
             disabled={!allComplete || isSessionStarted}
           >
@@ -168,14 +162,14 @@ export function DocumentSidebar({
       {/* YOUR SESSION Section */}
       <div className="border-t border-border">
         <div className="p-5 border-b border-border">
-          <h2 className="font-heading font-semibold text-sm uppercase tracking-wide text-foreground">
+          <h2 className="font-extrabold text-sm uppercase tracking-wide text-foreground">
             Your Session
           </h2>
         </div>
         
         <div className="p-5 space-y-4">
           <div className="p-3 rounded-lg border border-border bg-background">
-            <span className="text-primary font-medium">
+            <span className="text-primary font-semibold">
               {config?.name || 'Select a Session'}
             </span>
           </div>
@@ -186,9 +180,12 @@ export function DocumentSidebar({
               5
             </span>
             <Button
-              variant={isSessionStarted ? "destructive" : getButtonVariant()}
+              variant={isSessionStarted ? "destructive" : "default"}
               size="lg"
-              className="flex-1"
+              className={cn(
+                "flex-1 font-semibold shadow-sm hover:shadow-md transition-all",
+                !isSessionStarted && "bg-primary hover:bg-primary/90"
+              )}
               onClick={onStartSession}
               disabled={!canStart || isLoading}
             >
@@ -208,7 +205,7 @@ export function DocumentSidebar({
           </div>
 
           {!isPaymentVerified && !isSessionStarted && (
-            <p className="text-xs text-destructive text-center">
+            <p className="text-xs text-destructive text-center font-medium">
               Please complete your purchase to start
             </p>
           )}
