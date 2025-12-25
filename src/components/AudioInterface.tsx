@@ -1,28 +1,121 @@
-import { useState } from 'react';
-import { Mic, MicOff, Volume2, Phone, PhoneOff } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { useConversation } from '@elevenlabs/react';
+import { Mic, MicOff, Volume2, Phone, PhoneOff, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface AudioInterfaceProps {
   isActive: boolean;
+  sessionId?: string;
+  documents?: {
+    resume: string;
+    jobDescription: string;
+    companyUrl: string;
+  };
 }
 
-export function AudioInterface({ isActive }: AudioInterfaceProps) {
-  const [isConnected, setIsConnected] = useState(false);
+// Replace with your ElevenLabs agent ID
+const ELEVENLABS_AGENT_ID = 'your-agent-id-here';
+
+export function AudioInterface({ isActive, sessionId, documents }: AudioInterfaceProps) {
+  const [isConnecting, setIsConnecting] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const { toast } = useToast();
 
-  const handleConnect = () => {
-    setIsConnected(true);
-    // In full implementation, this will connect to ElevenLabs
-  };
+  const conversation = useConversation({
+    onConnect: () => {
+      console.log('Connected to ElevenLabs agent');
+      toast({
+        title: 'Connected!',
+        description: 'Your voice interview has started.',
+      });
+    },
+    onDisconnect: () => {
+      console.log('Disconnected from ElevenLabs agent');
+      setIsConnecting(false);
+    },
+    onMessage: (message) => {
+      console.log('Message from agent:', message);
+    },
+    onError: (error) => {
+      console.error('Conversation error:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Connection Error',
+        description: 'Failed to connect to voice agent. Please try again.',
+      });
+      setIsConnecting(false);
+    },
+  });
 
-  const handleDisconnect = () => {
-    setIsConnected(false);
-    setIsMuted(false);
-  };
+  const startConversation = useCallback(async () => {
+    setIsConnecting(true);
+    
+    try {
+      // Request microphone permission
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      // Get conversation token from edge function
+      const { data, error } = await supabase.functions.invoke('elevenlabs-conversation-token', {
+        body: { agentId: ELEVENLABS_AGENT_ID },
+      });
+
+      if (error || !data?.token) {
+        throw new Error(error?.message || 'No token received');
+      }
+
+      // Build context from documents for the agent
+      const contextParts = [];
+      if (documents?.resume) {
+        contextParts.push(`Candidate Resume: ${documents.resume}`);
+      }
+      if (documents?.jobDescription) {
+        contextParts.push(`Job Description: ${documents.jobDescription}`);
+      }
+      if (documents?.companyUrl) {
+        contextParts.push(`Company URL: ${documents.companyUrl}`);
+      }
+
+      // Start the conversation with WebRTC
+      await conversation.startSession({
+        conversationToken: data.token,
+        connectionType: 'webrtc',
+        overrides: contextParts.length > 0 ? {
+          agent: {
+            prompt: {
+              prompt: `You are a professional interview coach conducting a mock interview. Use the following context about the candidate and role to personalize the interview:\n\n${contextParts.join('\n\n')}\n\nConduct a realistic behavioral interview, asking relevant questions based on the job requirements and the candidate's background. Provide constructive feedback after each answer.`,
+            },
+            firstMessage: "Hello! I'm your AI interview coach. I've reviewed your resume and the job description. Let's start with a warm-up question - can you briefly tell me about yourself and why you're interested in this role?",
+          },
+        } : undefined,
+      });
+    } catch (error) {
+      console.error('Failed to start conversation:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Connection Failed',
+        description: error instanceof Error ? error.message : 'Could not start voice interview. Please check your microphone permissions.',
+      });
+      setIsConnecting(false);
+    }
+  }, [conversation, documents, toast]);
+
+  const stopConversation = useCallback(async () => {
+    await conversation.endSession();
+  }, [conversation]);
+
+  const toggleMute = useCallback(() => {
+    setIsMuted(!isMuted);
+    // Note: The ElevenLabs SDK handles audio input internally
+    // For actual muting, you may need to track the media stream
+  }, [isMuted]);
 
   if (!isActive) return null;
+
+  const isConnected = conversation.status === 'connected';
+  const isSpeaking = conversation.isSpeaking;
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-8">
@@ -39,7 +132,9 @@ export function AudioInterface({ isActive }: AudioInterfaceProps) {
                 : "bg-muted"
             )}
           >
-            {isConnected ? (
+            {isConnecting ? (
+              <Loader2 className="h-16 w-16 text-primary animate-spin" />
+            ) : isConnected ? (
               <Volume2 className="h-16 w-16 text-primary-foreground" />
             ) : (
               <Mic className="h-16 w-16 text-muted-foreground" />
@@ -56,15 +151,21 @@ export function AudioInterface({ isActive }: AudioInterfaceProps) {
         </div>
 
         <h2 className="font-heading text-2xl font-bold text-foreground mb-2">
-          {isConnected ? 'Interview in Progress' : 'Premium Audio Interview'}
+          {isConnecting 
+            ? 'Connecting...' 
+            : isConnected 
+              ? 'Interview in Progress' 
+              : 'Premium Audio Interview'}
         </h2>
         
         <p className="text-muted-foreground mb-8">
-          {isConnected
-            ? isSpeaking
-              ? 'AI is speaking...'
-              : 'Listening to your response...'
-            : 'Click the button below to start your voice interview with our AI interviewer.'}
+          {isConnecting
+            ? 'Setting up your voice connection...'
+            : isConnected
+              ? isSpeaking
+                ? 'AI is speaking...'
+                : 'Listening to your response...'
+              : 'Click the button below to start your voice interview with our AI interviewer.'}
         </p>
 
         {/* Controls */}
@@ -73,11 +174,21 @@ export function AudioInterface({ isActive }: AudioInterfaceProps) {
             <Button
               variant="audio"
               size="xl"
-              onClick={handleConnect}
+              onClick={startConversation}
+              disabled={isConnecting}
               className="gap-2"
             >
-              <Phone className="h-5 w-5" />
-              Start Voice Interview
+              {isConnecting ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                <>
+                  <Phone className="h-5 w-5" />
+                  Start Voice Interview
+                </>
+              )}
             </Button>
           ) : (
             <>
@@ -85,7 +196,7 @@ export function AudioInterface({ isActive }: AudioInterfaceProps) {
                 variant={isMuted ? 'destructive' : 'outline'}
                 size="icon"
                 className="h-14 w-14 rounded-full"
-                onClick={() => setIsMuted(!isMuted)}
+                onClick={toggleMute}
               >
                 {isMuted ? (
                   <MicOff className="h-6 w-6" />
@@ -98,7 +209,7 @@ export function AudioInterface({ isActive }: AudioInterfaceProps) {
                 variant="destructive"
                 size="icon"
                 className="h-14 w-14 rounded-full"
-                onClick={handleDisconnect}
+                onClick={stopConversation}
               >
                 <PhoneOff className="h-6 w-6" />
               </Button>
