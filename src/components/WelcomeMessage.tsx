@@ -1,14 +1,21 @@
 import { SessionType, SESSION_CONFIGS } from '@/types/session';
-import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, AlertCircle } from 'lucide-react';
+import { Lightbulb } from 'lucide-react';
 
 interface WelcomeMessageProps {
   sessionType: SessionType | null;
   userEmail: string | null;
   isPaymentVerified?: boolean;
+  isReady?: boolean;
+  onStartSession?: () => void;
 }
 
-export function WelcomeMessage({ sessionType, userEmail, isPaymentVerified = false }: WelcomeMessageProps) {
+export function WelcomeMessage({ 
+  sessionType, 
+  userEmail, 
+  isPaymentVerified = false,
+  isReady = false,
+  onStartSession 
+}: WelcomeMessageProps) {
   const config = sessionType ? SESSION_CONFIGS[sessionType] : null;
 
   if (!config) {
@@ -29,81 +36,149 @@ export function WelcomeMessage({ sessionType, userEmail, isPaymentVerified = fal
     );
   }
 
+  // Get session-specific instructions
+  const getSessionInstructions = () => {
+    switch (sessionType) {
+      case 'quick_prep':
+        return {
+          title: 'Quick Prep Session',
+          icon: '⚡',
+          steps: [
+            { num: 1, text: 'Paste your **résumé text** in the sidebar', highlight: 'résumé text' },
+            { num: 2, text: 'Paste the **job description** in the sidebar', highlight: 'job description' },
+            { num: 3, text: 'Enter the **company URL** in the sidebar', highlight: 'company URL' },
+            { num: 4, text: 'Click "**📋 Save Documents & Prepare**" in the sidebar', highlight: '📋 Save Documents & Prepare' },
+            { num: 5, text: 'Click "**⚡ Start Quick Prep**" below to begin', highlight: '⚡ Start Quick Prep' },
+          ],
+          tip: 'Quick Prep provides a concise overview of key talking points in under 5 minutes.',
+        };
+      case 'full_mock':
+        return {
+          title: 'Full Mock Interview',
+          icon: '🎯',
+          steps: [
+            { num: 1, text: 'Paste your **résumé text** in the sidebar', highlight: 'résumé text' },
+            { num: 2, text: 'Paste the **job description** in the sidebar', highlight: 'job description' },
+            { num: 3, text: 'Enter the **company URL** in the sidebar', highlight: 'company URL' },
+            { num: 4, text: 'Click "**📋 Save Documents & Prepare**" in the sidebar', highlight: '📋 Save Documents & Prepare' },
+            { num: 5, text: 'Click "**🎯 Start Full Mock**" below to begin the interview', highlight: '🎯 Start Full Mock' },
+          ],
+          tip: 'The Full Mock simulates a real interview with follow-up questions and detailed feedback.',
+        };
+      case 'premium_audio':
+        return {
+          title: 'Premium Audio Mock Interview',
+          icon: '🎙️',
+          steps: [
+            { num: 1, text: 'Paste your **résumé text** in the sidebar', highlight: 'résumé text' },
+            { num: 2, text: 'Paste the **job description** in the sidebar', highlight: 'job description' },
+            { num: 3, text: 'Enter the **company URL** in the sidebar', highlight: 'company URL' },
+            { num: 4, text: 'Click "**📋 Save Documents & Prepare**" in the sidebar', highlight: '📋 Save Documents & Prepare' },
+            { num: 5, text: 'Click "**🎙️ Start Voice Interview**" below to begin speaking', highlight: '🎙️ Start Voice Interview' },
+          ],
+          tip: 'Use headphones for the best experience. Allow microphone access when prompted.',
+        };
+      case 'pro':
+        return {
+          title: 'Pro Subscription',
+          icon: '👑',
+          steps: [
+            { num: 1, text: 'Paste your **résumé text** in the sidebar', highlight: 'résumé text' },
+            { num: 2, text: 'Paste the **job description** in the sidebar', highlight: 'job description' },
+            { num: 3, text: 'Enter the **company URL** in the sidebar', highlight: 'company URL' },
+            { num: 4, text: 'Click "**📋 Save Documents & Prepare**" in the sidebar', highlight: '📋 Save Documents & Prepare' },
+            { num: 5, text: 'Click "**👑 Start Pro Session**" below to begin', highlight: '👑 Start Pro Session' },
+          ],
+          tip: 'Pro members have unlimited access to all session types and priority support.',
+        };
+      default:
+        return {
+          title: config.name,
+          icon: config.icon,
+          steps: [],
+          tip: '',
+        };
+    }
+  };
+
+  const instructions = getSessionInstructions();
+
+  // Parse markdown-style bold text
+  const renderText = (text: string) => {
+    const parts = text.split(/\*\*(.*?)\*\*/g);
+    return parts.map((part, index) => 
+      index % 2 === 1 ? (
+        <strong key={index} className="font-semibold text-foreground">{part}</strong>
+      ) : (
+        <span key={index}>{part}</span>
+      )
+    );
+  };
+
   return (
-    <div className="flex-1 flex items-center justify-center p-8">
-      <div className="max-w-lg w-full animate-slide-up">
-        <div className="text-center mb-8">
-          <Badge variant={config.badgeVariant} className="mb-4 text-sm px-4 py-1.5">
-            {config.icon} {config.name} • {config.price}
-          </Badge>
-          
-          <h2 className="font-heading text-2xl md:text-3xl font-bold text-foreground mb-3">
-            Ready to ace your interview!
-          </h2>
-          
-          <p className="text-muted-foreground leading-relaxed">
-            {config.description}
-          </p>
-          
-          {userEmail && (
-            <p className="text-sm text-primary mt-4">
-              Session for: <span className="font-medium">{userEmail}</span>
-            </p>
-          )}
+    <div className="flex-1 flex flex-col items-center justify-center p-8">
+      <div className="max-w-2xl w-full animate-slide-up">
+        {/* Title */}
+        <div className="text-center mb-10">
+          <h1 className="font-heading text-2xl md:text-3xl font-bold text-foreground flex items-center justify-center gap-3">
+            <span className="text-3xl">{instructions.icon}</span>
+            {instructions.title}
+          </h1>
         </div>
 
-        {/* Payment Status */}
-        <div className={`mb-6 p-4 rounded-lg border ${
-          isPaymentVerified 
-            ? 'bg-accent/50 border-accent' 
-            : 'bg-destructive/10 border-destructive/30'
-        }`}>
-          <div className="flex items-center gap-2">
-            {isPaymentVerified ? (
-              <>
-                <CheckCircle2 className="h-5 w-5 text-primary" />
-                <span className="font-medium text-foreground">Payment verified</span>
-              </>
-            ) : (
-              <>
-                <AlertCircle className="h-5 w-5 text-destructive" />
-                <span className="font-medium text-destructive">Payment required</span>
-              </>
-            )}
-          </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            {isPaymentVerified 
-              ? 'Your session is ready to begin.' 
-              : 'Please complete your purchase to access this session.'
-            }
-          </p>
+        {/* Steps */}
+        <div className="space-y-4 mb-8">
+          {instructions.steps.map((step) => (
+            <div 
+              key={step.num} 
+              className="flex items-start gap-4 animate-fade-in"
+              style={{ animationDelay: `${step.num * 100}ms` }}
+            >
+              <span className="flex items-center justify-center h-7 w-7 rounded-full bg-primary text-primary-foreground text-sm font-bold flex-shrink-0">
+                {step.num}
+              </span>
+              <p className="text-foreground/90 text-base leading-relaxed pt-0.5">
+                {renderText(step.text)}
+              </p>
+            </div>
+          ))}
         </div>
 
-        <div className="bg-muted/50 rounded-xl p-6 border border-border">
-          <h3 className="font-heading font-semibold text-foreground mb-4">
-            What's included:
-          </h3>
-          <ul className="space-y-3">
-            {config.features.map((feature, index) => (
-              <li 
-                key={index} 
-                className="flex items-center gap-3 text-foreground animate-fade-in"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
-                <span>{feature}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {isPaymentVerified && (
-          <div className="mt-6 p-4 bg-accent/50 rounded-lg border border-accent">
-            <p className="text-sm text-accent-foreground">
-              <span className="font-semibold">Next step:</span> Fill in your documents on the left sidebar, then click "Start {config.name}" to begin.
-            </p>
+        {/* Tip */}
+        {instructions.tip && (
+          <div className="flex items-start gap-2 text-sm text-muted-foreground italic mb-8">
+            <Lightbulb className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+            <p>Tip: {instructions.tip}</p>
           </div>
         )}
+
+        {/* Ready Status & CTA */}
+        <div className="bg-muted/30 rounded-xl border border-border p-6 text-center">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <span className={`h-3 w-3 rounded-full ${isPaymentVerified && isReady ? 'bg-primary animate-pulse' : 'bg-muted-foreground/40'}`} />
+            <span className="text-muted-foreground">
+              {isPaymentVerified && isReady ? 'Ready to start' : 'Complete the steps above'}
+            </span>
+          </div>
+
+          {sessionType === 'premium_audio' ? (
+            <button
+              onClick={onStartSession}
+              disabled={!isPaymentVerified || !isReady}
+              className="inline-flex items-center justify-center gap-2 px-8 py-3 rounded-lg bg-primary text-primary-foreground font-semibold text-base hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span>🎙️</span> Start Voice Interview
+            </button>
+          ) : (
+            <button
+              onClick={onStartSession}
+              disabled={!isPaymentVerified || !isReady}
+              className="inline-flex items-center justify-center gap-2 px-8 py-3 rounded-lg bg-primary text-primary-foreground font-semibold text-base hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span>{instructions.icon}</span> Start {config.name}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
