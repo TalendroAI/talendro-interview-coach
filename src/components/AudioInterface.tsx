@@ -17,7 +17,7 @@ interface AudioInterfaceProps {
 }
 
 // Replace with your ElevenLabs agent ID
-const ELEVENLABS_AGENT_ID = 'your-agent-id-here';
+const ELEVENLABS_AGENT_ID = 'agent_1901kb0ray8kfph9x9bh4w97bbe4';
 
 export function AudioInterface({ isActive, sessionId, documents }: AudioInterfaceProps) {
   const [isConnecting, setIsConnecting] = useState(false);
