@@ -35,9 +35,9 @@ const generateNewPurchaseEmail = (sessionType: string, email: string) => {
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.8; color: #2C2F38; margin: 0; padding: 0; background-color: #f5f5f5; }
     .container { max-width: 600px; margin: 0 auto; background: #ffffff; }
     .header { background: linear-gradient(135deg, #2F6DF6, #00C4CC); padding: 40px 30px; text-align: center; }
-    .logo { margin-bottom: 16px; }
-    .logo img { height: 48px; width: auto; }
-    .header h1 { color: white; margin: 0; font-size: 28px; font-weight: 600; }
+    .logo-text { font-size: 32px; font-weight: 700; color: white; margin-bottom: 8px; letter-spacing: -0.5px; }
+    .logo-text span { color: #00C4CC; }
+    .header h1 { color: white; margin: 0; font-size: 24px; font-weight: 600; }
     .header p { color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 16px; }
     .content { padding: 40px 30px; }
     .content p { margin: 16px 0; font-size: 16px; }
@@ -64,10 +64,8 @@ const generateNewPurchaseEmail = (sessionType: string, email: string) => {
 <body>
   <div class="container">
     <div class="header">
-      <div class="logo">
-        <img src="https://coach.talendro.com/lovable-uploads/8bf31ef0-e857-4727-8133-f6e8a4af6e90.png" alt="Talendro Logo" />
-      </div>
-      <h1>Welcome to Talendro&trade;</h1>
+      <div class="logo-text">Talendro<span>&trade;</span></div>
+      <h1>Welcome!</h1>
       <p>Your interview coaching session is ready</p>
     </div>
     <div class="content">
@@ -131,9 +129,9 @@ const generateUpgradeEmail = (sessionType: string, email: string, upgradeCredit:
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.8; color: #2C2F38; margin: 0; padding: 0; background-color: #f5f5f5; }
     .container { max-width: 600px; margin: 0 auto; background: #ffffff; }
     .header { background: linear-gradient(135deg, #2F6DF6, #00C4CC); padding: 40px 30px; text-align: center; }
-    .logo { margin-bottom: 16px; }
-    .logo img { height: 48px; width: auto; }
-    .header h1 { color: white; margin: 0; font-size: 28px; font-weight: 600; }
+    .logo-text { font-size: 32px; font-weight: 700; color: white; margin-bottom: 8px; letter-spacing: -0.5px; }
+    .logo-text span { color: #00C4CC; }
+    .header h1 { color: white; margin: 0; font-size: 24px; font-weight: 600; }
     .header p { color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 16px; }
     .content { padding: 40px 30px; }
     .content p { margin: 16px 0; font-size: 16px; }
@@ -164,9 +162,7 @@ const generateUpgradeEmail = (sessionType: string, email: string, upgradeCredit:
 <body>
   <div class="container">
     <div class="header">
-      <div class="logo">
-        <img src="https://coach.talendro.com/lovable-uploads/8bf31ef0-e857-4727-8133-f6e8a4af6e90.png" alt="Talendro Logo" />
-      </div>
+      <div class="logo-text">Talendro<span>&trade;</span></div>
       <h1>Your Upgrade Is Complete</h1>
       <p>You're now on a more powerful plan</p>
     </div>
@@ -326,6 +322,34 @@ serve(async (req) => {
       });
 
       if (checkoutSession.payment_status === "paid") {
+        const sessionTypeFromMetadata = checkoutSession.metadata?.session_type || session_type;
+        const customerEmail = checkoutSession.customer_email || email;
+        
+        // FIRST: Check if session for this checkout is already completed
+        const { data: existingSession } = await supabaseClient
+          .from("coaching_sessions")
+          .select("*, session_results(*)")
+          .eq("stripe_checkout_session_id", checkout_session_id)
+          .single();
+        
+        if (existingSession?.status === "completed") {
+          logStep("Session already completed", { sessionId: existingSession.id });
+          
+          // Fetch session results if not already included
+          const sessionResults = existingSession.session_results?.[0] || null;
+          
+          return new Response(JSON.stringify({ 
+            verified: false, 
+            session: existingSession,
+            session_status: "completed",
+            session_results: sessionResults,
+            message: "Session already completed"
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          });
+        }
+        
         // Update the session status to active
         const { data: updatedSession, error: updateError } = await supabaseClient
           .from("coaching_sessions")
@@ -365,9 +389,6 @@ serve(async (req) => {
         }
 
         // Send purchase confirmation email
-        const sessionTypeFromMetadata = checkoutSession.metadata?.session_type || session_type;
-        const customerEmail = checkoutSession.customer_email || email;
-        
         if (resend && customerEmail && sessionTypeFromMetadata) {
           try {
             await sendPurchaseEmail(

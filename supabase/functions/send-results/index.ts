@@ -97,11 +97,15 @@ serve(async (req) => {
       <html>
       <head>
         <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #2C2F38; }
-          .container { max-width: 700px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #2F6DF6, #00C4CC); padding: 30px; text-align: center; border-radius: 12px 12px 0 0; }
-          .header h1 { color: white; margin: 0; font-size: 24px; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #2C2F38; margin: 0; padding: 0; background-color: #f5f5f5; }
+          .container { max-width: 700px; margin: 0 auto; background: #ffffff; }
+          .header { background: linear-gradient(135deg, #2F6DF6, #00C4CC); padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0; }
+          .logo-text { font-size: 32px; font-weight: 700; color: white; margin-bottom: 8px; letter-spacing: -0.5px; }
+          .logo-text span { color: #00C4CC; }
+          .header h1 { color: white; margin: 0; font-size: 24px; font-weight: 600; }
+          .header p { color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 16px; }
           .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; }
           .section { margin-bottom: 24px; }
           .section h2 { color: #2F6DF6; font-size: 18px; margin-bottom: 12px; }
@@ -110,18 +114,22 @@ serve(async (req) => {
           .prep-content h1, .prep-content h2, .prep-content h3 { color: #2F6DF6; }
           .prep-content ul { padding-left: 20px; }
           .prep-content li { margin: 8px 0; }
-          .footer { text-align: center; margin-top: 30px; color: #6b7280; font-size: 14px; }
-          .cta { display: inline-block; background: #2F6DF6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin-top: 20px; }
+          .cta-container { text-align: center; margin: 32px 0; }
+          .cta { display: inline-block; background: #2F6DF6; color: #ffffff !important; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; }
+          .cta:hover { background: #1e5bc6; }
+          .footer { text-align: center; margin-top: 30px; padding: 20px; color: #6b7280; font-size: 14px; border-top: 1px solid #e5e7eb; }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
-            <h1>🎯 Your ${sessionLabel} Results</h1>
+            <div class="logo-text">Talendro<span>&trade;</span></div>
+            <h1>Your ${sessionLabel} Results</h1>
+            <p>Your interview coaching session is complete</p>
           </div>
           <div class="content">
             <div class="section">
-              <p>Thank you for completing your interview coaching session with Talendro™!</p>
+              <p>Thank you for completing your interview coaching session with Talendro&trade;!</p>
             </div>
     `;
 
@@ -191,12 +199,13 @@ serve(async (req) => {
     }
 
     emailHtml += `
-            <div class="section" style="text-align: center;">
-              <p>Ready for more practice?</p>
-              <a href="https://coach.talendro.com" class="cta">Start Another Session</a>
+            <div class="cta-container">
+              <p style="margin-bottom: 16px; color: #374151;">Ready for more practice?</p>
+              <a href="https://coach.talendro.com/#products" class="cta">Upgrade Your Prep</a>
             </div>
             <div class="footer">
-              <p>© ${new Date().getFullYear()} Talendro™ Interview Coach</p>
+              <p><strong>Talendro&trade;</strong></p>
+              <p>&copy; ${new Date().getFullYear()} Talendro&trade; Interview Coach</p>
               <p>Questions? Reply to this email.</p>
             </div>
           </div>
