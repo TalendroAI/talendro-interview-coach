@@ -189,6 +189,71 @@ export type Database = {
         }
         Relationships: []
       }
+      error_logs: {
+        Row: {
+          admin_notified_at: string | null
+          ai_resolution_attempted: boolean | null
+          ai_resolution_response: string | null
+          ai_resolution_successful: boolean | null
+          context: Json | null
+          created_at: string
+          error_code: string | null
+          error_message: string
+          error_type: string
+          escalated_to_admin: boolean | null
+          id: string
+          resolution_notes: string | null
+          resolved: boolean | null
+          resolved_at: string | null
+          session_id: string | null
+          user_email: string | null
+        }
+        Insert: {
+          admin_notified_at?: string | null
+          ai_resolution_attempted?: boolean | null
+          ai_resolution_response?: string | null
+          ai_resolution_successful?: boolean | null
+          context?: Json | null
+          created_at?: string
+          error_code?: string | null
+          error_message: string
+          error_type: string
+          escalated_to_admin?: boolean | null
+          id?: string
+          resolution_notes?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          session_id?: string | null
+          user_email?: string | null
+        }
+        Update: {
+          admin_notified_at?: string | null
+          ai_resolution_attempted?: boolean | null
+          ai_resolution_response?: string | null
+          ai_resolution_successful?: boolean | null
+          context?: Json | null
+          created_at?: string
+          error_code?: string | null
+          error_message?: string
+          error_type?: string
+          escalated_to_admin?: boolean | null
+          id?: string
+          resolution_notes?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          session_id?: string | null
+          user_email?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "error_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "coaching_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string

@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { SessionType, DiscountValidation } from "@/types/session";
+import { reportSessionError, reportDiscountError } from "@/services/errorHandler";
 
 export interface VerifyPaymentResponse {
   verified: boolean;
@@ -91,7 +92,30 @@ export async function validateDiscountCode(
 
   if (error) {
     console.error("Validate discount error:", error);
+    // Report discount validation errors to AI resolution system
+    await reportDiscountError(
+      error.message || "Failed to validate code",
+      "validation_error",
+      email,
+      { action: "validate_discount", additionalInfo: { code, sessionType } }
+    );
     return { valid: false, error: "Failed to validate code" };
+  }
+
+  // If the code is invalid, report it for tracking
+  if (!data.valid && data.error) {
+    const errorCode = data.error.includes("expired") ? "code_expired" 
+      : data.error.includes("already used") ? "code_already_used"
+      : data.error.includes("not applicable") ? "code_not_applicable"
+      : data.error.includes("limit") ? "code_usage_limit_reached"
+      : "code_not_found";
+    
+    await reportDiscountError(
+      data.error,
+      errorCode,
+      email,
+      { action: "validate_discount", additionalInfo: { code, sessionType } }
+    );
   }
 
   return data;
@@ -206,6 +230,14 @@ export async function sendAIMessage(
 
   if (error) {
     console.error("AI coach error:", error);
+    // Report session/AI errors to resolution system
+    await reportSessionError(
+      error.message || "Failed to get AI response",
+      "ai_connection_failed",
+      undefined, // We don't always have email in this context
+      sessionId,
+      { action: "send_ai_message", sessionType, additionalInfo: { isInitial } }
+    );
     throw new Error(error.message || "Failed to get AI response");
   }
 
@@ -234,6 +266,14 @@ export async function sendSessionResults(
 
   if (error) {
     console.error("Send results error:", error);
+    // Report session results sending errors
+    await reportSessionError(
+      error.message || "Failed to send results",
+      "results_send_failed",
+      email,
+      sessionId,
+      { action: "send_results", sessionType }
+    );
     throw new Error(error.message || "Failed to send results");
   }
 }
