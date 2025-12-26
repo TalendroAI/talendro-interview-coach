@@ -181,14 +181,26 @@ serve(async (req) => {
     `;
 
     // Send email
-    const emailResponse = await resend.emails.send({
-      from: "Talendro Interview Coach <coach@talendro.com>",
-      to: [email],
-      subject: `Your ${sessionLabel} Results - Talendro™`,
-      html: emailHtml,
-    });
+    let emailResponse;
+    try {
+      emailResponse = await resend.emails.send({
+        from: "Talendro Interview Coach <greg@talendro.com>",
+        to: [email],
+        subject: `Your ${sessionLabel} Results - Talendro™`,
+        html: emailHtml,
+      });
 
-    logStep("Email sent", { emailResponse });
+      logStep("Email sent", { emailResponse });
+
+      // Check if email actually sent successfully
+      if (emailResponse.error) {
+        logStep("Email API returned error", { error: emailResponse.error });
+        throw new Error(`Email sending failed: ${emailResponse.error.message || 'Unknown error'}`);
+      }
+    } catch (emailError) {
+      logStep("Email sending exception", { error: String(emailError) });
+      throw new Error(`Failed to send email: ${emailError instanceof Error ? emailError.message : String(emailError)}`);
+    }
 
     // Save results to database
     await supabaseClient
