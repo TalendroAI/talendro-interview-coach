@@ -22,7 +22,7 @@ export interface VerifyPaymentResponse {
 
 export async function createCheckout(sessionType: SessionType, email: string): Promise<string> {
   console.log('[FRONTEND] Calling create-checkout edge function', { sessionType, email });
-  
+
   const { data, error } = await supabase.functions.invoke("create-checkout", {
     body: { session_type: sessionType, email },
   });
@@ -34,13 +34,38 @@ export async function createCheckout(sessionType: SessionType, email: string): P
     throw new Error(error.message || "Failed to create checkout session");
   }
 
-  if (!data?.url) {
+  const url = data?.url as string | undefined;
+  const debug = data?.debug as
+    | {
+        stripe_key_type?: string;
+        stripe_account_livemode?: boolean | null;
+        checkout_url_host?: string | null;
+      }
+    | undefined;
+
+  if (!url) {
     console.error("[FRONTEND] No URL in response:", data);
     throw new Error("No checkout URL returned");
   }
 
-  console.log('[FRONTEND] Checkout URL received:', data.url);
-  return data.url;
+  // Guardrail: if the browser is still being sent to a deleted test payment link, stop here and surface proof.
+  const host = (() => {
+    try {
+      return new URL(url).host;
+    } catch {
+      return null;
+    }
+  })();
+
+  if (typeof url === 'string' && (url.includes('/test_') || host === 'buy.stripe.com')) {
+    console.error('[FRONTEND] Unexpected checkout URL host/mode', { url, host, debug });
+    throw new Error(
+      `Checkout misconfigured: received ${host ?? 'unknown host'} (${debug?.stripe_key_type ?? 'key:unknown'}, livemode=${String(debug?.stripe_account_livemode)})`
+    );
+  }
+
+  console.log('[FRONTEND] Checkout URL received:', { host, debug });
+  return url;
 }
 
 export async function verifyPayment(
