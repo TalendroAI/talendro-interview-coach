@@ -22,9 +22,7 @@ serve(async (req) => {
 
     const resendKeyRaw = Deno.env.get("RESEND_API_KEY") ?? "";
     const resendKey = resendKeyRaw
-      // Remove zero-width chars that sometimes sneak in via copy/paste
       .replace(/[\u200B-\u200D\uFEFF]/g, "")
-      // Remove any whitespace (Resend keys should never contain whitespace)
       .replace(/\s+/g, "")
       .trim();
 
@@ -47,7 +45,51 @@ serve(async (req) => {
 
     const resend = new Resend(resendKey);
 
-    const { session_id, email, session_type, results, prep_content } = await req.json();
+    const { session_id, email, session_type, results, prep_content, test_email } = await req.json();
+
+    // Test email mode
+    if (test_email && email) {
+      logStep("Test email mode triggered", { email, session_type });
+      
+      const testSessionType = session_type || "quick_prep";
+      const sessionTypeLabels: Record<string, string> = {
+        quick_prep: "Quick Prep Packet",
+        full_mock: "Full Mock Interview",
+        premium_audio: "Premium Audio Interview",
+        pro: "Pro Coaching Session"
+      };
+      const sessionLabel = sessionTypeLabels[testSessionType] || "Interview Coaching";
+      
+      const testResults = {
+        overall_score: 85,
+        strengths: ["Clear communication style", "Strong STAR method usage", "Confident delivery"],
+        improvements: ["Add more specific metrics", "Practice concise answers"],
+        recommendations: "Focus on quantifying your achievements and practicing 2-minute response timing."
+      };
+      
+      const testPrepContent = "### Company Overview\nAcme Corp is a leading technology company...\n\n### Key Interview Tips\n* Research the team structure\n* Prepare questions about growth opportunities";
+      
+      const emailHtml = generateResultsEmail(sessionLabel, testResults, testPrepContent, 5);
+      
+      const emailResult = await resend.emails.send({
+        from: "Talendro Interview Coach <noreply@talendro.com>",
+        reply_to: "greg@talendro.com",
+        to: [email],
+        subject: `[TEST] Your ${sessionLabel} Results - Talendro™`,
+        html: emailHtml,
+      });
+      
+      logStep("Test email sent", { emailResult });
+      
+      return new Response(JSON.stringify({ 
+        success: true,
+        message: "Test results email sent",
+        emailResult 
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
 
     if (!session_id || !email) {
       throw new Error("session_id and email are required");
@@ -58,7 +100,6 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Get session details
     const { data: session } = await supabaseClient
       .from("coaching_sessions")
       .select("*, chat_messages(*)")
@@ -67,154 +108,18 @@ serve(async (req) => {
 
     logStep("Session retrieved", { sessionId: session_id });
 
-    // Format the results for email
-    const sessionTypeLabels = {
+    const sessionTypeLabels: Record<string, string> = {
       quick_prep: "Quick Prep Packet",
       full_mock: "Full Mock Interview",
       premium_audio: "Premium Audio Interview",
       pro: "Pro Coaching Session"
     };
 
-    const sessionLabel = sessionTypeLabels[session_type as keyof typeof sessionTypeLabels] || "Interview Coaching";
+    const sessionLabel = sessionTypeLabels[session_type as string] || "Interview Coaching";
+    const messageCount = session?.chat_messages?.length || 0;
 
-    // Convert markdown content to HTML if present
-    const formatMarkdownToHtml = (markdown: string): string => {
-      return markdown
-        .replace(/^### (.+)$/gm, '<h3 style="color: #2F6DF6; font-size: 16px; margin-top: 20px;">$1</h3>')
-        .replace(/^## (.+)$/gm, '<h2 style="color: #2F6DF6; font-size: 18px; margin-top: 24px;">$1</h2>')
-        .replace(/^# (.+)$/gm, '<h1 style="color: #2F6DF6; font-size: 20px; margin-top: 28px;">$1</h1>')
-        .replace(/^\* (.+)$/gm, '<li>$1</li>')
-        .replace(/^- (.+)$/gm, '<li>$1</li>')
-        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.+?)\*/g, '<em>$1</em>')
-        .replace(/\n\n/g, '</p><p>')
-        .replace(/\n/g, '<br>');
-    };
+    const emailHtml = generateResultsEmail(sessionLabel, results, prep_content, messageCount);
 
-    // Build email HTML
-    let emailHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #2C2F38; margin: 0; padding: 0; background-color: #f5f5f5; }
-          .container { max-width: 700px; margin: 0 auto; background: #ffffff; }
-          .header { background: linear-gradient(135deg, #2F6DF6, #00C4CC); padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0; }
-          .logo-text { font-size: 32px; font-weight: 700; color: white; margin-bottom: 8px; letter-spacing: -0.5px; }
-          .logo-text span { color: #00C4CC; }
-          .header h1 { color: white; margin: 0; font-size: 24px; font-weight: 600; }
-          .header p { color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 16px; }
-          .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; }
-          .section { margin-bottom: 24px; }
-          .section h2 { color: #2F6DF6; font-size: 18px; margin-bottom: 12px; }
-          .section p { margin: 8px 0; }
-          .prep-content { background: #f8fafc; padding: 24px; border-radius: 8px; border-left: 4px solid #2F6DF6; }
-          .prep-content h1, .prep-content h2, .prep-content h3 { color: #2F6DF6; }
-          .prep-content ul { padding-left: 20px; }
-          .prep-content li { margin: 8px 0; }
-          .cta-container { text-align: center; margin: 32px 0; }
-          .cta { display: inline-block; background: #2F6DF6; color: #ffffff !important; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; }
-          .cta:hover { background: #1e5bc6; }
-          .footer { text-align: center; margin-top: 30px; padding: 20px; color: #6b7280; font-size: 14px; border-top: 1px solid #e5e7eb; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div class="logo-text">Talendro<span>&trade;</span></div>
-            <h1>Your ${sessionLabel} Results</h1>
-            <p>Your interview coaching session is complete</p>
-          </div>
-          <div class="content">
-            <div class="section">
-              <p>Thank you for completing your interview coaching session with Talendro&trade;!</p>
-            </div>
-    `;
-
-    // Add Quick Prep content if present
-    if (prep_content) {
-      const formattedContent = formatMarkdownToHtml(prep_content);
-      emailHtml += `
-        <div class="section">
-          <h2>📋 Your Interview Prep Materials</h2>
-          <div class="prep-content">
-            <p>${formattedContent}</p>
-          </div>
-        </div>
-      `;
-    }
-
-    // Add results content
-    if (results) {
-      if (results.overall_score) {
-        emailHtml += `
-          <div class="section">
-            <h2>Overall Score: ${results.overall_score}/100</h2>
-          </div>
-        `;
-      }
-      
-      if (results.strengths && results.strengths.length > 0) {
-        emailHtml += `
-          <div class="section">
-            <h2>Your Strengths</h2>
-            <ul>
-              ${results.strengths.map((s: string) => `<li>${s}</li>`).join('')}
-            </ul>
-          </div>
-        `;
-      }
-
-      if (results.improvements && results.improvements.length > 0) {
-        emailHtml += `
-          <div class="section">
-            <h2>Areas for Improvement</h2>
-            <ul>
-              ${results.improvements.map((i: string) => `<li>${i}</li>`).join('')}
-            </ul>
-          </div>
-        `;
-      }
-
-      if (results.recommendations) {
-        emailHtml += `
-          <div class="section">
-            <h2>Recommendations</h2>
-            <p>${results.recommendations}</p>
-          </div>
-        `;
-      }
-    }
-
-    // Add transcript summary if available
-    if (session?.chat_messages && session.chat_messages.length > 0) {
-      emailHtml += `
-        <div class="section">
-          <h2>Session Summary</h2>
-          <p>Your session included ${session.chat_messages.length} messages. Full transcript is available in your dashboard.</p>
-        </div>
-      `;
-    }
-
-    emailHtml += `
-            <div class="cta-container">
-              <p style="margin-bottom: 16px; color: #374151;">Ready for more practice?</p>
-              <a href="https://coach.talendro.com/#products" class="cta">Upgrade Your Prep</a>
-            </div>
-            <div class="footer">
-              <p><strong>Talendro&trade;</strong></p>
-              <p>&copy; ${new Date().getFullYear()} Talendro&trade; Interview Coach</p>
-              <p>Questions? Reply to this email.</p>
-            </div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    // Send email
     let emailResponse;
     try {
       emailResponse = await resend.emails.send({
@@ -227,7 +132,6 @@ serve(async (req) => {
 
       logStep("Email sent", { emailResponse });
 
-      // Check if email actually sent successfully
       if (emailResponse.error) {
         logStep("Email API returned error", { error: emailResponse.error });
         throw new Error(`Email sending failed: ${emailResponse.error.message || 'Unknown error'}`);
@@ -237,7 +141,6 @@ serve(async (req) => {
       throw new Error(`Failed to send email: ${emailError instanceof Error ? emailError.message : String(emailError)}`);
     }
 
-    // Save results to database
     await supabaseClient
       .from("session_results")
       .insert({
@@ -250,7 +153,6 @@ serve(async (req) => {
         email_sent_at: new Date().toISOString()
       });
 
-    // Update session status to completed and store prep content
     await supabaseClient
       .from("coaching_sessions")
       .update({ 
@@ -277,3 +179,191 @@ serve(async (req) => {
     });
   }
 });
+
+// Generate results email HTML with Talendro brand standards
+function generateResultsEmail(sessionLabel: string, results: any, prep_content: string | null, messageCount: number): string {
+  const formatMarkdownToHtml = (markdown: string): string => {
+    return markdown
+      .replace(/^### (.+)$/gm, '<h3 style="color: #2F6DF6; font-size: 16px; margin-top: 20px; margin-bottom: 8px;">$1</h3>')
+      .replace(/^## (.+)$/gm, '<h2 style="color: #2F6DF6; font-size: 18px; margin-top: 24px; margin-bottom: 10px;">$1</h2>')
+      .replace(/^# (.+)$/gm, '<h1 style="color: #2F6DF6; font-size: 20px; margin-top: 28px; margin-bottom: 12px;">$1</h1>')
+      .replace(/^\* (.+)$/gm, '<li style="margin: 6px 0; color: #2C2F38;">$1</li>')
+      .replace(/^- (.+)$/gm, '<li style="margin: 6px 0; color: #2C2F38;">$1</li>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/\n\n/g, '</p><p style="margin: 12px 0; color: #2C2F38;">')
+      .replace(/\n/g, '<br>');
+  };
+
+  let emailHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #2C2F38; margin: 0; padding: 0; background-color: #f0f4f8;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f0f4f8; padding: 20px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="background-color: #2F6DF6; padding: 30px; text-align: center;">
+              <div style="font-size: 32px; font-weight: 800; color: #ffffff; letter-spacing: -1px;">
+                Talendro<span style="font-size: 14px; vertical-align: super; color: #00C4CC; font-weight: 600;">™</span>
+              </div>
+              <h1 style="color: white; margin: 16px 0 0 0; font-size: 26px; font-weight: 700;">Your ${sessionLabel} Results</h1>
+              <p style="color: rgba(255,255,255,0.85); margin: 12px 0 0 0; font-size: 16px;">Your interview coaching session is complete</p>
+            </td>
+          </tr>
+          <!-- Hero Banner -->
+          <tr>
+            <td style="background-color: #E8F4FE; padding: 30px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+              <div style="font-size: 48px; margin-bottom: 12px;">🎉</div>
+              <h2 style="color: #2C2F38; font-size: 20px; font-weight: 600; margin: 0 0 8px 0;">Session Complete!</h2>
+              <p style="color: #9FA6B2; font-size: 15px; margin: 0;">Here's everything you need to ace your interview</p>
+            </td>
+          </tr>
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px 30px;">
+              <p style="margin: 0 0 24px 0; font-size: 16px; color: #2C2F38;">Thank you for completing your interview coaching session with <strong>Talendro™</strong>! Below you'll find your personalized results and recommendations.</p>
+  `;
+
+  // Add prep content if present
+  if (prep_content) {
+    const formattedContent = formatMarkdownToHtml(prep_content);
+    emailHtml += `
+              <!-- Prep Materials -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
+                <tr>
+                  <td style="background-color: #f8fafc; border-left: 4px solid #2F6DF6; padding: 24px; border-radius: 0 12px 12px 0;">
+                    <p style="margin: 0 0 16px 0; color: #2F6DF6; font-size: 17px; font-weight: 700;">📋 Your Interview Prep Materials</p>
+                    <div style="color: #2C2F38; font-size: 15px;">${formattedContent}</div>
+                  </td>
+                </tr>
+              </table>
+    `;
+  }
+
+  // Add results content
+  if (results) {
+    if (results.overall_score) {
+      emailHtml += `
+              <!-- Score -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
+                <tr>
+                  <td style="background-color: #E8F4FE; border: 1px solid #2F6DF6; padding: 24px; border-radius: 12px; text-align: center;">
+                    <p style="margin: 0 0 8px 0; color: #2F6DF6; font-size: 14px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Overall Score</p>
+                    <p style="margin: 0; font-size: 48px; font-weight: 800; color: #2F6DF6;">${results.overall_score}<span style="font-size: 24px; color: #9FA6B2;">/100</span></p>
+                  </td>
+                </tr>
+              </table>
+      `;
+    }
+    
+    if (results.strengths && results.strengths.length > 0) {
+      emailHtml += `
+              <!-- Strengths -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
+                <tr>
+                  <td style="background: #E8F4FE; border: 1px solid #2F6DF6; border-radius: 12px; padding: 24px;">
+                    <p style="margin: 0 0 16px 0; color: #2F6DF6; font-size: 17px; font-weight: 700;">💪 Your Strengths</p>
+                    ${results.strengths.map((s: string) => `<p style="margin: 10px 0; color: #2C2F38; font-size: 15px;">✓ ${s}</p>`).join('')}
+                  </td>
+                </tr>
+              </table>
+      `;
+    }
+
+    if (results.improvements && results.improvements.length > 0) {
+      emailHtml += `
+              <!-- Improvements -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
+                <tr>
+                  <td style="background: #FEF3E8; border: 1px solid #F59E0B; border-radius: 12px; padding: 24px;">
+                    <p style="margin: 0 0 16px 0; color: #D97706; font-size: 17px; font-weight: 700;">📈 Areas for Improvement</p>
+                    ${results.improvements.map((i: string) => `<p style="margin: 10px 0; color: #2C2F38; font-size: 15px;">• ${i}</p>`).join('')}
+                  </td>
+                </tr>
+              </table>
+      `;
+    }
+
+    if (results.recommendations) {
+      emailHtml += `
+              <!-- Recommendations -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
+                <tr>
+                  <td style="background-color: #f8fafc; border-left: 4px solid #00C4CC; padding: 24px; border-radius: 0 12px 12px 0;">
+                    <p style="margin: 0 0 12px 0; color: #00C4CC; font-size: 17px; font-weight: 700;">💡 Recommendations</p>
+                    <p style="margin: 0; color: #2C2F38; font-size: 15px;">${results.recommendations}</p>
+                  </td>
+                </tr>
+              </table>
+      `;
+    }
+  }
+
+  // Add session summary if messages exist
+  if (messageCount > 0) {
+    emailHtml += `
+              <!-- Session Summary -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
+                <tr>
+                  <td style="background-color: #f8fafc; padding: 20px; border-radius: 12px; text-align: center;">
+                    <p style="margin: 0; color: #9FA6B2; font-size: 14px;">Your session included <strong style="color: #2C2F38;">${messageCount} messages</strong></p>
+                  </td>
+                </tr>
+              </table>
+    `;
+  }
+
+  emailHtml += `
+              <!-- CTA Button -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 36px 0;">
+                <tr>
+                  <td align="center">
+                    <p style="margin: 0 0 16px 0; color: #2C2F38; font-size: 16px;">Ready for more practice?</p>
+                    <a href="https://coach.talendro.com/#products" style="display: inline-block; background-color: #2F6DF6; color: #ffffff; padding: 18px 48px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px;">Upgrade Your Prep →</a>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 24px 0 0 0; font-size: 16px; color: #2C2F38;">Questions? Simply reply to this email. We're here to help you succeed.</p>
+              
+              <!-- Signature -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-top: 36px; padding-top: 28px; border-top: 1px solid #e5e7eb;">
+                <tr>
+                  <td>
+                    <p style="margin: 8px 0; color: #2C2F38;">Go crush that interview!</p>
+                    <p style="margin: 8px 0; color: #2C2F38;"><strong>— Greg Jackson</strong><br>Founder, Talendro™</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #0F172A; padding: 36px 30px; text-align: center;">
+              <div style="font-size: 24px; font-weight: 800; color: white; margin-bottom: 8px;">Talendro<span style="font-size: 12px; vertical-align: super; color: #00C4CC;">™</span></div>
+              <p style="color: #00C4CC; font-style: italic; font-size: 15px; margin: 12px 0 20px 0;">"Your partner in interview success"</p>
+              <p style="margin: 20px 0; font-size: 13px; color: #9FA6B2;">🇺🇸 American-Built • 🎖️ Veteran-Led • ✅ Recruiter-Tested</p>
+              <p style="margin: 20px 0;">
+                <a href="https://www.linkedin.com/company/talendro" style="color: #9FA6B2; text-decoration: none; margin: 0 12px; font-size: 14px;">LinkedIn</a>
+                <a href="https://talendro.com" style="color: #9FA6B2; text-decoration: none; margin: 0 12px; font-size: 14px;">Website</a>
+              </p>
+              <p style="color: #9FA6B2; font-size: 12px; margin-top: 20px;">© ${new Date().getFullYear()} Talendro. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  return emailHtml;
+}
