@@ -21,13 +21,13 @@ export function WelcomeMessage({
 
   if (!config) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8 bg-gradient-to-br from-foreground via-foreground to-foreground/90">
+      <div className="flex-1 flex items-center justify-center p-8 bg-hero">
         <div className="text-center max-w-md animate-slide-up">
           <div className="text-5xl mb-6">🎯</div>
-          <h2 className="text-2xl font-extrabold text-background mb-3">
+          <h2 className="text-2xl font-extrabold text-foreground mb-3">
             Welcome to Interview Coach
           </h2>
-          <p className="text-background/70">
+          <p className="text-muted-foreground">
             Please select a session type to begin your personalized interview preparation.
           </p>
         </div>
@@ -115,11 +115,11 @@ export function WelcomeMessage({
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gradient-to-br from-foreground via-foreground to-foreground/90">
+    <div className="flex-1 flex flex-col items-center justify-center p-8 bg-hero">
       <div className="max-w-2xl w-full animate-slide-up">
         {/* Title */}
         <div className="text-center mb-10">
-          <h1 className="text-3xl md:text-4xl font-extrabold text-background flex items-center justify-center gap-3">
+          <h1 className="text-3xl md:text-4xl font-extrabold text-foreground flex items-center justify-center gap-3">
             <span className="text-4xl">{instructions.icon}</span>
             {instructions.title}
           </h1>
@@ -136,7 +136,7 @@ export function WelcomeMessage({
               <span className="flex items-center justify-center h-7 w-7 rounded-full bg-primary text-primary-foreground text-sm font-bold flex-shrink-0">
                 {step.num}
               </span>
-              <p className="text-background/90 text-base leading-relaxed pt-0.5">
+              <p className="text-foreground/90 text-base leading-relaxed pt-0.5">
                 {renderText(step.text)}
               </p>
             </div>
@@ -152,10 +152,10 @@ export function WelcomeMessage({
         )}
 
         {/* Ready Status & CTA */}
-        <div className="bg-background/5 backdrop-blur-sm rounded-xl border border-background/20 p-6 text-center">
+        <div className="bg-muted/50 backdrop-blur-sm rounded-xl border border-border p-6 text-center shadow-soft">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <span className={`h-3 w-3 rounded-full ${isPaymentVerified && isReady ? 'bg-secondary animate-pulse-subtle' : 'bg-background/30'}`} />
-            <span className="text-background/70 font-medium">
+            <span className={`h-3 w-3 rounded-full ${isPaymentVerified && isReady ? 'bg-secondary animate-pulse-subtle' : 'bg-muted-foreground/30'}`} />
+            <span className="text-muted-foreground font-medium">
               {isPaymentVerified && isReady ? 'Ready to start' : 'Complete the steps above'}
             </span>
           </div>
