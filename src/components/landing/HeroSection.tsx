@@ -1,8 +1,12 @@
 import { ArrowRight, CheckCircle, Shield, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
+import { SessionType } from '@/types/session';
 
-export function HeroSection() {
+interface HeroSectionProps {
+  onSelectSession?: (sessionType: SessionType) => void;
+}
+
+export function HeroSection({ onSelectSession }: HeroSectionProps) {
   return (
     <section className="pt-32 pb-16 bg-hero text-center">
       <div className="container">
@@ -25,16 +29,21 @@ export function HeroSection() {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <Button asChild size="lg" className="text-lg px-8 py-6 shadow-brand hover:shadow-brand-lg hover:-translate-y-0.5 transition-all">
-              <Link to="/?type=full_mock&email=">
-                Start Full Mock Interview — $29
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
+            <Button 
+              size="lg" 
+              className="text-lg px-8 py-6 shadow-brand hover:shadow-brand-lg hover:-translate-y-0.5 transition-all"
+              onClick={() => onSelectSession?.('full_mock')}
+            >
+              Start Full Mock Interview — $29
+              <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
-            <Button asChild variant="outline" size="lg" className="text-lg px-8 py-6 border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-all">
-              <Link to="/?type=quick_prep&email=">
-                Quick Prep — $12
-              </Link>
+            <Button 
+              variant="outline" 
+              size="lg" 
+              className="text-lg px-8 py-6 border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-all"
+              onClick={() => onSelectSession?.('quick_prep')}
+            >
+              Quick Prep — $12
             </Button>
           </div>
 

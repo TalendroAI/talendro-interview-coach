@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,21 +21,28 @@ import { FinalCTASection } from '@/components/landing/FinalCTASection';
 
 export default function Index() {
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<SessionType | null>(null);
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Check for session type in URL params on mount
+  // Open checkout dialog for a session type
+  const openCheckout = useCallback((sessionType: SessionType) => {
+    setSelectedSession(sessionType);
+    setIsCheckoutOpen(true);
+    // Clear URL params after opening dialog
+    setSearchParams({});
+  }, [setSearchParams]);
+
+  // Check for session type in URL params
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const typeParam = urlParams.get('type') as SessionType | null;
+    const typeParam = searchParams.get('type') as SessionType | null;
     
     if (typeParam && SESSION_CONFIGS[typeParam]) {
-      setSelectedSession(typeParam);
-      setIsCheckoutOpen(true);
+      openCheckout(typeParam);
     }
-  }, []);
+  }, [searchParams, openCheckout]);
 
   const handleCheckout = async () => {
     if (!selectedSession || !email) {
@@ -74,7 +82,7 @@ export default function Index() {
       <LandingHeader />
       
       <main>
-        <HeroSection />
+        <HeroSection onSelectSession={openCheckout} />
         <HowItWorksSection />
         <ProductsSection />
         <WhySection />
