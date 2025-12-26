@@ -54,9 +54,11 @@ serve(async (req) => {
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
     // Definitive signal: Stripe account mode as seen by the API key in use
+    let stripeAccountLivemode: boolean | null = null;
     try {
       const account = await stripe.accounts.retrieve();
-      logStep("Stripe account mode", { accountId: account.id, livemode: account.livemode });
+      stripeAccountLivemode = (account as any).livemode ?? null;
+      logStep("Stripe account mode", { accountId: account.id, livemode: stripeAccountLivemode });
     } catch (e) {
       logStep("Stripe account mode lookup failed", { message: String(e) });
     }
@@ -188,22 +190,42 @@ serve(async (req) => {
       .update({ stripe_checkout_session_id: checkoutSession.id })
       .eq("id", sessionData.id);
 
+    let checkoutUrlHost: string | null = null;
+    try {
+      if (typeof checkoutSession.url === "string") {
+        checkoutUrlHost = new URL(checkoutSession.url).host;
+      }
+    } catch {
+      checkoutUrlHost = null;
+    }
+
     logStep("Checkout session created", {
       checkoutSessionId: checkoutSession.id,
+      checkoutUrlHost,
+      stripeAccountLivemode,
       checkoutLivemode: (checkoutSession as any).livemode ?? null,
-      urlHasTestPrefix: typeof checkoutSession.url === "string" ? checkoutSession.url.includes("/test_") : null,
+      urlHasTestPrefix:
+        typeof checkoutSession.url === "string" ? checkoutSession.url.includes("/test_") : null,
       upgradeCreditApplied: upgradeCredit > 0 ? upgradeCredit / 100 : 0,
     });
 
-    return new Response(JSON.stringify({ 
-      url: checkoutSession.url,
-      upgrade_credit_applied: upgradeCredit > 0 ? upgradeCredit / 100 : 0,
-      original_price: priceConfig.amount / 100,
-      final_price: (priceConfig.amount - upgradeCredit) / 100,
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
+    return new Response(
+      JSON.stringify({
+        url: checkoutSession.url,
+        debug: {
+          stripe_key_type: keyType,
+          stripe_account_livemode: stripeAccountLivemode,
+          checkout_url_host: checkoutUrlHost,
+        },
+        upgrade_credit_applied: upgradeCredit > 0 ? upgradeCredit / 100 : 0,
+        original_price: priceConfig.amount / 100,
+        final_price: (priceConfig.amount - upgradeCredit) / 100,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      }
+    );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERROR", { message: errorMessage });
