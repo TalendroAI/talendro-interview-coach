@@ -38,13 +38,26 @@ export default function InterviewCoach() {
   const isJobComplete = documents.jobDescription.trim().length > 50;
   const isDocumentsReady = isResumeComplete && isJobComplete && isDocumentsSaved;
 
-  const handleSaveDocuments = () => {
+  const handleSaveDocuments = async () => {
     if (isResumeComplete && isJobComplete) {
       setIsDocumentsSaved(true);
       toast({
         title: 'Documents saved!',
-        description: 'Your materials are ready. You can now start your session.',
+        description: 'Starting your session now...',
       });
+      
+      // Automatically start the session after saving documents
+      if (isPaymentVerified && sessionType) {
+        setIsLoading(true);
+        setTimeout(() => {
+          setIsSessionStarted(true);
+          setIsLoading(false);
+          toast({
+            title: 'Session started!',
+            description: 'Your personalized coaching session has begun.',
+          });
+        }, 500);
+      }
     }
   };
 
