@@ -57,11 +57,12 @@ export default function Index() {
     setIsLoading(true);
     try {
       const checkoutUrl = await createCheckout(selectedSession, email);
-      window.open(checkoutUrl, '_blank');
+      // Use same-tab navigation to avoid opening stale/cached checkout tabs.
+      window.location.assign(checkoutUrl);
       setIsCheckoutOpen(false);
       toast({
         title: 'Redirecting to checkout',
-        description: 'Complete your purchase in the new tab.',
+        description: 'Complete your purchase in the next step.',
       });
     } catch (error) {
       console.error('Checkout error:', error);
