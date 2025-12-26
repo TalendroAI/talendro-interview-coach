@@ -21,18 +21,29 @@ serve(async (req) => {
     logStep("Function started");
 
     const resendKeyRaw = Deno.env.get("RESEND_API_KEY") ?? "";
-    const resendKey = resendKeyRaw.trim();
+    const resendKey = resendKeyRaw
+      // Remove zero-width chars that sometimes sneak in via copy/paste
+      .replace(/[\u200B-\u200D\uFEFF]/g, "")
+      // Remove any whitespace (Resend keys should never contain whitespace)
+      .replace(/\s+/g, "")
+      .trim();
+
+    logStep("Resend key loaded", {
+      present: Boolean(resendKey),
+      rawLength: resendKeyRaw.length,
+      length: resendKey.length,
+      startsWithRe: resendKey.startsWith("re_"),
+      containsStar: resendKey.includes("*"),
+      normalized: resendKeyRaw !== resendKey,
+    });
 
     if (!resendKey) {
-      logStep("Missing RESEND_API_KEY", { present: false });
       throw new Error("Email service is not configured");
     }
 
-    logStep("Resend key loaded", {
-      present: true,
-      length: resendKey.length,
-      startsWithRe: resendKey.startsWith("re_"),
-    });
+    if (resendKey.includes("*")) {
+      throw new Error("Email service is misconfigured (API key appears masked)");
+    }
 
     const resend = new Resend(resendKey);
 
