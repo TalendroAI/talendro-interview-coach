@@ -45,14 +45,21 @@ serve(async (req) => {
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
-    
+
     // Log key type (without exposing actual key)
-    const keyType = stripeKey.startsWith('sk_live_') ? 'LIVE' : 
+    const keyType = stripeKey.startsWith('sk_live_') ? 'LIVE' :
                     stripeKey.startsWith('sk_test_') ? 'TEST' : 'UNKNOWN';
     logStep("Stripe key type", { keyType });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-    
+
+    // Definitive signal: Stripe account mode as seen by the API key in use
+    try {
+      const account = await stripe.accounts.retrieve();
+      logStep("Stripe account mode", { accountId: account.id, livemode: account.livemode });
+    } catch (e) {
+      logStep("Stripe account mode lookup failed", { message: String(e) });
+    }
     // Check if customer exists
     const customers = await stripe.customers.list({ email, limit: 1 });
     let customerId;
@@ -181,9 +188,11 @@ serve(async (req) => {
       .update({ stripe_checkout_session_id: checkoutSession.id })
       .eq("id", sessionData.id);
 
-    logStep("Checkout session created", { 
+    logStep("Checkout session created", {
       checkoutSessionId: checkoutSession.id,
-      upgradeCreditApplied: upgradeCredit > 0 ? upgradeCredit / 100 : 0
+      checkoutLivemode: (checkoutSession as any).livemode ?? null,
+      urlHasTestPrefix: typeof checkoutSession.url === "string" ? checkoutSession.url.includes("/test_") : null,
+      upgradeCreditApplied: upgradeCredit > 0 ? upgradeCredit / 100 : 0,
     });
 
     return new Response(JSON.stringify({ 
