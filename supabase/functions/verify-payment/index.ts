@@ -233,11 +233,17 @@ serve(async (req) => {
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
 
-    const resendKey = Deno.env.get("RESEND_API_KEY");
+    const resendKeyRaw = Deno.env.get("RESEND_API_KEY") ?? "";
+    const resendKey = resendKeyRaw.trim();
     const resend = resendKey ? new Resend(resendKey) : null;
-    
+
     if (!resendKey) {
-      logStep("WARNING: RESEND_API_KEY not set - emails will not be sent");
+      logStep("WARNING: RESEND_API_KEY missing/blank - emails will not be sent");
+    } else {
+      logStep("Resend key loaded", {
+        length: resendKey.length,
+        startsWithRe: resendKey.startsWith("re_"),
+      });
     }
 
     const supabaseClient = createClient(

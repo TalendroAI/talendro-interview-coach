@@ -2,8 +2,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -21,7 +19,23 @@ serve(async (req) => {
 
   try {
     logStep("Function started");
-    
+
+    const resendKeyRaw = Deno.env.get("RESEND_API_KEY") ?? "";
+    const resendKey = resendKeyRaw.trim();
+
+    if (!resendKey) {
+      logStep("Missing RESEND_API_KEY", { present: false });
+      throw new Error("Email service is not configured");
+    }
+
+    logStep("Resend key loaded", {
+      present: true,
+      length: resendKey.length,
+      startsWithRe: resendKey.startsWith("re_"),
+    });
+
+    const resend = new Resend(resendKey);
+
     const { session_id, email, session_type, results, prep_content } = await req.json();
 
     if (!session_id || !email) {
