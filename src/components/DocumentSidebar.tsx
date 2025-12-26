@@ -154,68 +154,43 @@ export function DocumentSidebar({
             disabled={!allComplete || isSessionStarted}
           >
             <Save className="h-4 w-4 mr-2" />
-            Save Documents & Prepare
+            Save Documents & Begin
           </Button>
         </div>
       </div>
 
-      {/* YOUR SESSION Section */}
-      <div className="border-t border-border">
-        <div className="p-5 border-b border-border">
-          <h2 className="font-extrabold text-sm uppercase tracking-wide text-foreground">
-            Your Session
-          </h2>
+      {/* 5. Complete Session Button */}
+      <div className="border-t border-border p-5">
+        <div className="flex items-start gap-2">
+          <span className="flex items-center justify-center h-6 w-6 rounded-full bg-destructive text-destructive-foreground text-xs font-bold mt-1">
+            5
+          </span>
+          <Button
+            variant={isSessionStarted ? "destructive" : "default"}
+            size="lg"
+            className={cn(
+              "flex-1 font-semibold shadow-sm hover:shadow-md transition-all",
+              !isSessionStarted && "bg-primary hover:bg-primary/90"
+            )}
+            onClick={onStartSession}
+            disabled={!canStart || isLoading}
+          >
+            {isLoading ? (
+              <>
+                <span className="animate-spin mr-2">⏳</span>
+                Starting...
+              </>
+            ) : (
+              <>Complete Session</>
+            )}
+          </Button>
         </div>
-        
-        <div className="p-5 space-y-4">
-          <div className="p-3 rounded-lg border border-primary/30 bg-primary/10">
-            <span className="text-primary font-semibold">
-              {config?.name || 'Select a Session'}
-            </span>
-          </div>
 
-          {/* 5. Start/Complete Session Button */}
-          <div className="flex items-start gap-2">
-            <span className="flex items-center justify-center h-6 w-6 rounded-full bg-destructive text-destructive-foreground text-xs font-bold mt-1">
-              5
-            </span>
-            <Button
-              variant={isSessionStarted ? "destructive" : "default"}
-              size="lg"
-              className={cn(
-                "flex-1 font-semibold shadow-sm hover:shadow-md transition-all",
-                !isSessionStarted && "bg-primary hover:bg-primary/90"
-              )}
-              onClick={onStartSession}
-              disabled={!canStart || isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <span className="animate-spin mr-2">⏳</span>
-                  Starting...
-                </>
-              ) : isSessionStarted ? (
-                <>Complete Session</>
-              ) : !isPaymentVerified ? (
-                <>Payment Required</>
-              ) : (
-                <>Start {config?.name || 'Session'}</>
-              )}
-            </Button>
-          </div>
-
-          {!isPaymentVerified && !isSessionStarted && (
-            <p className="text-xs text-destructive text-center font-medium">
-              Please complete your purchase to start
-            </p>
-          )}
-          
-          {isPaymentVerified && !allComplete && !isSessionStarted && (
-            <p className="text-xs text-muted-foreground text-center">
-              Please complete all required fields
-            </p>
-          )}
-        </div>
+        {!isPaymentVerified && !isSessionStarted && (
+          <p className="text-xs text-destructive text-center font-medium mt-4">
+            Please complete your purchase to start
+          </p>
+        )}
       </div>
     </aside>
   );

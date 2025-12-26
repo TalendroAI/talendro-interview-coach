@@ -46,8 +46,8 @@ export function WelcomeMessage({
             { num: 1, text: 'Paste your **résumé text** in the sidebar', highlight: 'résumé text' },
             { num: 2, text: 'Paste the **job description** in the sidebar', highlight: 'job description' },
             { num: 3, text: 'Enter the **company URL** in the sidebar', highlight: 'company URL' },
-            { num: 4, text: 'Click "**📋 Save Documents & Prepare**" in the sidebar', highlight: '📋 Save Documents & Prepare' },
-            { num: 5, text: 'Click "**⚡ Start Quick Prep**" below to begin', highlight: '⚡ Start Quick Prep' },
+            { num: 4, text: 'Click "**📋 Save Documents & Begin**" in the sidebar', highlight: '📋 Save Documents & Begin' },
+            { num: 5, text: 'Click "**Complete Session**" to finish and receive your summary', highlight: 'Complete Session' },
           ],
           tip: 'Quick Prep provides a concise overview of key talking points in under 5 minutes.',
         };
@@ -59,8 +59,8 @@ export function WelcomeMessage({
             { num: 1, text: 'Paste your **résumé text** in the sidebar', highlight: 'résumé text' },
             { num: 2, text: 'Paste the **job description** in the sidebar', highlight: 'job description' },
             { num: 3, text: 'Enter the **company URL** in the sidebar', highlight: 'company URL' },
-            { num: 4, text: 'Click "**📋 Save Documents & Prepare**" in the sidebar', highlight: '📋 Save Documents & Prepare' },
-            { num: 5, text: 'Click "**🎯 Start Full Mock**" below to begin the interview', highlight: '🎯 Start Full Mock' },
+            { num: 4, text: 'Click "**📋 Save Documents & Begin**" in the sidebar', highlight: '📋 Save Documents & Begin' },
+            { num: 5, text: 'Click "**Complete Session**" to finish and receive your summary', highlight: 'Complete Session' },
           ],
           tip: 'The Full Mock simulates a real interview with follow-up questions and detailed feedback.',
         };
@@ -72,8 +72,8 @@ export function WelcomeMessage({
             { num: 1, text: 'Paste your **résumé text** in the sidebar', highlight: 'résumé text' },
             { num: 2, text: 'Paste the **job description** in the sidebar', highlight: 'job description' },
             { num: 3, text: 'Enter the **company URL** in the sidebar', highlight: 'company URL' },
-            { num: 4, text: 'Click "**📋 Save Documents & Prepare**" in the sidebar', highlight: '📋 Save Documents & Prepare' },
-            { num: 5, text: 'Click "**🎙️ Start Voice Interview**" below to begin speaking', highlight: '🎙️ Start Voice Interview' },
+            { num: 4, text: 'Click "**📋 Save Documents & Begin**" in the sidebar', highlight: '📋 Save Documents & Begin' },
+            { num: 5, text: 'Click "**Complete Session**" to finish and receive your summary', highlight: 'Complete Session' },
           ],
           tip: 'Use headphones for the best experience. Allow microphone access when prompted.',
         };
@@ -85,8 +85,8 @@ export function WelcomeMessage({
             { num: 1, text: 'Paste your **résumé text** in the sidebar', highlight: 'résumé text' },
             { num: 2, text: 'Paste the **job description** in the sidebar', highlight: 'job description' },
             { num: 3, text: 'Enter the **company URL** in the sidebar', highlight: 'company URL' },
-            { num: 4, text: 'Click "**📋 Save Documents & Prepare**" in the sidebar', highlight: '📋 Save Documents & Prepare' },
-            { num: 5, text: 'Click "**👑 Start Pro Session**" below to begin', highlight: '👑 Start Pro Session' },
+            { num: 4, text: 'Click "**📋 Save Documents & Begin**" in the sidebar', highlight: '📋 Save Documents & Begin' },
+            { num: 5, text: 'Click "**Complete Session**" to finish and receive your summary', highlight: 'Complete Session' },
           ],
           tip: 'Pro members have unlimited access to all session types and priority support.',
         };
@@ -151,25 +151,6 @@ export function WelcomeMessage({
           </div>
         )}
 
-        {/* Ready Status & CTA */}
-        <div className="bg-muted/50 backdrop-blur-sm rounded-xl border border-border p-6 text-center shadow-soft">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <span className={`h-3 w-3 rounded-full ${isPaymentVerified && isReady ? 'bg-secondary animate-pulse-subtle' : 'bg-muted-foreground/30'}`} />
-            <span className="text-muted-foreground font-medium">
-              {isPaymentVerified && isReady ? 'Ready to start' : 'Complete the steps above'}
-            </span>
-          </div>
-
-          <Button
-            size="lg"
-            onClick={onStartSession}
-            disabled={!isPaymentVerified || !isReady}
-            className="px-8 py-6 text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all"
-          >
-            <span className="mr-2">{sessionType === 'premium_audio' ? '🎙️' : instructions.icon}</span>
-            {sessionType === 'premium_audio' ? 'Start Voice Interview' : `Start ${config.name}`}
-          </Button>
-        </div>
       </div>
     </div>
   );
