@@ -16,6 +16,7 @@ interface DocumentSidebarProps {
   isPaymentVerified?: boolean;
   onSaveDocuments?: () => void;
   isDocumentsSaved?: boolean;
+  isContentReady?: boolean;
 }
 
 export function DocumentSidebar({
@@ -28,6 +29,7 @@ export function DocumentSidebar({
   isPaymentVerified = false,
   onSaveDocuments,
   isDocumentsSaved = false,
+  isContentReady = false,
 }: DocumentSidebarProps) {
   const config = sessionType ? SESSION_CONFIGS[sessionType] : null;
 
@@ -36,8 +38,8 @@ export function DocumentSidebar({
   const isCompanyComplete = documents.companyUrl.trim().length > 5;
   const allFieldsComplete = isResumeComplete && isJobComplete && isCompanyComplete;
 
-  const canSaveDocuments = allFieldsComplete && !isSessionStarted;
-  const canCompleteSession = isDocumentsSaved && isPaymentVerified && !isSessionStarted && sessionType;
+  const canSaveDocuments = allFieldsComplete && !isDocumentsSaved;
+  const canCompleteSession = isContentReady && sessionType;
 
   const handleSaveDocuments = () => {
     if (onSaveDocuments) {
