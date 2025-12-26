@@ -84,7 +84,7 @@ const generateNewPurchaseEmail = (sessionType: string, email: string, customerNa
                     <p style="margin: 10px 0; color: #374151; font-size: 15px;">• Click the button below to start your session</p>
                     <p style="margin: 10px 0; color: #374151; font-size: 15px;">• Upload your resume and job description for personalized coaching</p>
                     <p style="margin: 10px 0; color: #374151; font-size: 15px;">• Complete your session and receive detailed feedback</p>
-                    <p style="margin: 10px 0; color: #374141; font-size: 15px;">• Get your results emailed to you automatically</p>
+                    <p style="margin: 10px 0; color: #374151; font-size: 15px;">• Get your results emailed to you automatically</p>
                   </td>
                 </tr>
               </table>
@@ -132,6 +132,7 @@ const generateNewPurchaseEmail = (sessionType: string, email: string, customerNa
 </html>
   `;
 };
+
 
 // Generate email HTML for upgrade purchase (Template B)
 const generateUpgradeEmail = (sessionType: string, email: string, upgradeCredit: number, previousPurchase: string, customerName?: string) => {
