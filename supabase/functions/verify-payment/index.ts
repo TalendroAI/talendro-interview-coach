@@ -193,7 +193,8 @@ const sendPurchaseEmail = async (
   
   try {
     const result = await resend.emails.send({
-      from: "Talendro Interview Coach <greg@talendro.com>",
+      from: "Talendro Interview Coach <noreply@talendro.com>",
+      reply_to: "greg@talendro.com",
       to: [email],
       subject,
       html,
