@@ -234,16 +234,26 @@ serve(async (req) => {
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
 
     const resendKeyRaw = Deno.env.get("RESEND_API_KEY") ?? "";
-    const resendKey = resendKeyRaw.trim();
-    const resend = resendKey ? new Resend(resendKey) : null;
+    const resendKey = resendKeyRaw
+      .replace(/[\u200B-\u200D\uFEFF]/g, "")
+      .replace(/\s+/g, "")
+      .trim();
+
+    logStep("Resend key loaded", {
+      present: Boolean(resendKey),
+      rawLength: resendKeyRaw.length,
+      length: resendKey.length,
+      startsWithRe: resendKey.startsWith("re_"),
+      containsStar: resendKey.includes("*"),
+      normalized: resendKeyRaw !== resendKey,
+    });
+
+    const resend = resendKey && !resendKey.includes("*") ? new Resend(resendKey) : null;
 
     if (!resendKey) {
       logStep("WARNING: RESEND_API_KEY missing/blank - emails will not be sent");
-    } else {
-      logStep("Resend key loaded", {
-        length: resendKey.length,
-        startsWithRe: resendKey.startsWith("re_"),
-      });
+    } else if (resendKey.includes("*")) {
+      logStep("WARNING: RESEND_API_KEY appears masked - emails will not be sent");
     }
 
     const supabaseClient = createClient(
