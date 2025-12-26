@@ -9,6 +9,7 @@ import { createCheckout } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 
+import { CheckoutDiagnostics } from '@/components/CheckoutDiagnostics';
 import { LandingHeader } from '@/components/landing/LandingHeader';
 import { LandingFooter } from '@/components/landing/LandingFooter';
 import { HeroSection } from '@/components/landing/HeroSection';
@@ -27,18 +28,21 @@ export default function Index() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  const debugParam = searchParams.get('debug');
+  const debugEnabled = debugParam === '1' || debugParam === 'true';
+
   // Open checkout dialog for a session type
   const openCheckout = useCallback((sessionType: SessionType) => {
     setSelectedSession(sessionType);
     setIsCheckoutOpen(true);
-    // Clear URL params after opening dialog
-    setSearchParams({});
-  }, [setSearchParams]);
+    // Clear URL params after opening dialog, but preserve debug flag if present
+    setSearchParams(debugParam ? { debug: debugParam } : {});
+  }, [setSearchParams, debugParam]);
 
   // Check for session type in URL params
   useEffect(() => {
     const typeParam = searchParams.get('type') as SessionType | null;
-    
+
     if (typeParam && SESSION_CONFIGS[typeParam]) {
       openCheckout(typeParam);
     }
@@ -81,8 +85,13 @@ export default function Index() {
   return (
     <div className="min-h-screen bg-background">
       <LandingHeader />
-      
+
       <main>
+        {debugEnabled && (
+          <aside className="container pt-6">
+            <CheckoutDiagnostics defaultEmail={email} />
+          </aside>
+        )}
         <HeroSection onSelectSession={openCheckout} />
         <HowItWorksSection />
         <ProductsSection />
