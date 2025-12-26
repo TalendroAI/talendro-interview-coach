@@ -43,8 +43,8 @@ export function WelcomeMessage({
           title: 'Quick Prep Session',
           icon: '⚡',
           steps: [
-            { num: 1, text: 'Paste your **résumé text** in the sidebar', highlight: 'résumé text' },
-            { num: 2, text: 'Paste the **job description** in the sidebar', highlight: 'job description' },
+            { num: 1, text: 'Select, copy, and paste all of the contents from your **résumé** into the space provided.\n\n**Mac:** Press ⌘ + A (select), then ⌘ + C (copy), then click in the field and press ⌘ + V (paste)\n\n**Windows:** Press Ctrl + A (select), then Ctrl + C (copy), then click in the field and press Ctrl + V (paste)', highlight: 'résumé' },
+            { num: 2, text: 'Select, copy, and paste all of the contents from the **job description** into the space provided.\n\n**Mac:** Press ⌘ + A (select), then ⌘ + C (copy), then click in the field and press ⌘ + V (paste)\n\n**Windows:** Press Ctrl + A (select), then Ctrl + C (copy), then click in the field and press Ctrl + V (paste)', highlight: 'job description' },
             { num: 3, text: 'Enter the **company URL** in the sidebar', highlight: 'company URL' },
             { num: 4, text: 'Click "**📋 Save Documents & Begin**" in the sidebar', highlight: '📋 Save Documents & Begin' },
             { num: 5, text: 'Click "**Complete Session**" to finish and receive your summary', highlight: 'Complete Session' },
@@ -56,8 +56,8 @@ export function WelcomeMessage({
           title: 'Full Mock Interview',
           icon: '🎯',
           steps: [
-            { num: 1, text: 'Paste your **résumé text** in the sidebar', highlight: 'résumé text' },
-            { num: 2, text: 'Paste the **job description** in the sidebar', highlight: 'job description' },
+            { num: 1, text: 'Select, copy, and paste all of the contents from your **résumé** into the space provided.\n\n**Mac:** Press ⌘ + A (select), then ⌘ + C (copy), then click in the field and press ⌘ + V (paste)\n\n**Windows:** Press Ctrl + A (select), then Ctrl + C (copy), then click in the field and press Ctrl + V (paste)', highlight: 'résumé' },
+            { num: 2, text: 'Select, copy, and paste all of the contents from the **job description** into the space provided.\n\n**Mac:** Press ⌘ + A (select), then ⌘ + C (copy), then click in the field and press ⌘ + V (paste)\n\n**Windows:** Press Ctrl + A (select), then Ctrl + C (copy), then click in the field and press Ctrl + V (paste)', highlight: 'job description' },
             { num: 3, text: 'Enter the **company URL** in the sidebar', highlight: 'company URL' },
             { num: 4, text: 'Click "**📋 Save Documents & Begin**" in the sidebar', highlight: '📋 Save Documents & Begin' },
             { num: 5, text: 'Click "**Complete Session**" to finish and receive your summary', highlight: 'Complete Session' },
@@ -69,8 +69,8 @@ export function WelcomeMessage({
           title: 'Premium Audio Mock Interview',
           icon: '🎙️',
           steps: [
-            { num: 1, text: 'Paste your **résumé text** in the sidebar', highlight: 'résumé text' },
-            { num: 2, text: 'Paste the **job description** in the sidebar', highlight: 'job description' },
+            { num: 1, text: 'Select, copy, and paste all of the contents from your **résumé** into the space provided.\n\n**Mac:** Press ⌘ + A (select), then ⌘ + C (copy), then click in the field and press ⌘ + V (paste)\n\n**Windows:** Press Ctrl + A (select), then Ctrl + C (copy), then click in the field and press Ctrl + V (paste)', highlight: 'résumé' },
+            { num: 2, text: 'Select, copy, and paste all of the contents from the **job description** into the space provided.\n\n**Mac:** Press ⌘ + A (select), then ⌘ + C (copy), then click in the field and press ⌘ + V (paste)\n\n**Windows:** Press Ctrl + A (select), then Ctrl + C (copy), then click in the field and press Ctrl + V (paste)', highlight: 'job description' },
             { num: 3, text: 'Enter the **company URL** in the sidebar', highlight: 'company URL' },
             { num: 4, text: 'Click "**📋 Save Documents & Begin**" in the sidebar', highlight: '📋 Save Documents & Begin' },
             { num: 5, text: 'Click "**Complete Session**" to finish and receive your summary', highlight: 'Complete Session' },
@@ -82,8 +82,8 @@ export function WelcomeMessage({
           title: 'Pro Subscription',
           icon: '👑',
           steps: [
-            { num: 1, text: 'Paste your **résumé text** in the sidebar', highlight: 'résumé text' },
-            { num: 2, text: 'Paste the **job description** in the sidebar', highlight: 'job description' },
+            { num: 1, text: 'Select, copy, and paste all of the contents from your **résumé** into the space provided.\n\n**Mac:** Press ⌘ + A (select), then ⌘ + C (copy), then click in the field and press ⌘ + V (paste)\n\n**Windows:** Press Ctrl + A (select), then Ctrl + C (copy), then click in the field and press Ctrl + V (paste)', highlight: 'résumé' },
+            { num: 2, text: 'Select, copy, and paste all of the contents from the **job description** into the space provided.\n\n**Mac:** Press ⌘ + A (select), then ⌘ + C (copy), then click in the field and press ⌘ + V (paste)\n\n**Windows:** Press Ctrl + A (select), then Ctrl + C (copy), then click in the field and press Ctrl + V (paste)', highlight: 'job description' },
             { num: 3, text: 'Enter the **company URL** in the sidebar', highlight: 'company URL' },
             { num: 4, text: 'Click "**📋 Save Documents & Begin**" in the sidebar', highlight: '📋 Save Documents & Begin' },
             { num: 5, text: 'Click "**Complete Session**" to finish and receive your summary', highlight: 'Complete Session' },
