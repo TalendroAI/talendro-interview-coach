@@ -5,13 +5,14 @@ import { DocumentSidebar } from '@/components/DocumentSidebar';
 import { WelcomeMessage } from '@/components/WelcomeMessage';
 import { ChatInterface } from '@/components/ChatInterface';
 import { AudioInterface } from '@/components/AudioInterface';
+import { QuickPrepContent } from '@/components/QuickPrepContent';
 import { SessionCompletedDialog } from '@/components/SessionCompletedDialog';
 import { useSessionParams } from '@/hooks/useSessionParams';
 import { DocumentInputs } from '@/types/session';
 import { useToast } from '@/hooks/use-toast';
 import { verifyPayment } from '@/services/api';
+import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
-
 export default function InterviewCoach() {
   const { sessionType, userEmail } = useSessionParams();
   const [searchParams] = useSearchParams();
@@ -29,6 +30,11 @@ export default function InterviewCoach() {
   const [sessionId, setSessionId] = useState<string | undefined>();
   const [isDocumentsSaved, setIsDocumentsSaved] = useState(false);
   
+  // Quick Prep content state
+  const [quickPrepContent, setQuickPrepContent] = useState<string | null>(null);
+  const [isGeneratingContent, setIsGeneratingContent] = useState(false);
+  const [contentError, setContentError] = useState<string | null>(null);
+  
   // Completed session dialog state
   const [showCompletedDialog, setShowCompletedDialog] = useState(false);
   const [completedSessionResults, setCompletedSessionResults] = useState<any>(null);
@@ -41,13 +47,42 @@ export default function InterviewCoach() {
   const handleSaveDocuments = async () => {
     if (isResumeComplete && isJobComplete) {
       setIsDocumentsSaved(true);
-      toast({
-        title: 'Documents saved!',
-        description: 'Starting your session now...',
-      });
       
-      // Automatically start the session after saving documents
-      if (isPaymentVerified && sessionType) {
+      // For quick_prep, generate content immediately
+      if (isPaymentVerified && sessionType === 'quick_prep' && sessionId) {
+        setIsGeneratingContent(true);
+        setContentError(null);
+        setIsSessionStarted(true);
+        
+        try {
+          const { data, error } = await supabase.functions.invoke('ai-coach', {
+            body: {
+              session_id: sessionId,
+              session_type: sessionType,
+              resume: documents.resume,
+              job_description: documents.jobDescription,
+              company_url: documents.companyUrl,
+              is_initial: true
+            }
+          });
+          
+          if (error) {
+            throw new Error(error.message || 'Failed to generate content');
+          }
+          
+          if (data?.message) {
+            setQuickPrepContent(data.message);
+          } else {
+            throw new Error('No content received from AI');
+          }
+        } catch (err) {
+          console.error('Error generating Quick Prep content:', err);
+          setContentError(err instanceof Error ? err.message : 'Failed to generate content');
+        } finally {
+          setIsGeneratingContent(false);
+        }
+      } else if (isPaymentVerified && sessionType) {
+        // For other session types, just start the session
         setIsLoading(true);
         setTimeout(() => {
           setIsSessionStarted(true);
@@ -168,6 +203,17 @@ export default function InterviewCoach() {
           isPaymentVerified={isPaymentVerified}
           isReady={isDocumentsReady}
           onStartSession={handleStartSession}
+        />
+      );
+    }
+
+    // For quick_prep, show the generated content
+    if (sessionType === 'quick_prep') {
+      return (
+        <QuickPrepContent 
+          content={quickPrepContent}
+          isLoading={isGeneratingContent}
+          error={contentError}
         />
       );
     }
