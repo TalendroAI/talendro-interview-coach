@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { SessionType } from "@/types/session";
+import { SessionType, DiscountValidation } from "@/types/session";
 
 export interface VerifyPaymentResponse {
   verified: boolean;
@@ -20,11 +20,105 @@ export interface VerifyPaymentResponse {
   message?: string;
 }
 
-export async function createCheckout(sessionType: SessionType, email: string): Promise<string> {
-  console.log('[FRONTEND] Calling create-checkout edge function', { sessionType, email });
+export interface CheckUpgradeResponse {
+  hasUpgradeCredit: boolean;
+  upgradeCredit: number;
+  upgradedFromType?: SessionType;
+  upgradedFromSessionId?: string;
+}
+
+export async function checkUpgradeCredit(email: string, targetSessionType: SessionType): Promise<CheckUpgradeResponse> {
+  // Check for recent purchases in the last 24 hours that qualify for upgrade credit
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  
+  const TIER_ORDER: SessionType[] = ['quick_prep', 'full_mock', 'premium_audio', 'pro'];
+  const PRICE_MAP: Record<SessionType, number> = {
+    quick_prep: 1200,
+    full_mock: 2900,
+    premium_audio: 4900,
+    pro: 7900,
+  };
+  
+  const currentTierIndex = TIER_ORDER.indexOf(targetSessionType);
+  
+  const { data: recentSessions, error } = await supabase
+    .from("coaching_sessions")
+    .select("*")
+    .eq("email", email)
+    .eq("status", "active")
+    .gte("created_at", twentyFourHoursAgo)
+    .order("created_at", { ascending: false });
+
+  if (error || !recentSessions || recentSessions.length === 0) {
+    return { hasUpgradeCredit: false, upgradeCredit: 0 };
+  }
+
+  let upgradeCredit = 0;
+  let upgradedFromType: SessionType | undefined;
+  let upgradedFromSessionId: string | undefined;
+
+  for (const session of recentSessions) {
+    const sessionType = session.session_type as SessionType;
+    const sessionTierIndex = TIER_ORDER.indexOf(sessionType);
+    
+    // Only apply credit if upgrading to a higher tier
+    if (sessionTierIndex >= 0 && sessionTierIndex < currentTierIndex) {
+      const sessionPrice = PRICE_MAP[sessionType];
+      if (sessionPrice > upgradeCredit) {
+        upgradeCredit = sessionPrice;
+        upgradedFromType = sessionType;
+        upgradedFromSessionId = session.id;
+      }
+    }
+  }
+
+  return {
+    hasUpgradeCredit: upgradeCredit > 0,
+    upgradeCredit,
+    upgradedFromType,
+    upgradedFromSessionId,
+  };
+}
+
+export async function validateDiscountCode(
+  code: string,
+  email: string,
+  sessionType: SessionType
+): Promise<DiscountValidation> {
+  const { data, error } = await supabase.functions.invoke("validate-discount", {
+    body: { code, email, session_type: sessionType },
+  });
+
+  if (error) {
+    console.error("Validate discount error:", error);
+    return { valid: false, error: "Failed to validate code" };
+  }
+
+  return data;
+}
+
+export interface CreateCheckoutOptions {
+  sessionType: SessionType;
+  email: string;
+  discountCodeId?: string;
+  discountPercent?: number;
+}
+
+export async function createCheckout(
+  sessionType: SessionType, 
+  email: string,
+  discountCodeId?: string,
+  discountPercent?: number
+): Promise<string> {
+  console.log('[FRONTEND] Calling create-checkout edge function', { sessionType, email, discountCodeId, discountPercent });
 
   const { data, error } = await supabase.functions.invoke("create-checkout", {
-    body: { session_type: sessionType, email },
+    body: { 
+      session_type: sessionType, 
+      email,
+      discount_code_id: discountCodeId,
+      discount_percent: discountPercent,
+    },
   });
 
   console.log('[FRONTEND] Edge function response:', { data, error });

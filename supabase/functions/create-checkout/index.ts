@@ -31,7 +31,7 @@ serve(async (req) => {
   try {
     logStep("Function started");
     
-    const { session_type, email } = await req.json();
+    const { session_type, email, discount_code_id, discount_percent } = await req.json();
     
     if (!session_type || !PRICE_CONFIG[session_type as keyof typeof PRICE_CONFIG]) {
       throw new Error("Invalid session type");
@@ -41,7 +41,7 @@ serve(async (req) => {
       throw new Error("Email is required");
     }
 
-    logStep("Request validated", { session_type, email });
+    logStep("Request validated", { session_type, email, discount_code_id, discount_percent });
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
@@ -62,6 +62,7 @@ serve(async (req) => {
     } catch (e) {
       logStep("Stripe account mode lookup failed", { message: String(e) });
     }
+    
     // Check if customer exists
     const customers = await stripe.customers.list({ email, limit: 1 });
     let customerId;
@@ -118,6 +119,31 @@ serve(async (req) => {
       }
     }
 
+    // Calculate promo discount (applied AFTER upgrade credit)
+    let promoDiscountAmount = 0;
+    if (discount_percent && discount_percent > 0) {
+      // Calculate discount on the REMAINING amount after upgrade credit
+      const priceAfterUpgrade = priceConfig.amount - upgradeCredit;
+      promoDiscountAmount = Math.floor(priceAfterUpgrade * (discount_percent / 100));
+      logStep("Promo discount calculated", { 
+        discount_percent,
+        priceAfterUpgrade: priceAfterUpgrade / 100,
+        promoDiscountAmount: promoDiscountAmount / 100 
+      });
+    }
+
+    // Total discount (upgrade credit + promo)
+    const totalDiscount = upgradeCredit + promoDiscountAmount;
+    const finalPrice = Math.max(0, priceConfig.amount - totalDiscount);
+
+    logStep("Final pricing", {
+      originalPrice: priceConfig.amount / 100,
+      upgradeCredit: upgradeCredit / 100,
+      promoDiscount: promoDiscountAmount / 100,
+      totalDiscount: totalDiscount / 100,
+      finalPrice: finalPrice / 100,
+    });
+
     // Create a pending session in database
     const { data: sessionData, error: sessionError } = await supabaseClient
       .from("coaching_sessions")
@@ -135,6 +161,24 @@ serve(async (req) => {
     }
 
     logStep("Created pending session", { sessionId: sessionData.id });
+
+    // Record the discount code usage if a code was applied
+    if (discount_code_id && promoDiscountAmount > 0) {
+      const { error: usageError } = await supabaseClient
+        .from("discount_code_usage")
+        .insert({
+          code_id: discount_code_id,
+          email: email.toLowerCase().trim(),
+          session_id: sessionData.id,
+        });
+
+      if (usageError) {
+        logStep("Warning: Failed to record discount usage", { error: usageError });
+        // Don't throw - we still want to proceed with checkout
+      } else {
+        logStep("Recorded discount code usage", { code_id: discount_code_id, email });
+      }
+    }
 
     const origin = req.headers.get("origin") || "https://coach.talendro.com";
     
@@ -157,25 +201,33 @@ serve(async (req) => {
         session_type,
         upgraded_from_session: upgradedFromSession?.id || null,
         upgrade_credit_applied: upgradeCredit > 0 ? (upgradeCredit / 100).toString() : null,
+        promo_discount_applied: promoDiscountAmount > 0 ? (promoDiscountAmount / 100).toString() : null,
+        discount_code_id: discount_code_id || null,
       },
     };
 
-    // Apply upgrade credit as a coupon if applicable
-    if (upgradeCredit > 0 && !isSubscription) {
-      // Create a one-time coupon for the upgrade credit
+    // Apply combined discount as a single coupon if there's any discount
+    if (totalDiscount > 0 && !isSubscription) {
+      // Create a one-time coupon for the total discount
+      const couponName = upgradeCredit > 0 && promoDiscountAmount > 0
+        ? `Upgrade + Promo discount`
+        : upgradeCredit > 0
+          ? `Upgrade credit from ${upgradedFromSession?.session_type}`
+          : `Promo discount (${discount_percent}% off)`;
+
       const coupon = await stripe.coupons.create({
-        amount_off: upgradeCredit,
+        amount_off: totalDiscount,
         currency: "usd",
         duration: "once",
-        name: `Upgrade credit from ${upgradedFromSession?.session_type}`,
+        name: couponName,
         max_redemptions: 1,
       });
       
-      logStep("Created upgrade coupon", { 
+      logStep("Created discount coupon", { 
         couponId: coupon.id, 
-        amountOff: upgradeCredit / 100,
+        amountOff: totalDiscount / 100,
         originalPrice: priceConfig.amount / 100,
-        finalPrice: (priceConfig.amount - upgradeCredit) / 100
+        finalPrice: finalPrice / 100
       });
 
       checkoutOptions.discounts = [{ coupon: coupon.id }];
@@ -206,7 +258,7 @@ serve(async (req) => {
       checkoutLivemode: (checkoutSession as any).livemode ?? null,
       urlHasTestPrefix:
         typeof checkoutSession.url === "string" ? checkoutSession.url.includes("/test_") : null,
-      upgradeCreditApplied: upgradeCredit > 0 ? upgradeCredit / 100 : 0,
+      totalDiscountApplied: totalDiscount > 0 ? totalDiscount / 100 : 0,
     });
 
     return new Response(
@@ -218,8 +270,9 @@ serve(async (req) => {
           checkout_url_host: checkoutUrlHost,
         },
         upgrade_credit_applied: upgradeCredit > 0 ? upgradeCredit / 100 : 0,
+        promo_discount_applied: promoDiscountAmount > 0 ? promoDiscountAmount / 100 : 0,
         original_price: priceConfig.amount / 100,
-        final_price: (priceConfig.amount - upgradeCredit) / 100,
+        final_price: finalPrice / 100,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.elevenlabs-conversation-token]
 verify_jwt = false
+
+[functions.validate-discount]
+verify_jwt = false
