@@ -45,6 +45,11 @@ serve(async (req) => {
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
+    
+    // Log key type (without exposing actual key)
+    const keyType = stripeKey.startsWith('sk_live_') ? 'LIVE' : 
+                    stripeKey.startsWith('sk_test_') ? 'TEST' : 'UNKNOWN';
+    logStep("Stripe key type", { keyType });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     
@@ -135,7 +140,7 @@ serve(async (req) => {
         },
       ],
       mode: isSubscription ? "subscription" : "payment",
-      payment_method_types: ["card"], // Explicitly use only card to disable Link
+      ui_mode: "hosted", // Force standard Checkout UI
       success_url: `${origin}/interview-coach?session_type=${session_type}&email=${encodeURIComponent(email)}&checkout_session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/?canceled=true`,
       metadata: {
