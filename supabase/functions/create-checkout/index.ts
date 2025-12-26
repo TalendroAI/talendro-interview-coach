@@ -7,13 +7,16 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Stripe Price IDs from your existing products
+// Stripe Price IDs and amounts from your existing products
 const PRICE_CONFIG = {
-  quick_prep: "price_1SUJpOCoFieNARvY61k4XFm3", // $12
-  full_mock: "price_1SUJX1CoFieNARvYE286d1lq", // $29
-  premium_audio: "price_1SUJwECoFieNARvYch9Y4PAY", // $49
-  pro: "price_1SX74aCoFieNARvY06cE5g5e", // $79/month
+  quick_prep: { price_id: "price_1SUJpOCoFieNARvY61k4XFm3", amount: 1200 }, // $12 in cents
+  full_mock: { price_id: "price_1SUJX1CoFieNARvYE286d1lq", amount: 2900 }, // $29 in cents
+  premium_audio: { price_id: "price_1SUJwECoFieNARvYch9Y4PAY", amount: 4900 }, // $49 in cents
+  pro: { price_id: "price_1SX74aCoFieNARvY06cE5g5e", amount: 7900, recurring: true }, // $79/month in cents
 };
+
+// Product tier order (lowest to highest)
+const TIER_ORDER = ["quick_prep", "full_mock", "premium_audio", "pro"];
 
 const logStep = (step: string, details?: any) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
@@ -53,14 +56,53 @@ serve(async (req) => {
       logStep("Found existing customer", { customerId });
     }
 
-    const priceId = PRICE_CONFIG[session_type as keyof typeof PRICE_CONFIG];
+    const priceConfig = PRICE_CONFIG[session_type as keyof typeof PRICE_CONFIG];
+    const priceId = priceConfig.price_id;
     const isSubscription = session_type === "pro";
+    const currentTierIndex = TIER_ORDER.indexOf(session_type);
 
     // Create Supabase client
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
+
+    // Check for upgrade credit - look for purchases within last 24 hours
+    let upgradeCredit = 0;
+    let upgradedFromSession = null;
+    
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    
+    const { data: recentSessions, error: recentError } = await supabaseClient
+      .from("coaching_sessions")
+      .select("*")
+      .eq("email", email)
+      .eq("status", "active")
+      .gte("created_at", twentyFourHoursAgo)
+      .order("created_at", { ascending: false });
+
+    if (!recentError && recentSessions && recentSessions.length > 0) {
+      logStep("Found recent sessions", { count: recentSessions.length });
+      
+      // Find the highest tier purchase within 24 hours that is lower than current purchase
+      for (const session of recentSessions) {
+        const sessionTierIndex = TIER_ORDER.indexOf(session.session_type);
+        
+        // Only apply credit if upgrading to a higher tier
+        if (sessionTierIndex >= 0 && sessionTierIndex < currentTierIndex) {
+          const sessionPrice = PRICE_CONFIG[session.session_type as keyof typeof PRICE_CONFIG];
+          if (sessionPrice && sessionPrice.amount > upgradeCredit) {
+            upgradeCredit = sessionPrice.amount;
+            upgradedFromSession = session;
+            logStep("Upgrade credit found", { 
+              from: session.session_type, 
+              credit: upgradeCredit / 100,
+              sessionId: session.id 
+            });
+          }
+        }
+      }
+    }
 
     // Create a pending session in database
     const { data: sessionData, error: sessionError } = await supabaseClient
@@ -82,8 +124,8 @@ serve(async (req) => {
 
     const origin = req.headers.get("origin") || "https://coach.talendro.com";
     
-    // Create checkout session with Link disabled for streamlined experience
-    const checkoutSession = await stripe.checkout.sessions.create({
+    // Build checkout session options
+    const checkoutOptions: Stripe.Checkout.SessionCreateParams = {
       customer: customerId,
       customer_email: customerId ? undefined : email,
       line_items: [
@@ -99,8 +141,34 @@ serve(async (req) => {
       metadata: {
         session_id: sessionData.id,
         session_type,
+        upgraded_from_session: upgradedFromSession?.id || null,
+        upgrade_credit_applied: upgradeCredit > 0 ? (upgradeCredit / 100).toString() : null,
       },
-    });
+    };
+
+    // Apply upgrade credit as a coupon if applicable
+    if (upgradeCredit > 0 && !isSubscription) {
+      // Create a one-time coupon for the upgrade credit
+      const coupon = await stripe.coupons.create({
+        amount_off: upgradeCredit,
+        currency: "usd",
+        duration: "once",
+        name: `Upgrade credit from ${upgradedFromSession?.session_type}`,
+        max_redemptions: 1,
+      });
+      
+      logStep("Created upgrade coupon", { 
+        couponId: coupon.id, 
+        amountOff: upgradeCredit / 100,
+        originalPrice: priceConfig.amount / 100,
+        finalPrice: (priceConfig.amount - upgradeCredit) / 100
+      });
+
+      checkoutOptions.discounts = [{ coupon: coupon.id }];
+    }
+
+    // Create checkout session
+    const checkoutSession = await stripe.checkout.sessions.create(checkoutOptions);
 
     // Update session with checkout session ID
     await supabaseClient
@@ -108,9 +176,17 @@ serve(async (req) => {
       .update({ stripe_checkout_session_id: checkoutSession.id })
       .eq("id", sessionData.id);
 
-    logStep("Checkout session created", { checkoutSessionId: checkoutSession.id });
+    logStep("Checkout session created", { 
+      checkoutSessionId: checkoutSession.id,
+      upgradeCreditApplied: upgradeCredit > 0 ? upgradeCredit / 100 : 0
+    });
 
-    return new Response(JSON.stringify({ url: checkoutSession.url }), {
+    return new Response(JSON.stringify({ 
+      url: checkoutSession.url,
+      upgrade_credit_applied: upgradeCredit > 0 ? upgradeCredit / 100 : 0,
+      original_price: priceConfig.amount / 100,
+      final_price: (priceConfig.amount - upgradeCredit) / 100,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
