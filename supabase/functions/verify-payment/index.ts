@@ -23,24 +23,35 @@ const logStep = (step: string, details?: any) => {
 // Generate email HTML for new/standard purchase (Template A)
 const generateNewPurchaseEmail = (sessionType: string, email: string) => {
   const productName = PRICE_CONFIG[sessionType as keyof typeof PRICE_CONFIG]?.name || "Interview Coaching Session";
+  const sessionUrl = `https://coach.talendro.com/interview-coach?session_type=${sessionType}&email=${encodeURIComponent(email)}`;
   
   return `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.8; color: #2C2F38; margin: 0; padding: 0; background-color: #f5f5f5; }
     .container { max-width: 600px; margin: 0 auto; background: #ffffff; }
     .header { background: linear-gradient(135deg, #2F6DF6, #00C4CC); padding: 40px 30px; text-align: center; }
+    .logo { margin-bottom: 16px; }
+    .logo img { height: 48px; width: auto; }
     .header h1 { color: white; margin: 0; font-size: 28px; font-weight: 600; }
+    .header p { color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 16px; }
     .content { padding: 40px 30px; }
     .content p { margin: 16px 0; font-size: 16px; }
     .product-box { background: #f8fafc; border-left: 4px solid #2F6DF6; padding: 20px; margin: 24px 0; border-radius: 0 8px 8px 0; }
     .product-box h3 { margin: 0 0 8px 0; color: #2F6DF6; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .product-box p { margin: 0; font-size: 18px; font-weight: 600; color: #2C2F38; }
-    .cta { display: inline-block; background: #2F6DF6; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 24px 0; }
+    .product-box a { margin: 0; font-size: 18px; font-weight: 600; color: #2C2F38; text-decoration: none; }
+    .product-box a:hover { color: #2F6DF6; text-decoration: underline; }
+    .cta-container { text-align: center; margin: 32px 0; }
+    .cta { display: inline-block; background: #2F6DF6; color: #ffffff !important; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; }
     .cta:hover { background: #1e5bc6; }
+    .what-next { background: #f0f9ff; border-radius: 8px; padding: 20px; margin: 24px 0; }
+    .what-next h3 { margin: 0 0 12px 0; color: #2F6DF6; font-size: 16px; }
+    .what-next ul { margin: 0; padding-left: 20px; }
+    .what-next li { margin: 8px 0; color: #374151; }
     .signature { margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb; }
     .signature p { margin: 8px 0; }
     .footer { background: #2C2F38; color: white; padding: 30px; text-align: center; }
@@ -53,36 +64,50 @@ const generateNewPurchaseEmail = (sessionType: string, email: string) => {
 <body>
   <div class="container">
     <div class="header">
-      <h1>Welcome to Talendro™ 🎯</h1>
+      <div class="logo">
+        <img src="https://coach.talendro.com/lovable-uploads/8bf31ef0-e857-4727-8133-f6e8a4af6e90.png" alt="Talendro Logo" />
+      </div>
+      <h1>Welcome to Talendro&trade;</h1>
+      <p>Your interview coaching session is ready</p>
     </div>
     <div class="content">
       <p>Hi There!</p>
       
-      <p>Thank you for choosing <strong>Talendro™ Interview Coach</strong>! Your purchase is confirmed and your session is ready to begin.</p>
+      <p>Thank you for choosing <strong>Talendro&trade; Interview Coach</strong>! Your purchase is confirmed and your session is ready to begin.</p>
       
       <div class="product-box">
         <h3>Your Purchase</h3>
-        <p>${productName}</p>
+        <a href="${sessionUrl}">${productName}</a>
       </div>
       
       <p>You now have access to everything included in your plan. Our AI-powered coaching system is designed to help you walk into your next interview with confidence.</p>
       
-      <p>Ready to get started? Head back to your session to begin your preparation.</p>
+      <div class="what-next">
+        <h3>What Happens Next?</h3>
+        <ul>
+          <li>Click the button below to start your session</li>
+          <li>Upload your resume and job description for personalized coaching</li>
+          <li>Complete your session and receive detailed feedback</li>
+          <li>Get your results emailed to you automatically</li>
+        </ul>
+      </div>
       
-      <a href="https://coach.talendro.com/interview-coach?session_type=${sessionType}&email=${encodeURIComponent(email)}" class="cta">Start Your Session</a>
+      <div class="cta-container">
+        <a href="${sessionUrl}" class="cta">Start Your Session</a>
+      </div>
       
       <p>If you have any questions or need assistance, simply reply to this email. We're here to help you succeed.</p>
       
       <div class="signature">
         <p>Let's ace your next interview together.</p>
-        <p><strong>— Greg Jackson</strong><br>Founder, Talendro™</p>
+        <p><strong>&mdash; Greg Jackson</strong><br>Founder, Talendro&trade;</p>
       </div>
     </div>
     <div class="footer">
       <p class="tagline">Precision Matches. Faster Results.</p>
-      <p><strong>Talendro™</strong></p>
-      <p class="badges">🇺🇸 American-Built • 🎖️ Veteran-Led • ✔ Recruiter-Tested</p>
-      <p class="copyright">© ${new Date().getFullYear()} Talendro. All rights reserved.</p>
+      <p><strong>Talendro&trade;</strong></p>
+      <p class="badges">&#127482;&#127480; American-Built &bull; &#127894; Veteran-Led &bull; &#10004; Recruiter-Tested</p>
+      <p class="copyright">&copy; ${new Date().getFullYear()} Talendro. All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -94,28 +119,39 @@ const generateNewPurchaseEmail = (sessionType: string, email: string) => {
 const generateUpgradeEmail = (sessionType: string, email: string, upgradeCredit: number, previousPurchase: string) => {
   const productName = PRICE_CONFIG[sessionType as keyof typeof PRICE_CONFIG]?.name || "Interview Coaching Session";
   const previousProductName = PRICE_CONFIG[previousPurchase as keyof typeof PRICE_CONFIG]?.name || previousPurchase;
+  const sessionUrl = `https://coach.talendro.com/interview-coach?session_type=${sessionType}&email=${encodeURIComponent(email)}`;
   
   return `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.8; color: #2C2F38; margin: 0; padding: 0; background-color: #f5f5f5; }
     .container { max-width: 600px; margin: 0 auto; background: #ffffff; }
     .header { background: linear-gradient(135deg, #2F6DF6, #00C4CC); padding: 40px 30px; text-align: center; }
+    .logo { margin-bottom: 16px; }
+    .logo img { height: 48px; width: auto; }
     .header h1 { color: white; margin: 0; font-size: 28px; font-weight: 600; }
+    .header p { color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 16px; }
     .content { padding: 40px 30px; }
     .content p { margin: 16px 0; font-size: 16px; }
     .product-box { background: #f8fafc; border-left: 4px solid #2F6DF6; padding: 20px; margin: 24px 0; border-radius: 0 8px 8px 0; }
     .product-box h3 { margin: 0 0 8px 0; color: #2F6DF6; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .product-box p { margin: 0; font-size: 18px; font-weight: 600; color: #2C2F38; }
+    .product-box a { margin: 0; font-size: 18px; font-weight: 600; color: #2C2F38; text-decoration: none; }
+    .product-box a:hover { color: #2F6DF6; text-decoration: underline; }
     .upgrade-details { background: #ecfdf5; border: 1px solid #10b981; padding: 20px; margin: 24px 0; border-radius: 8px; }
     .upgrade-details h3 { margin: 0 0 12px 0; color: #059669; font-size: 16px; }
     .upgrade-details ul { margin: 0; padding-left: 20px; }
     .upgrade-details li { margin: 8px 0; color: #065f46; }
-    .cta { display: inline-block; background: #2F6DF6; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 24px 0; }
+    .cta-container { text-align: center; margin: 32px 0; }
+    .cta { display: inline-block; background: #2F6DF6; color: #ffffff !important; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; }
     .cta:hover { background: #1e5bc6; }
+    .what-next { background: #f0f9ff; border-radius: 8px; padding: 20px; margin: 24px 0; }
+    .what-next h3 { margin: 0 0 12px 0; color: #2F6DF6; font-size: 16px; }
+    .what-next ul { margin: 0; padding-left: 20px; }
+    .what-next li { margin: 8px 0; color: #374151; }
     .signature { margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb; }
     .signature p { margin: 8px 0; }
     .footer { background: #2C2F38; color: white; padding: 30px; text-align: center; }
@@ -128,20 +164,24 @@ const generateUpgradeEmail = (sessionType: string, email: string, upgradeCredit:
 <body>
   <div class="container">
     <div class="header">
-      <h1>Your Upgrade Is Complete 🚀</h1>
+      <div class="logo">
+        <img src="https://coach.talendro.com/lovable-uploads/8bf31ef0-e857-4727-8133-f6e8a4af6e90.png" alt="Talendro Logo" />
+      </div>
+      <h1>Your Upgrade Is Complete</h1>
+      <p>You're now on a more powerful plan</p>
     </div>
     <div class="content">
       <p>Hi There!</p>
       
-      <p>Thank you for upgrading your Talendro™ experience! Your new plan is now active and ready to go.</p>
+      <p>Thank you for upgrading your Talendro&trade; experience! Your new plan is now active and ready to go.</p>
       
       <div class="product-box">
         <h3>Your Upgraded Plan</h3>
-        <p>${productName}</p>
+        <a href="${sessionUrl}">${productName}</a>
       </div>
       
       <div class="upgrade-details">
-        <h3>💰 Upgrade Credit Applied</h3>
+        <h3>&#128176; Upgrade Credit Applied</h3>
         <ul>
           <li><strong>Previous purchase:</strong> ${previousProductName}</li>
           <li><strong>Credit applied:</strong> $${(upgradeCredit / 100).toFixed(2)}</li>
@@ -151,20 +191,31 @@ const generateUpgradeEmail = (sessionType: string, email: string, upgradeCredit:
       
       <p>You now have full access to everything included in your enhanced plan. We're excited to help you take your interview preparation to the next level.</p>
       
-      <a href="https://coach.talendro.com/interview-coach?session_type=${sessionType}&email=${encodeURIComponent(email)}" class="cta">Continue Your Session</a>
+      <div class="what-next">
+        <h3>What's Included in Your Upgrade?</h3>
+        <ul>
+          <li>Enhanced AI coaching with deeper analysis</li>
+          <li>More comprehensive feedback and recommendations</li>
+          <li>Access to all features in your new tier</li>
+        </ul>
+      </div>
+      
+      <div class="cta-container">
+        <a href="${sessionUrl}" class="cta">Continue Your Session</a>
+      </div>
       
       <p>If you'd like guidance, strategic prep advice, or help getting the most from your new plan, reply to this email anytime. You've got support here.</p>
       
       <div class="signature">
         <p>Let's strengthen your next interview together.</p>
-        <p><strong>— Greg Jackson</strong><br>Founder, Talendro™</p>
+        <p><strong>&mdash; Greg Jackson</strong><br>Founder, Talendro&trade;</p>
       </div>
     </div>
     <div class="footer">
       <p class="tagline">Precision Matches. Faster Results.</p>
-      <p><strong>Talendro™</strong></p>
-      <p class="badges">🇺🇸 American-Built • 🎖️ Veteran-Led • ✔ Recruiter-Tested</p>
-      <p class="copyright">© ${new Date().getFullYear()} Talendro. All rights reserved.</p>
+      <p><strong>Talendro&trade;</strong></p>
+      <p class="badges">&#127482;&#127480; American-Built &bull; &#127894; Veteran-Led &bull; &#10004; Recruiter-Tested</p>
+      <p class="copyright">&copy; ${new Date().getFullYear()} Talendro. All rights reserved.</p>
     </div>
   </div>
 </body>
