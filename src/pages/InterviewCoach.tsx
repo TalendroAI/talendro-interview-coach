@@ -35,6 +35,10 @@ export default function InterviewCoach() {
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
   const [contentError, setContentError] = useState<string | null>(null);
   
+  // Mock Interview completion state
+  const [mockInterviewMessages, setMockInterviewMessages] = useState<any[]>([]);
+  const [isMockInterviewComplete, setIsMockInterviewComplete] = useState(false);
+  
   // Completed session dialog state
   const [showCompletedDialog, setShowCompletedDialog] = useState(false);
   const [completedSessionResults, setCompletedSessionResults] = useState<any>(null);
@@ -146,6 +150,12 @@ export default function InterviewCoach() {
     checkPayment();
   }, [sessionType, userEmail, searchParams]);
 
+  // Callback when mock interview is complete
+  const handleMockInterviewComplete = (messages: any[]) => {
+    setMockInterviewMessages(messages);
+    setIsMockInterviewComplete(true);
+  };
+
   const handleStartSession = async () => {
     if (!sessionType) {
       toast({
@@ -156,7 +166,8 @@ export default function InterviewCoach() {
       return;
     }
 
-    if (!quickPrepContent) {
+    // For quick_prep, we need the content ready
+    if (sessionType === 'quick_prep' && !quickPrepContent) {
       toast({
         title: 'Content not ready',
         description: 'Please wait for your prep materials to finish generating.',
@@ -165,16 +176,55 @@ export default function InterviewCoach() {
       return;
     }
 
+    // For full_mock, we need the interview to be complete
+    if (sessionType === 'full_mock' && !isMockInterviewComplete) {
+      toast({
+        title: 'Interview not complete',
+        description: 'Please complete all interview questions before getting your results.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsLoading(true);
     
     try {
+      // Prepare the content to send based on session type
+      let contentToSend = '';
+      let resultsToSend = null;
+
+      if (sessionType === 'quick_prep') {
+        contentToSend = quickPrepContent || '';
+      } else if (sessionType === 'full_mock') {
+        // Combine all messages into a comprehensive report
+        const allContent = mockInterviewMessages
+          .map(m => `**${m.role === 'user' ? 'Your Answer' : 'Coach'}:**\n${m.content}`)
+          .join('\n\n---\n\n');
+        contentToSend = allContent;
+        
+        // Try to extract score from the final message
+        const lastAssistantMessage = mockInterviewMessages
+          .filter(m => m.role === 'assistant')
+          .pop();
+        
+        if (lastAssistantMessage) {
+          const scoreMatch = lastAssistantMessage.content.match(/(\d+)\s*(?:\/\s*100|out of 100)/i);
+          if (scoreMatch) {
+            resultsToSend = {
+              overall_score: parseInt(scoreMatch[1], 10),
+            };
+          }
+        }
+      }
+
       // Send the materials via email
       const { data, error } = await supabase.functions.invoke('send-results', {
         body: {
           session_id: sessionId,
           email: userEmail,
           session_type: sessionType,
-          prep_content: quickPrepContent,
+          prep_content: contentToSend,
+          results: resultsToSend,
         }
       });
 
@@ -183,14 +233,14 @@ export default function InterviewCoach() {
       }
 
       toast({
-        title: 'Materials sent!',
-        description: 'Your prep materials have been emailed to you.',
+        title: 'Results sent!',
+        description: 'Your interview results have been emailed to you.',
       });
     } catch (err) {
       console.error('Error sending results:', err);
       toast({
         title: 'Error sending email',
-        description: err instanceof Error ? err.message : 'Failed to send your materials. Please try again.',
+        description: err instanceof Error ? err.message : 'Failed to send your results. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -254,6 +304,7 @@ export default function InterviewCoach() {
         isActive={isSessionStarted}
         sessionId={sessionId}
         documents={documents}
+        onInterviewComplete={handleMockInterviewComplete}
       />
     );
   };
@@ -274,7 +325,11 @@ export default function InterviewCoach() {
           isPaymentVerified={isPaymentVerified}
           onSaveDocuments={handleSaveDocuments}
           isDocumentsSaved={isDocumentsSaved}
-          isContentReady={!!quickPrepContent && !isGeneratingContent}
+          isContentReady={
+            (sessionType === 'quick_prep' && !!quickPrepContent && !isGeneratingContent) ||
+            (sessionType === 'full_mock' && isMockInterviewComplete) ||
+            (sessionType === 'premium_audio' && isSessionStarted)
+          }
         />
         
         {/* Main Content */}

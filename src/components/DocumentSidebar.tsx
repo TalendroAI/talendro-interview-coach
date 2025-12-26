@@ -1,4 +1,4 @@
-import { Save } from 'lucide-react';
+import { Save, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -165,15 +165,18 @@ export function DocumentSidebar({
       {/* 5. Complete Session Button */}
       <div className="border-t border-border p-5">
         <div className="flex items-start gap-2">
-          <span className="flex items-center justify-center h-6 w-6 rounded-full bg-destructive text-destructive-foreground text-xs font-bold mt-1">
+          <span className={cn(
+            "flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold mt-1",
+            canCompleteSession ? "bg-secondary text-secondary-foreground" : "bg-muted text-muted-foreground"
+          )}>
             5
           </span>
           <Button
-            variant={isSessionStarted ? "destructive" : "default"}
+            variant={canCompleteSession ? "default" : "outline"}
             size="lg"
             className={cn(
               "flex-1 font-semibold shadow-sm hover:shadow-md transition-all disabled:bg-muted disabled:text-muted-foreground",
-              !isSessionStarted && canCompleteSession && "bg-primary hover:bg-primary/90"
+              canCompleteSession && "bg-secondary hover:bg-secondary/90 text-secondary-foreground"
             )}
             onClick={onStartSession}
             disabled={!canCompleteSession || isLoading}
@@ -181,10 +184,13 @@ export function DocumentSidebar({
             {isLoading ? (
               <>
                 <span className="animate-spin mr-2">⏳</span>
-                Starting...
+                Sending Results...
               </>
             ) : (
-              <>Complete Session</>
+              <>
+                <Send className="h-4 w-4 mr-2" />
+                Complete Session & Get Results
+              </>
             )}
           </Button>
         </div>
@@ -192,6 +198,12 @@ export function DocumentSidebar({
         {!isPaymentVerified && !isSessionStarted && (
           <p className="text-xs text-destructive text-center font-medium mt-4">
             Please complete your purchase to start
+          </p>
+        )}
+        
+        {isSessionStarted && !canCompleteSession && sessionType === 'full_mock' && (
+          <p className="text-xs text-muted-foreground text-center mt-4">
+            Complete all interview questions to unlock your results
           </p>
         )}
       </div>
