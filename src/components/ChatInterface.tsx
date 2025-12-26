@@ -19,16 +19,24 @@ interface ChatInterfaceProps {
   isActive: boolean;
   sessionId?: string;
   documents: DocumentInputs;
+  onInterviewComplete?: (messages: Message[]) => void;
 }
 
-export function ChatInterface({ sessionType, isActive, sessionId, documents }: ChatInterfaceProps) {
+export function ChatInterface({ sessionType, isActive, sessionId, documents, onInterviewComplete }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isInterviewComplete, setIsInterviewComplete] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const config = SESSION_CONFIGS[sessionType];
   const { toast } = useToast();
+
+  // Check if the interview is complete by looking for the completion marker
+  const checkInterviewComplete = (content: string) => {
+    const completionMarkers = ['## INTERVIEW COMPLETE', '**INTERVIEW COMPLETE**', 'INTERVIEW COMPLETE'];
+    return completionMarkers.some(marker => content.toUpperCase().includes(marker.toUpperCase()));
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -106,7 +114,19 @@ export function ChatInterface({ sessionType, isActive, sessionId, documents }: C
         content: response,
         timestamp: new Date(),
       };
-      setMessages((prev) => [...prev, assistantMessage]);
+      
+      const updatedMessages = [...messages, userMessage, assistantMessage];
+      setMessages(updatedMessages);
+      
+      // Check if interview is complete
+      if (checkInterviewComplete(response) && !isInterviewComplete) {
+        setIsInterviewComplete(true);
+        onInterviewComplete?.(updatedMessages);
+        toast({
+          title: 'Interview Complete!',
+          description: 'Click "Complete Session & Get Results" to receive your detailed report.',
+        });
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
