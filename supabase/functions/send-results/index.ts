@@ -22,7 +22,7 @@ serve(async (req) => {
   try {
     logStep("Function started");
     
-    const { session_id, email, session_type, results } = await req.json();
+    const { session_id, email, session_type, results, prep_content } = await req.json();
 
     if (!session_id || !email) {
       throw new Error("session_id and email are required");
@@ -52,6 +52,20 @@ serve(async (req) => {
 
     const sessionLabel = sessionTypeLabels[session_type as keyof typeof sessionTypeLabels] || "Interview Coaching";
 
+    // Convert markdown content to HTML if present
+    const formatMarkdownToHtml = (markdown: string): string => {
+      return markdown
+        .replace(/^### (.+)$/gm, '<h3 style="color: #2F6DF6; font-size: 16px; margin-top: 20px;">$1</h3>')
+        .replace(/^## (.+)$/gm, '<h2 style="color: #2F6DF6; font-size: 18px; margin-top: 24px;">$1</h2>')
+        .replace(/^# (.+)$/gm, '<h1 style="color: #2F6DF6; font-size: 20px; margin-top: 28px;">$1</h1>')
+        .replace(/^\* (.+)$/gm, '<li>$1</li>')
+        .replace(/^- (.+)$/gm, '<li>$1</li>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+        .replace(/\n\n/g, '</p><p>')
+        .replace(/\n/g, '<br>');
+    };
+
     // Build email HTML
     let emailHtml = `
       <!DOCTYPE html>
@@ -60,13 +74,17 @@ serve(async (req) => {
         <meta charset="utf-8">
         <style>
           body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #2C2F38; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .container { max-width: 700px; margin: 0 auto; padding: 20px; }
           .header { background: linear-gradient(135deg, #2F6DF6, #00C4CC); padding: 30px; text-align: center; border-radius: 12px 12px 0 0; }
           .header h1 { color: white; margin: 0; font-size: 24px; }
           .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; }
           .section { margin-bottom: 24px; }
           .section h2 { color: #2F6DF6; font-size: 18px; margin-bottom: 12px; }
           .section p { margin: 8px 0; }
+          .prep-content { background: #f8fafc; padding: 24px; border-radius: 8px; border-left: 4px solid #2F6DF6; }
+          .prep-content h1, .prep-content h2, .prep-content h3 { color: #2F6DF6; }
+          .prep-content ul { padding-left: 20px; }
+          .prep-content li { margin: 8px 0; }
           .footer { text-align: center; margin-top: 30px; color: #6b7280; font-size: 14px; }
           .cta { display: inline-block; background: #2F6DF6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin-top: 20px; }
         </style>
@@ -81,6 +99,19 @@ serve(async (req) => {
               <p>Thank you for completing your interview coaching session with Talendro™!</p>
             </div>
     `;
+
+    // Add Quick Prep content if present
+    if (prep_content) {
+      const formattedContent = formatMarkdownToHtml(prep_content);
+      emailHtml += `
+        <div class="section">
+          <h2>📋 Your Interview Prep Materials</h2>
+          <div class="prep-content">
+            <p>${formattedContent}</p>
+          </div>
+        </div>
+      `;
+    }
 
     // Add results content
     if (results) {
@@ -172,12 +203,13 @@ serve(async (req) => {
         email_sent_at: new Date().toISOString()
       });
 
-    // Update session status to completed
+    // Update session status to completed and store prep content
     await supabaseClient
       .from("coaching_sessions")
       .update({ 
         status: "completed",
-        completed_at: new Date().toISOString()
+        completed_at: new Date().toISOString(),
+        prep_packet: prep_content ? { content: prep_content } : null
       })
       .eq("id", session_id);
 

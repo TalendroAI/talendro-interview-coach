@@ -156,10 +156,10 @@ export default function InterviewCoach() {
       return;
     }
 
-    if (!isPaymentVerified) {
+    if (!quickPrepContent) {
       toast({
-        title: 'Payment required',
-        description: 'Please complete your purchase to start a session.',
+        title: 'Content not ready',
+        description: 'Please wait for your prep materials to finish generating.',
         variant: 'destructive',
       });
       return;
@@ -167,15 +167,35 @@ export default function InterviewCoach() {
 
     setIsLoading(true);
     
-    // Start the session
-    setTimeout(() => {
-      setIsSessionStarted(true);
-      setIsLoading(false);
-      toast({
-        title: 'Session started!',
-        description: 'Your personalized coaching session has begun.',
+    try {
+      // Send the materials via email
+      const { data, error } = await supabase.functions.invoke('send-results', {
+        body: {
+          session_id: sessionId,
+          email: userEmail,
+          session_type: sessionType,
+          prep_content: quickPrepContent,
+        }
       });
-    }, 500);
+
+      if (error) {
+        throw new Error(error.message || 'Failed to send results');
+      }
+
+      toast({
+        title: 'Materials sent!',
+        description: 'Your prep materials have been emailed to you.',
+      });
+    } catch (err) {
+      console.error('Error sending results:', err);
+      toast({
+        title: 'Error sending email',
+        description: err instanceof Error ? err.message : 'Failed to send your materials. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const renderMainContent = () => {
@@ -248,12 +268,13 @@ export default function InterviewCoach() {
           documents={documents}
           onDocumentsChange={setDocuments}
           onStartSession={handleStartSession}
-          isLoading={isLoading}
+          isLoading={isLoading || isGeneratingContent}
           sessionType={sessionType}
           isSessionStarted={isSessionStarted}
           isPaymentVerified={isPaymentVerified}
           onSaveDocuments={handleSaveDocuments}
           isDocumentsSaved={isDocumentsSaved}
+          isContentReady={!!quickPrepContent && !isGeneratingContent}
         />
         
         {/* Main Content */}
