@@ -82,7 +82,7 @@ serve(async (req) => {
 
     const origin = req.headers.get("origin") || "https://coach.talendro.com";
     
-    // Create checkout session
+    // Create checkout session with Link disabled for streamlined experience
     const checkoutSession = await stripe.checkout.sessions.create({
       customer: customerId,
       customer_email: customerId ? undefined : email,
@@ -93,6 +93,7 @@ serve(async (req) => {
         },
       ],
       mode: isSubscription ? "subscription" : "payment",
+      payment_method_types: ["card"], // Explicitly use only card to disable Link
       success_url: `${origin}/interview-coach?session_type=${session_type}&email=${encodeURIComponent(email)}&checkout_session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/?canceled=true`,
       metadata: {
