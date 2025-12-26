@@ -34,9 +34,10 @@ export function DocumentSidebar({
   const isResumeComplete = documents.resume.trim().length > 50;
   const isJobComplete = documents.jobDescription.trim().length > 50;
   const isCompanyComplete = documents.companyUrl.trim().length > 5;
-  const allComplete = isResumeComplete && isJobComplete;
+  const allFieldsComplete = isResumeComplete && isJobComplete && isCompanyComplete;
 
-  const canStart = allComplete && isPaymentVerified && !isSessionStarted && sessionType;
+  const canSaveDocuments = allFieldsComplete && !isSessionStarted;
+  const canCompleteSession = isDocumentsSaved && isPaymentVerified && !isSessionStarted && sessionType;
 
   const handleSaveDocuments = () => {
     if (onSaveDocuments) {
@@ -149,9 +150,9 @@ export function DocumentSidebar({
           </span>
           <Button
             size="lg"
-            className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm hover:shadow-md transition-all"
+            className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm hover:shadow-md transition-all disabled:bg-muted disabled:text-muted-foreground"
             onClick={handleSaveDocuments}
-            disabled={!allComplete || isSessionStarted}
+            disabled={!canSaveDocuments}
           >
             <Save className="h-4 w-4 mr-2" />
             Save Documents & Begin
@@ -169,11 +170,11 @@ export function DocumentSidebar({
             variant={isSessionStarted ? "destructive" : "default"}
             size="lg"
             className={cn(
-              "flex-1 font-semibold shadow-sm hover:shadow-md transition-all",
-              !isSessionStarted && "bg-primary hover:bg-primary/90"
+              "flex-1 font-semibold shadow-sm hover:shadow-md transition-all disabled:bg-muted disabled:text-muted-foreground",
+              !isSessionStarted && canCompleteSession && "bg-primary hover:bg-primary/90"
             )}
             onClick={onStartSession}
-            disabled={!canStart || isLoading}
+            disabled={!canCompleteSession || isLoading}
           >
             {isLoading ? (
               <>
