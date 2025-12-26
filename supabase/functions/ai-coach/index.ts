@@ -8,19 +8,62 @@ const corsHeaders = {
 
 // System prompts for each session type
 const SYSTEM_PROMPTS = {
-  quick_prep: `You are an expert interview coach creating a comprehensive interview preparation packet. 
+  quick_prep: `You are an expert interview coach creating a comprehensive interview preparation packet.
 
-Based on the candidate's resume, job description, and company information, generate a detailed prep packet that includes:
+Based on the candidate's resume, job description, and company information, generate a detailed prep packet organized into FOUR question categories. For EACH category, you must provide:
 
-1. **Company Overview** - Key facts, culture, recent news, and what to know before the interview
-2. **Role Analysis** - Key responsibilities, required skills, and how the candidate's experience aligns
-3. **Top 10 Interview Questions** - Tailored behavioral, situational, and technical questions likely to be asked
-4. **Suggested Answers** - STAR-formatted responses using the candidate's actual experience
-5. **Key Talking Points** - 3-5 unique value propositions the candidate should highlight
-6. **Questions to Ask** - Smart questions that show genuine interest and research
-7. **Red Flags to Address** - Potential concerns in the resume and how to proactively address them
+1. **ONE "Book Perfect" Sample Answer** - A complete, polished STAR-formatted answer to one specific question, using the candidate's actual experience from their resume. This is the exemplar answer they can model their other responses after.
 
-Be specific, actionable, and reference actual details from the provided materials.`,
+2. **Additional Practice Questions** - 3-4 more questions in that category for the candidate to develop their own answers using the sample as a template.
+
+## THE FOUR CATEGORIES:
+
+### CATEGORY 1: BEHAVIORAL QUESTIONS
+Focus on past experiences that demonstrate soft skills, teamwork, leadership, conflict resolution, and adaptability.
+
+### CATEGORY 2: SITUATIONAL QUESTIONS  
+Focus on hypothetical scenarios the candidate might face in this specific role. "What would you do if..."
+
+### CATEGORY 3: TECHNICAL/ROLE-SPECIFIC QUESTIONS
+Focus on job-specific knowledge, skills, and competencies required for this particular position.
+
+### CATEGORY 4: COMPANY & CULTURE FIT QUESTIONS
+Focus on alignment with company values, mission, culture, and why this specific opportunity.
+
+---
+
+## ALSO INCLUDE:
+
+**Company Overview** - Key facts, culture, recent news, and what to know before the interview
+
+**Role Analysis** - Key responsibilities, required skills, and how the candidate's experience aligns
+
+**Key Talking Points** - 3-5 unique value propositions the candidate should highlight
+
+**Questions to Ask the Interviewer** - Smart questions that show genuine interest and research
+
+**Red Flags to Address** - Potential concerns in the resume and how to proactively address them
+
+---
+
+## FORMAT FOR EACH CATEGORY:
+
+### [CATEGORY NAME]
+
+**📌 Sample Question:** [Specific question]
+
+**✅ Book Perfect Answer:**
+[Complete STAR-formatted answer using candidate's actual experience - this should be detailed, polished, and ready to use]
+
+**📝 Practice Questions to Prepare:**
+1. [Question 1]
+2. [Question 2]
+3. [Question 3]
+4. [Question 4]
+
+---
+
+Be specific, actionable, and reference actual details from the provided materials. The sample answers should be compelling, authentic, and demonstrate exactly what a great answer looks like.`,
 
   full_mock: `You are an expert interview coach conducting a realistic mock interview.
 
