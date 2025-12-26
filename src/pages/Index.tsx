@@ -61,8 +61,8 @@ export default function Index() {
     setIsLoading(true);
     try {
       const checkoutUrl = await createCheckout(selectedSession, email);
-      // Use same-tab navigation to avoid opening stale/cached checkout tabs.
-      window.location.assign(checkoutUrl);
+      // Open in new tab to avoid iframe restrictions in preview environments
+      window.open(checkoutUrl, '_blank');
       setIsCheckoutOpen(false);
       toast({
         title: 'Redirecting to checkout',
