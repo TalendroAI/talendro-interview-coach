@@ -315,11 +315,11 @@ serve(async (req) => {
   try {
     logStep("Function started");
     
-    const { checkout_session_id, email, session_type, test_email } = await req.json();
+    const { checkout_session_id, email, session_type, test_email, test_upgrade } = await req.json();
     
     // Test email mode - just send a sample email without verification
     if (test_email && email) {
-      logStep("Test email mode triggered", { email, session_type });
+      logStep("Test email mode triggered", { email, session_type, test_upgrade });
       
       const resendKeyRaw = Deno.env.get("RESEND_API_KEY") ?? "";
       const resendKey = resendKeyRaw
@@ -337,21 +337,30 @@ serve(async (req) => {
       }
       
       const resend = new Resend(resendKey);
-      const testSessionType = session_type || "quick_prep";
-      const emailHtml = generateNewPurchaseEmail(testSessionType, email, "Test User");
+      const testSessionType = session_type || "premium_audio";
+      
+      // Choose template based on test_upgrade flag
+      const emailHtml = test_upgrade 
+        ? generateUpgradeEmail(testSessionType, email, 2900, "full_mock", "Test User")
+        : generateNewPurchaseEmail(testSessionType, email, "Test User");
+      
+      const subject = test_upgrade
+        ? "🚀 [TEST] Your Talendro Upgrade Is Complete!"
+        : "🎯 [TEST] Your Talendro Interview Coaching Session is Ready!";
       
       const emailResult = await resend.emails.send({
-        from: "Talendro Interview Coach <coaching@talendro.com>",
+        from: "Talendro Interview Coach <noreply@talendro.com>",
+        reply_to: "greg@talendro.com",
         to: [email],
-        subject: "🎯 [TEST] Your Talendro Interview Coaching Session is Ready!",
+        subject: subject,
         html: emailHtml,
       });
       
-      logStep("Test email sent", { emailResult });
+      logStep("Test email sent", { emailResult, isUpgrade: test_upgrade });
       
       return new Response(JSON.stringify({ 
         success: true,
-        message: "Test email sent",
+        message: test_upgrade ? "Test upgrade email sent" : "Test new purchase email sent",
         emailResult 
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
