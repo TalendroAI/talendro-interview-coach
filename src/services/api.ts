@@ -21,19 +21,25 @@ export interface VerifyPaymentResponse {
 }
 
 export async function createCheckout(sessionType: SessionType, email: string): Promise<string> {
+  console.log('[FRONTEND] Calling create-checkout edge function', { sessionType, email });
+  
   const { data, error } = await supabase.functions.invoke("create-checkout", {
     body: { session_type: sessionType, email },
   });
 
+  console.log('[FRONTEND] Edge function response:', { data, error });
+
   if (error) {
-    console.error("Create checkout error:", error);
+    console.error("[FRONTEND] Create checkout error:", error);
     throw new Error(error.message || "Failed to create checkout session");
   }
 
   if (!data?.url) {
+    console.error("[FRONTEND] No URL in response:", data);
     throw new Error("No checkout URL returned");
   }
 
+  console.log('[FRONTEND] Checkout URL received:', data.url);
   return data.url;
 }
 
