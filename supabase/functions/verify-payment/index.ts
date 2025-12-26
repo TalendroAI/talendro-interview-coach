@@ -167,7 +167,7 @@ const generateUpgradeEmail = (sessionType: string, email: string, upgradeCredit:
           <!-- Hero Banner -->
           <tr>
             <td style="background-color: #E8F4FE; background: linear-gradient(180deg, #E8F4FE 0%, #ffffff 100%); padding: 30px; text-align: center; border-bottom: 1px solid #e5e7eb;">
-              <div style="font-size: 48px; margin-bottom: 12px;">⬆️</div>
+              <div style="font-size: 42px; margin-bottom: 12px;">✨</div>
               <h2 style="color: #2C2F38; font-size: 20px; font-weight: 600; margin: 0 0 8px 0;">Unlocking Your Full Interview Potential</h2>
               <p style="color: #9FA6B2; font-size: 15px; margin: 0;">Enhanced AI coaching with deeper, more personalized insights</p>
             </td>
