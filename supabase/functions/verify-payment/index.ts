@@ -41,12 +41,17 @@ const generateNewPurchaseEmail = (sessionType: string, email: string, customerNa
         <table width="600" cellpadding="0" cellspacing="0" style="background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
           <!-- Header -->
           <tr>
-            <td style="background-color: #0f172a; background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0d4b3e 100%); padding: 40px 30px; text-align: center;">
-              <div style="font-size: 36px; font-weight: 800; color: white; letter-spacing: -1px;">
-                Talendro<span style="font-size: 16px; vertical-align: super; color: #10b981; font-weight: 600;">™</span>
+            <td style="background-color: #ffffff; padding: 30px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+              <div style="font-size: 32px; font-weight: 800; color: #0f172a; letter-spacing: -1px;">
+                Talendro<span style="font-size: 14px; vertical-align: super; color: #10b981; font-weight: 600;">™</span>
               </div>
-              <h1 style="color: white; margin: 16px 0 0 0; font-size: 26px; font-weight: 700;">Welcome to Interview Success!</h1>
-              <p style="color: rgba(255,255,255,0.85); margin: 10px 0 0 0; font-size: 16px;">Your coaching session is ready to begin</p>
+            </td>
+          </tr>
+          <!-- Title Banner -->
+          <tr>
+            <td style="background-color: #0f172a; padding: 32px 30px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 26px; font-weight: 700;">Welcome to Interview Success!</h1>
+              <p style="color: rgba(255,255,255,0.85); margin: 12px 0 0 0; font-size: 16px;">Your coaching session is ready to begin</p>
             </td>
           </tr>
           <!-- Hero Banner -->
@@ -156,12 +161,17 @@ const generateUpgradeEmail = (sessionType: string, email: string, upgradeCredit:
         <table width="600" cellpadding="0" cellspacing="0" style="background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
           <!-- Header -->
           <tr>
-            <td style="background-color: #0f172a; background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0d4b3e 100%); padding: 40px 30px; text-align: center;">
-              <div style="font-size: 36px; font-weight: 800; color: white; letter-spacing: -1px;">
-                Talendro<span style="font-size: 16px; vertical-align: super; color: #10b981; font-weight: 600;">™</span>
+            <td style="background-color: #ffffff; padding: 30px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+              <div style="font-size: 32px; font-weight: 800; color: #0f172a; letter-spacing: -1px;">
+                Talendro<span style="font-size: 14px; vertical-align: super; color: #10b981; font-weight: 600;">™</span>
               </div>
-              <h1 style="color: white; margin: 16px 0 0 0; font-size: 26px; font-weight: 700;">🚀 Your Upgrade Is Complete!</h1>
-              <p style="color: rgba(255,255,255,0.85); margin: 10px 0 0 0; font-size: 16px;">You're now on a more powerful plan</p>
+            </td>
+          </tr>
+          <!-- Title Banner -->
+          <tr>
+            <td style="background-color: #0f172a; padding: 32px 30px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 26px; font-weight: 700;">🚀 Your Upgrade Is Complete!</h1>
+              <p style="color: rgba(255,255,255,0.85); margin: 12px 0 0 0; font-size: 16px;">You're now on a more powerful plan</p>
             </td>
           </tr>
           <!-- Hero Banner -->
