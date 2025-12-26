@@ -41,55 +41,50 @@ const generateNewPurchaseEmail = (sessionType: string, email: string, customerNa
         <table width="600" cellpadding="0" cellspacing="0" style="background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
           <!-- Header -->
           <tr>
-            <td style="background-color: #ffffff; padding: 30px; text-align: center; border-bottom: 1px solid #e5e7eb;">
-              <div style="font-size: 32px; font-weight: 800; color: #0f172a; letter-spacing: -1px;">
-                Talendro<span style="font-size: 14px; vertical-align: super; color: #10b981; font-weight: 600;">™</span>
+            <td style="background-color: #2F6DF6; padding: 30px; text-align: center;">
+              <div style="font-size: 32px; font-weight: 800; color: #ffffff; letter-spacing: -1px;">
+                Talendro<span style="font-size: 14px; vertical-align: super; color: #00C4CC; font-weight: 600;">™</span>
               </div>
-            </td>
-          </tr>
-          <!-- Title Banner -->
-          <tr>
-            <td style="background-color: #0f172a; padding: 32px 30px; text-align: center;">
-              <h1 style="color: white; margin: 0; font-size: 26px; font-weight: 700;">Welcome to Interview Success!</h1>
+              <h1 style="color: white; margin: 16px 0 0 0; font-size: 26px; font-weight: 700;">Welcome to Interview Success!</h1>
               <p style="color: rgba(255,255,255,0.85); margin: 12px 0 0 0; font-size: 16px;">Your coaching session is ready to begin</p>
             </td>
           </tr>
           <!-- Hero Banner -->
           <tr>
-            <td style="background-color: #f0fdf4; background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%); padding: 30px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+            <td style="background-color: #E8F4FE; background: linear-gradient(180deg, #E8F4FE 0%, #ffffff 100%); padding: 30px; text-align: center; border-bottom: 1px solid #e5e7eb;">
               <div style="font-size: 48px; margin-bottom: 12px;">🎯</div>
-              <h2 style="color: #0f172a; font-size: 20px; font-weight: 600; margin: 0 0 8px 0;">Be the Most Prepared Candidate in the Room</h2>
-              <p style="color: #64748b; font-size: 15px; margin: 0;">AI-powered coaching backed by 30 years of recruiting experience</p>
+              <h2 style="color: #2C2F38; font-size: 20px; font-weight: 600; margin: 0 0 8px 0;">Be the Most Prepared Candidate in the Room</h2>
+              <p style="color: #9FA6B2; font-size: 15px; margin: 0;">AI-powered coaching backed by 30 years of recruiting experience</p>
             </td>
           </tr>
           <!-- Content -->
           <tr>
             <td style="padding: 40px 30px;">
-              <p style="margin: 0 0 16px 0; font-size: 16px; color: #374151;">${greeting}</p>
+              <p style="margin: 0 0 16px 0; font-size: 16px; color: #2C2F38;">${greeting}</p>
               
-              <p style="margin: 16px 0; font-size: 16px; color: #374151;">Thank you for choosing <strong>Talendro™ Interview Coach</strong>! Your purchase is confirmed and your personalized coaching session is ready.</p>
+              <p style="margin: 16px 0; font-size: 16px; color: #2C2F38;">Thank you for choosing <strong>Talendro™ Interview Coach</strong>! Your purchase is confirmed and your personalized coaching session is ready.</p>
               
               <!-- Product Box -->
               <table width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
                 <tr>
-                  <td style="background-color: #f8fafc; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-left: 4px solid #10b981; padding: 24px; border-radius: 0 12px 12px 0;">
-                    <p style="margin: 0 0 10px 0; color: #10b981; font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Your Purchase</p>
-                    <p style="margin: 0; font-size: 20px; font-weight: 700; color: #0f172a;">${productName}</p>
+                  <td style="background-color: #f8fafc; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-left: 4px solid #2F6DF6; padding: 24px; border-radius: 0 12px 12px 0;">
+                    <p style="margin: 0 0 10px 0; color: #2F6DF6; font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Your Purchase</p>
+                    <p style="margin: 0; font-size: 20px; font-weight: 700; color: #2C2F38;">${productName}</p>
                   </td>
                 </tr>
               </table>
               
-              <p style="margin: 16px 0; font-size: 16px; color: #374151;">Our AI-powered coaching system is designed to help you walk into your next interview with unshakeable confidence.</p>
+              <p style="margin: 16px 0; font-size: 16px; color: #2C2F38;">Our AI-powered coaching system is designed to help you walk into your next interview with unshakeable confidence.</p>
               
               <!-- What Happens Next -->
               <table width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
                 <tr>
-                  <td style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 24px;">
-                    <p style="margin: 0 0 16px 0; color: #059669; font-size: 17px; font-weight: 700;">🚀 What Happens Next?</p>
-                    <p style="margin: 10px 0; color: #374151; font-size: 15px;">• Click the button below to start your session</p>
-                    <p style="margin: 10px 0; color: #374151; font-size: 15px;">• Upload your resume and job description for personalized coaching</p>
-                    <p style="margin: 10px 0; color: #374151; font-size: 15px;">• Complete your session and receive detailed feedback</p>
-                    <p style="margin: 10px 0; color: #374151; font-size: 15px;">• Get your results emailed to you automatically</p>
+                  <td style="background: #E8F4FE; border: 1px solid #2F6DF6; border-radius: 12px; padding: 24px;">
+                    <p style="margin: 0 0 16px 0; color: #2F6DF6; font-size: 17px; font-weight: 700;">🚀 What Happens Next?</p>
+                    <p style="margin: 10px 0; color: #2C2F38; font-size: 15px;">• Click the button below to start your session</p>
+                    <p style="margin: 10px 0; color: #2C2F38; font-size: 15px;">• Upload your resume and job description for personalized coaching</p>
+                    <p style="margin: 10px 0; color: #2C2F38; font-size: 15px;">• Complete your session and receive detailed feedback</p>
+                    <p style="margin: 10px 0; color: #2C2F38; font-size: 15px;">• Get your results emailed to you automatically</p>
                   </td>
                 </tr>
               </table>
@@ -98,19 +93,19 @@ const generateNewPurchaseEmail = (sessionType: string, email: string, customerNa
               <table width="100%" cellpadding="0" cellspacing="0" style="margin: 36px 0;">
                 <tr>
                   <td align="center">
-                    <a href="${sessionUrl}" style="display: inline-block; background-color: #10b981; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; padding: 18px 48px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px;">Start Your Session →</a>
+                    <a href="${sessionUrl}" style="display: inline-block; background-color: #2F6DF6; color: #ffffff; padding: 18px 48px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px;">Start Your Session →</a>
                   </td>
                 </tr>
               </table>
               
-              <p style="margin: 16px 0; font-size: 16px; color: #374151;">If you have any questions or need assistance, simply reply to this email. We're here to help you succeed.</p>
+              <p style="margin: 16px 0; font-size: 16px; color: #2C2F38;">If you have any questions or need assistance, simply reply to this email. We're here to help you succeed.</p>
               
               <!-- Signature -->
               <table width="100%" cellpadding="0" cellspacing="0" style="margin-top: 36px; padding-top: 28px; border-top: 1px solid #e5e7eb;">
                 <tr>
                   <td>
-                    <p style="margin: 8px 0; color: #374151;">Let's ace your next interview together.</p>
-                    <p style="margin: 8px 0; color: #374151;"><strong>— Greg Jackson</strong><br>Founder, Talendro™</p>
+                    <p style="margin: 8px 0; color: #2C2F38;">Let's ace your next interview together.</p>
+                    <p style="margin: 8px 0; color: #2C2F38;"><strong>— Greg Jackson</strong><br>Founder, Talendro™</p>
                   </td>
                 </tr>
               </table>
@@ -118,15 +113,15 @@ const generateNewPurchaseEmail = (sessionType: string, email: string, customerNa
           </tr>
           <!-- Footer -->
           <tr>
-            <td style="background-color: #0f172a; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 36px 30px; text-align: center;">
-              <div style="font-size: 24px; font-weight: 800; color: white; margin-bottom: 8px;">Talendro<span style="font-size: 12px; vertical-align: super; color: #10b981;">™</span></div>
-              <p style="color: #10b981; font-style: italic; font-size: 15px; margin: 12px 0 20px 0;">"Your partner in interview success"</p>
-              <p style="margin: 20px 0; font-size: 13px; color: #94a3b8;">🇺🇸 American-Built • 🎖️ Veteran-Led • ✅ Recruiter-Tested</p>
+            <td style="background-color: #0F172A; padding: 36px 30px; text-align: center;">
+              <div style="font-size: 24px; font-weight: 800; color: white; margin-bottom: 8px;">Talendro<span style="font-size: 12px; vertical-align: super; color: #00C4CC;">™</span></div>
+              <p style="color: #00C4CC; font-style: italic; font-size: 15px; margin: 12px 0 20px 0;">"Your partner in interview success"</p>
+              <p style="margin: 20px 0; font-size: 13px; color: #9FA6B2;">🇺🇸 American-Built • 🎖️ Veteran-Led • ✅ Recruiter-Tested</p>
               <p style="margin: 20px 0;">
-                <a href="https://www.linkedin.com/company/talendro" style="color: #94a3b8; text-decoration: none; margin: 0 12px; font-size: 14px;">LinkedIn</a>
-                <a href="https://talendro.com" style="color: #94a3b8; text-decoration: none; margin: 0 12px; font-size: 14px;">Website</a>
+                <a href="https://www.linkedin.com/company/talendro" style="color: #9FA6B2; text-decoration: none; margin: 0 12px; font-size: 14px;">LinkedIn</a>
+                <a href="https://talendro.com" style="color: #9FA6B2; text-decoration: none; margin: 0 12px; font-size: 14px;">Website</a>
               </p>
-              <p style="color: #64748b; font-size: 12px; margin-top: 20px;">© ${new Date().getFullYear()} Talendro. All rights reserved.</p>
+              <p style="color: #9FA6B2; font-size: 12px; margin-top: 20px;">© ${new Date().getFullYear()} Talendro. All rights reserved.</p>
             </td>
           </tr>
         </table>
@@ -161,40 +156,35 @@ const generateUpgradeEmail = (sessionType: string, email: string, upgradeCredit:
         <table width="600" cellpadding="0" cellspacing="0" style="background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
           <!-- Header -->
           <tr>
-            <td style="background-color: #ffffff; padding: 30px; text-align: center; border-bottom: 1px solid #e5e7eb;">
-              <div style="font-size: 32px; font-weight: 800; color: #0f172a; letter-spacing: -1px;">
-                Talendro<span style="font-size: 14px; vertical-align: super; color: #10b981; font-weight: 600;">™</span>
+            <td style="background-color: #2F6DF6; padding: 30px; text-align: center;">
+              <div style="font-size: 32px; font-weight: 800; color: #ffffff; letter-spacing: -1px;">
+                Talendro<span style="font-size: 14px; vertical-align: super; color: #00C4CC; font-weight: 600;">™</span>
               </div>
-            </td>
-          </tr>
-          <!-- Title Banner -->
-          <tr>
-            <td style="background-color: #0f172a; padding: 32px 30px; text-align: center;">
-              <h1 style="color: white; margin: 0; font-size: 26px; font-weight: 700;">🚀 Your Upgrade Is Complete!</h1>
+              <h1 style="color: white; margin: 16px 0 0 0; font-size: 26px; font-weight: 700;">🚀 Your Upgrade Is Complete!</h1>
               <p style="color: rgba(255,255,255,0.85); margin: 12px 0 0 0; font-size: 16px;">You're now on a more powerful plan</p>
             </td>
           </tr>
           <!-- Hero Banner -->
           <tr>
-            <td style="background-color: #ecfdf5; background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 100%); padding: 30px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+            <td style="background-color: #E8F4FE; background: linear-gradient(180deg, #E8F4FE 0%, #ffffff 100%); padding: 30px; text-align: center; border-bottom: 1px solid #e5e7eb;">
               <div style="font-size: 48px; margin-bottom: 12px;">⬆️</div>
-              <h2 style="color: #0f172a; font-size: 20px; font-weight: 600; margin: 0 0 8px 0;">Unlocking Your Full Interview Potential</h2>
-              <p style="color: #64748b; font-size: 15px; margin: 0;">Enhanced AI coaching with deeper, more personalized insights</p>
+              <h2 style="color: #2C2F38; font-size: 20px; font-weight: 600; margin: 0 0 8px 0;">Unlocking Your Full Interview Potential</h2>
+              <p style="color: #9FA6B2; font-size: 15px; margin: 0;">Enhanced AI coaching with deeper, more personalized insights</p>
             </td>
           </tr>
           <!-- Content -->
           <tr>
             <td style="padding: 40px 30px;">
-              <p style="margin: 0 0 16px 0; font-size: 16px; color: #374151;">${greeting}</p>
+              <p style="margin: 0 0 16px 0; font-size: 16px; color: #2C2F38;">${greeting}</p>
               
-              <p style="margin: 16px 0; font-size: 16px; color: #374151;">Thank you for upgrading your <strong>Talendro™</strong> experience! Your enhanced plan is now active and ready to elevate your interview preparation.</p>
+              <p style="margin: 16px 0; font-size: 16px; color: #2C2F38;">Thank you for upgrading your <strong>Talendro™</strong> experience! Your enhanced plan is now active and ready to elevate your interview preparation.</p>
               
               <!-- Product Box -->
               <table width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
                 <tr>
-                  <td style="background-color: #f8fafc; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-left: 4px solid #10b981; padding: 24px; border-radius: 0 12px 12px 0;">
-                    <p style="margin: 0 0 10px 0; color: #10b981; font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Your Upgraded Plan</p>
-                    <p style="margin: 0; font-size: 20px; font-weight: 700; color: #0f172a;">${productName}</p>
+                  <td style="background-color: #f8fafc; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-left: 4px solid #2F6DF6; padding: 24px; border-radius: 0 12px 12px 0;">
+                    <p style="margin: 0 0 10px 0; color: #2F6DF6; font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Your Upgraded Plan</p>
+                    <p style="margin: 0; font-size: 20px; font-weight: 700; color: #2C2F38;">${productName}</p>
                   </td>
                 </tr>
               </table>
@@ -202,25 +192,25 @@ const generateUpgradeEmail = (sessionType: string, email: string, upgradeCredit:
               <!-- Upgrade Details -->
               <table width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
                 <tr>
-                  <td style="background-color: #ecfdf5; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border: 1px solid #10b981; padding: 24px; border-radius: 12px;">
-                    <p style="margin: 0 0 16px 0; color: #059669; font-size: 17px; font-weight: 700;">💰 Upgrade Credit Applied</p>
-                    <p style="margin: 10px 0; color: #065f46; font-size: 15px;"><strong>Previous purchase:</strong> ${previousProductName}</p>
-                    <p style="margin: 10px 0; color: #065f46; font-size: 15px;"><strong>Credit applied:</strong> $${(upgradeCredit / 100).toFixed(2)}</p>
-                    <p style="margin: 10px 0; color: #065f46; font-size: 15px;">Your previous purchase was automatically credited toward this upgrade</p>
+                  <td style="background-color: #E8F4FE; border: 1px solid #2F6DF6; padding: 24px; border-radius: 12px;">
+                    <p style="margin: 0 0 16px 0; color: #2F6DF6; font-size: 17px; font-weight: 700;">💰 Upgrade Credit Applied</p>
+                    <p style="margin: 10px 0; color: #2C2F38; font-size: 15px;"><strong>Previous purchase:</strong> ${previousProductName}</p>
+                    <p style="margin: 10px 0; color: #2C2F38; font-size: 15px;"><strong>Credit applied:</strong> $${(upgradeCredit / 100).toFixed(2)}</p>
+                    <p style="margin: 10px 0; color: #2C2F38; font-size: 15px;">Your previous purchase was automatically credited toward this upgrade</p>
                   </td>
                 </tr>
               </table>
               
-              <p style="margin: 16px 0; font-size: 16px; color: #374151;">You now have full access to everything included in your enhanced plan. We're excited to help you take your interview preparation to the next level.</p>
+              <p style="margin: 16px 0; font-size: 16px; color: #2C2F38;">You now have full access to everything included in your enhanced plan. We're excited to help you take your interview preparation to the next level.</p>
               
               <!-- What's Included -->
               <table width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
                 <tr>
-                  <td style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 24px;">
-                    <p style="margin: 0 0 16px 0; color: #059669; font-size: 17px; font-weight: 700;">✨ What's Included in Your Upgrade?</p>
-                    <p style="margin: 10px 0; color: #374151; font-size: 15px;">• Enhanced AI coaching with deeper analysis</p>
-                    <p style="margin: 10px 0; color: #374151; font-size: 15px;">• More comprehensive feedback and recommendations</p>
-                    <p style="margin: 10px 0; color: #374151; font-size: 15px;">• Access to all features in your new tier</p>
+                  <td style="background: #E8F4FE; border: 1px solid #2F6DF6; border-radius: 12px; padding: 24px;">
+                    <p style="margin: 0 0 16px 0; color: #2F6DF6; font-size: 17px; font-weight: 700;">✨ What's Included in Your Upgrade?</p>
+                    <p style="margin: 10px 0; color: #2C2F38; font-size: 15px;">• Enhanced AI coaching with deeper analysis</p>
+                    <p style="margin: 10px 0; color: #2C2F38; font-size: 15px;">• More comprehensive feedback and recommendations</p>
+                    <p style="margin: 10px 0; color: #2C2F38; font-size: 15px;">• Access to all features in your new tier</p>
                   </td>
                 </tr>
               </table>
@@ -229,19 +219,19 @@ const generateUpgradeEmail = (sessionType: string, email: string, upgradeCredit:
               <table width="100%" cellpadding="0" cellspacing="0" style="margin: 36px 0;">
                 <tr>
                   <td align="center">
-                    <a href="${sessionUrl}" style="display: inline-block; background-color: #10b981; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; padding: 18px 48px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px;">Continue Your Session →</a>
+                    <a href="${sessionUrl}" style="display: inline-block; background-color: #2F6DF6; color: #ffffff; padding: 18px 48px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px;">Continue Your Session →</a>
                   </td>
                 </tr>
               </table>
               
-              <p style="margin: 16px 0; font-size: 16px; color: #374151;">If you'd like guidance, strategic prep advice, or help getting the most from your new plan, reply to this email anytime. You've got support here.</p>
+              <p style="margin: 16px 0; font-size: 16px; color: #2C2F38;">If you'd like guidance, strategic prep advice, or help getting the most from your new plan, reply to this email anytime. You've got support here.</p>
               
               <!-- Signature -->
               <table width="100%" cellpadding="0" cellspacing="0" style="margin-top: 36px; padding-top: 28px; border-top: 1px solid #e5e7eb;">
                 <tr>
                   <td>
-                    <p style="margin: 8px 0; color: #374151;">Let's strengthen your next interview together.</p>
-                    <p style="margin: 8px 0; color: #374151;"><strong>— Greg Jackson</strong><br>Founder, Talendro™</p>
+                    <p style="margin: 8px 0; color: #2C2F38;">Let's strengthen your next interview together.</p>
+                    <p style="margin: 8px 0; color: #2C2F38;"><strong>— Greg Jackson</strong><br>Founder, Talendro™</p>
                   </td>
                 </tr>
               </table>
@@ -249,15 +239,15 @@ const generateUpgradeEmail = (sessionType: string, email: string, upgradeCredit:
           </tr>
           <!-- Footer -->
           <tr>
-            <td style="background-color: #0f172a; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 36px 30px; text-align: center;">
-              <div style="font-size: 24px; font-weight: 800; color: white; margin-bottom: 8px;">Talendro<span style="font-size: 12px; vertical-align: super; color: #10b981;">™</span></div>
-              <p style="color: #10b981; font-style: italic; font-size: 15px; margin: 12px 0 20px 0;">"Your partner in interview success"</p>
-              <p style="margin: 20px 0; font-size: 13px; color: #94a3b8;">🇺🇸 American-Built • 🎖️ Veteran-Led • ✅ Recruiter-Tested</p>
+            <td style="background-color: #0F172A; padding: 36px 30px; text-align: center;">
+              <div style="font-size: 24px; font-weight: 800; color: white; margin-bottom: 8px;">Talendro<span style="font-size: 12px; vertical-align: super; color: #00C4CC;">™</span></div>
+              <p style="color: #00C4CC; font-style: italic; font-size: 15px; margin: 12px 0 20px 0;">"Your partner in interview success"</p>
+              <p style="margin: 20px 0; font-size: 13px; color: #9FA6B2;">🇺🇸 American-Built • 🎖️ Veteran-Led • ✅ Recruiter-Tested</p>
               <p style="margin: 20px 0;">
-                <a href="https://www.linkedin.com/company/talendro" style="color: #94a3b8; text-decoration: none; margin: 0 12px; font-size: 14px;">LinkedIn</a>
-                <a href="https://talendro.com" style="color: #94a3b8; text-decoration: none; margin: 0 12px; font-size: 14px;">Website</a>
+                <a href="https://www.linkedin.com/company/talendro" style="color: #9FA6B2; text-decoration: none; margin: 0 12px; font-size: 14px;">LinkedIn</a>
+                <a href="https://talendro.com" style="color: #9FA6B2; text-decoration: none; margin: 0 12px; font-size: 14px;">Website</a>
               </p>
-              <p style="color: #64748b; font-size: 12px; margin-top: 20px;">© ${new Date().getFullYear()} Talendro. All rights reserved.</p>
+              <p style="color: #9FA6B2; font-size: 12px; margin-top: 20px;">© ${new Date().getFullYear()} Talendro. All rights reserved.</p>
             </td>
           </tr>
         </table>
