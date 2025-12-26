@@ -84,6 +84,11 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* VERSION STAMP - Remove after debugging */}
+      <div className="fixed bottom-2 left-2 bg-destructive text-destructive-foreground px-3 py-1 rounded text-xs font-mono z-50">
+        BUILD: 2025-12-26-v3-CHECKOUT-SESSION
+      </div>
+      
       <LandingHeader />
 
       <main>
