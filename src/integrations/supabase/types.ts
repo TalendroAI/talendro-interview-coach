@@ -111,6 +111,84 @@ export type Database = {
           },
         ]
       }
+      discount_code_usage: {
+        Row: {
+          code_id: string
+          email: string
+          id: string
+          session_id: string | null
+          used_at: string
+        }
+        Insert: {
+          code_id: string
+          email: string
+          id?: string
+          session_id?: string | null
+          used_at?: string
+        }
+        Update: {
+          code_id?: string
+          email?: string
+          id?: string
+          session_id?: string | null
+          used_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discount_code_usage_code_id_fkey"
+            columns: ["code_id"]
+            isOneToOne: false
+            referencedRelation: "discount_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discount_code_usage_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "coaching_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discount_codes: {
+        Row: {
+          applicable_products: string[] | null
+          code: string
+          created_at: string
+          description: string | null
+          discount_percent: number
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          applicable_products?: string[] | null
+          code: string
+          created_at?: string
+          description?: string | null
+          discount_percent: number
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          applicable_products?: string[] | null
+          code?: string
+          created_at?: string
+          description?: string | null
+          discount_percent?: number
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

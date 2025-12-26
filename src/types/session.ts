@@ -4,6 +4,7 @@ export interface SessionConfig {
   type: SessionType;
   name: string;
   price: string;
+  priceInCents: number;
   description: string;
   icon: string;
   features: string[];
@@ -15,6 +16,7 @@ export const SESSION_CONFIGS: Record<SessionType, SessionConfig> = {
     type: 'quick_prep',
     name: 'Quick Prep',
     price: '$12',
+    priceInCents: 1200,
     description: 'AI-generated comprehensive interview prep packet with tailored questions, answers, and company insights.',
     icon: '⚡',
     features: [
@@ -29,6 +31,7 @@ export const SESSION_CONFIGS: Record<SessionType, SessionConfig> = {
     type: 'full_mock',
     name: 'Full Mock Interview',
     price: '$29',
+    priceInCents: 2900,
     description: 'Interactive 10-question mock interview with real-time AI feedback and detailed performance analysis.',
     icon: '🎯',
     features: [
@@ -43,6 +46,7 @@ export const SESSION_CONFIGS: Record<SessionType, SessionConfig> = {
     type: 'premium_audio',
     name: 'Premium Audio Mock',
     price: '$49',
+    priceInCents: 4900,
     description: 'Voice-based interview experience with our AI interviewer. Practice speaking your answers naturally.',
     icon: '🎙️',
     features: [
@@ -57,6 +61,7 @@ export const SESSION_CONFIGS: Record<SessionType, SessionConfig> = {
     type: 'pro',
     name: 'Pro Subscription',
     price: '$79/month',
+    priceInCents: 7900,
     description: 'Unlimited access to all session types. Perfect for active job seekers.',
     icon: '👑',
     features: [
@@ -81,4 +86,22 @@ export interface SessionState {
   documents: DocumentInputs;
   isSessionStarted: boolean;
   isLoading: boolean;
+}
+
+export interface DiscountValidation {
+  valid: boolean;
+  discount_percent?: number;
+  description?: string;
+  code_id?: string;
+  error?: string;
+}
+
+export interface PricingBreakdown {
+  originalPrice: number;
+  upgradeCredit: number;
+  discountAmount: number;
+  discountPercent: number;
+  discountCode?: string;
+  discountCodeId?: string;
+  finalPrice: number;
 }
