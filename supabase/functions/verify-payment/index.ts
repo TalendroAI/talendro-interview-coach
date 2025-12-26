@@ -68,6 +68,7 @@ serve(async (req) => {
         return new Response(JSON.stringify({ 
           verified: true, 
           session: updatedSession,
+          session_status: "active",
           message: "Payment verified successfully"
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -84,8 +85,8 @@ serve(async (req) => {
       }
     }
 
-    // If no checkout session ID, check for active session by email
-    const { data: existingSession, error: sessionError } = await supabaseClient
+    // If no checkout session ID, check for active session by email first
+    const { data: activeSession, error: activeError } = await supabaseClient
       .from("coaching_sessions")
       .select("*")
       .eq("email", email)
@@ -95,15 +96,54 @@ serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    if (sessionError) {
-      logStep("Error fetching session", { error: sessionError });
+    if (activeError) {
+      logStep("Error fetching active session", { error: activeError });
     }
 
-    if (existingSession) {
+    if (activeSession) {
+      logStep("Active session found", { sessionId: activeSession.id });
       return new Response(JSON.stringify({ 
         verified: true, 
-        session: existingSession,
+        session: activeSession,
+        session_status: "active",
         message: "Active session found"
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
+
+    // Check for completed session by email
+    const { data: completedSession, error: completedError } = await supabaseClient
+      .from("coaching_sessions")
+      .select("*")
+      .eq("email", email)
+      .eq("session_type", session_type)
+      .eq("status", "completed")
+      .order("completed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (completedError) {
+      logStep("Error fetching completed session", { error: completedError });
+    }
+
+    if (completedSession) {
+      logStep("Completed session found", { sessionId: completedSession.id });
+      
+      // Also fetch the session results if available
+      const { data: sessionResults } = await supabaseClient
+        .from("session_results")
+        .select("*")
+        .eq("session_id", completedSession.id)
+        .maybeSingle();
+
+      return new Response(JSON.stringify({ 
+        verified: false, 
+        session: completedSession,
+        session_status: "completed",
+        session_results: sessionResults,
+        message: "Session already completed"
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
@@ -135,6 +175,7 @@ serve(async (req) => {
           return new Response(JSON.stringify({ 
             verified: true, 
             session: newSession,
+            session_status: "active",
             is_pro: true,
             message: "Pro subscriber verified"
           }), {

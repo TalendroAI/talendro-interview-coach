@@ -9,6 +9,13 @@ export interface VerifyPaymentResponse {
     session_type: string;
     status: string;
   };
+  session_status?: 'active' | 'completed' | 'pending' | 'cancelled';
+  session_results?: {
+    overall_score?: number;
+    strengths?: string[];
+    improvements?: string[];
+    recommendations?: string;
+  };
   is_pro?: boolean;
   message?: string;
 }

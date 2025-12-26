@@ -5,6 +5,7 @@ import { DocumentSidebar } from '@/components/DocumentSidebar';
 import { WelcomeMessage } from '@/components/WelcomeMessage';
 import { ChatInterface } from '@/components/ChatInterface';
 import { AudioInterface } from '@/components/AudioInterface';
+import { SessionCompletedDialog } from '@/components/SessionCompletedDialog';
 import { useSessionParams } from '@/hooks/useSessionParams';
 import { DocumentInputs } from '@/types/session';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +28,10 @@ export default function InterviewCoach() {
   const [isPaymentVerified, setIsPaymentVerified] = useState(false);
   const [sessionId, setSessionId] = useState<string | undefined>();
   const [isDocumentsSaved, setIsDocumentsSaved] = useState(false);
+  
+  // Completed session dialog state
+  const [showCompletedDialog, setShowCompletedDialog] = useState(false);
+  const [completedSessionResults, setCompletedSessionResults] = useState<any>(null);
 
   // Check if documents are ready
   const isResumeComplete = documents.resume.trim().length > 50;
@@ -67,6 +72,10 @@ export default function InterviewCoach() {
             title: 'Payment verified!',
             description: 'Your session is ready to begin.',
           });
+        } else if (result.session_status === 'completed') {
+          // Session was already completed - show the dialog
+          setCompletedSessionResults(result.session_results);
+          setShowCompletedDialog(true);
         } else {
           toast({
             title: 'Payment not found',
@@ -193,6 +202,15 @@ export default function InterviewCoach() {
           {renderMainContent()}
         </main>
       </div>
+
+      {/* Completed Session Dialog */}
+      <SessionCompletedDialog
+        isOpen={showCompletedDialog}
+        onClose={() => setShowCompletedDialog(false)}
+        sessionType={sessionType || ''}
+        userEmail={userEmail || ''}
+        sessionResults={completedSessionResults}
+      />
     </div>
   );
 }
