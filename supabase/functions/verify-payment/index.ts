@@ -41,7 +41,7 @@ const generateNewPurchaseEmail = (sessionType: string, email: string, customerNa
         <table width="600" cellpadding="0" cellspacing="0" style="background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
           <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0d4b3e 100%); padding: 40px 30px; text-align: center;">
+            <td style="background-color: #0f172a; background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0d4b3e 100%); padding: 40px 30px; text-align: center;">
               <div style="font-size: 36px; font-weight: 800; color: white; letter-spacing: -1px;">
                 Talendro<span style="font-size: 16px; vertical-align: super; color: #10b981; font-weight: 600;">™</span>
               </div>
@@ -51,7 +51,7 @@ const generateNewPurchaseEmail = (sessionType: string, email: string, customerNa
           </tr>
           <!-- Hero Banner -->
           <tr>
-            <td style="background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%); padding: 30px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+            <td style="background-color: #f0fdf4; background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%); padding: 30px; text-align: center; border-bottom: 1px solid #e5e7eb;">
               <div style="font-size: 48px; margin-bottom: 12px;">🎯</div>
               <h2 style="color: #0f172a; font-size: 20px; font-weight: 600; margin: 0 0 8px 0;">Be the Most Prepared Candidate in the Room</h2>
               <p style="color: #64748b; font-size: 15px; margin: 0;">AI-powered coaching backed by 30 years of recruiting experience</p>
@@ -67,7 +67,7 @@ const generateNewPurchaseEmail = (sessionType: string, email: string, customerNa
               <!-- Product Box -->
               <table width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
                 <tr>
-                  <td style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-left: 4px solid #10b981; padding: 24px; border-radius: 0 12px 12px 0;">
+                  <td style="background-color: #f8fafc; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-left: 4px solid #10b981; padding: 24px; border-radius: 0 12px 12px 0;">
                     <p style="margin: 0 0 10px 0; color: #10b981; font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Your Purchase</p>
                     <p style="margin: 0; font-size: 20px; font-weight: 700; color: #0f172a;">${productName}</p>
                   </td>
@@ -93,7 +93,7 @@ const generateNewPurchaseEmail = (sessionType: string, email: string, customerNa
               <table width="100%" cellpadding="0" cellspacing="0" style="margin: 36px 0;">
                 <tr>
                   <td align="center">
-                    <a href="${sessionUrl}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; padding: 18px 48px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px;">Start Your Session →</a>
+                    <a href="${sessionUrl}" style="display: inline-block; background-color: #10b981; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; padding: 18px 48px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px;">Start Your Session →</a>
                   </td>
                 </tr>
               </table>
@@ -113,7 +113,7 @@ const generateNewPurchaseEmail = (sessionType: string, email: string, customerNa
           </tr>
           <!-- Footer -->
           <tr>
-            <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 36px 30px; text-align: center;">
+            <td style="background-color: #0f172a; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 36px 30px; text-align: center;">
               <div style="font-size: 24px; font-weight: 800; color: white; margin-bottom: 8px;">Talendro<span style="font-size: 12px; vertical-align: super; color: #10b981;">™</span></div>
               <p style="color: #10b981; font-style: italic; font-size: 15px; margin: 12px 0 20px 0;">"Your partner in interview success"</p>
               <p style="margin: 20px 0; font-size: 13px; color: #94a3b8;">🇺🇸 American-Built • 🎖️ Veteran-Led • ✅ Recruiter-Tested</p>
@@ -156,7 +156,7 @@ const generateUpgradeEmail = (sessionType: string, email: string, upgradeCredit:
         <table width="600" cellpadding="0" cellspacing="0" style="background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
           <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0d4b3e 100%); padding: 40px 30px; text-align: center;">
+            <td style="background-color: #0f172a; background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0d4b3e 100%); padding: 40px 30px; text-align: center;">
               <div style="font-size: 36px; font-weight: 800; color: white; letter-spacing: -1px;">
                 Talendro<span style="font-size: 16px; vertical-align: super; color: #10b981; font-weight: 600;">™</span>
               </div>
@@ -166,7 +166,7 @@ const generateUpgradeEmail = (sessionType: string, email: string, upgradeCredit:
           </tr>
           <!-- Hero Banner -->
           <tr>
-            <td style="background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 100%); padding: 30px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+            <td style="background-color: #ecfdf5; background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 100%); padding: 30px; text-align: center; border-bottom: 1px solid #e5e7eb;">
               <div style="font-size: 48px; margin-bottom: 12px;">⬆️</div>
               <h2 style="color: #0f172a; font-size: 20px; font-weight: 600; margin: 0 0 8px 0;">Unlocking Your Full Interview Potential</h2>
               <p style="color: #64748b; font-size: 15px; margin: 0;">Enhanced AI coaching with deeper, more personalized insights</p>
@@ -182,7 +182,7 @@ const generateUpgradeEmail = (sessionType: string, email: string, upgradeCredit:
               <!-- Product Box -->
               <table width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
                 <tr>
-                  <td style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-left: 4px solid #10b981; padding: 24px; border-radius: 0 12px 12px 0;">
+                  <td style="background-color: #f8fafc; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-left: 4px solid #10b981; padding: 24px; border-radius: 0 12px 12px 0;">
                     <p style="margin: 0 0 10px 0; color: #10b981; font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Your Upgraded Plan</p>
                     <p style="margin: 0; font-size: 20px; font-weight: 700; color: #0f172a;">${productName}</p>
                   </td>
@@ -192,7 +192,7 @@ const generateUpgradeEmail = (sessionType: string, email: string, upgradeCredit:
               <!-- Upgrade Details -->
               <table width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
                 <tr>
-                  <td style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border: 1px solid #10b981; padding: 24px; border-radius: 12px;">
+                  <td style="background-color: #ecfdf5; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border: 1px solid #10b981; padding: 24px; border-radius: 12px;">
                     <p style="margin: 0 0 16px 0; color: #059669; font-size: 17px; font-weight: 700;">💰 Upgrade Credit Applied</p>
                     <p style="margin: 10px 0; color: #065f46; font-size: 15px;"><strong>Previous purchase:</strong> ${previousProductName}</p>
                     <p style="margin: 10px 0; color: #065f46; font-size: 15px;"><strong>Credit applied:</strong> $${(upgradeCredit / 100).toFixed(2)}</p>
@@ -219,7 +219,7 @@ const generateUpgradeEmail = (sessionType: string, email: string, upgradeCredit:
               <table width="100%" cellpadding="0" cellspacing="0" style="margin: 36px 0;">
                 <tr>
                   <td align="center">
-                    <a href="${sessionUrl}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; padding: 18px 48px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px;">Continue Your Session →</a>
+                    <a href="${sessionUrl}" style="display: inline-block; background-color: #10b981; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; padding: 18px 48px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px;">Continue Your Session →</a>
                   </td>
                 </tr>
               </table>
@@ -239,7 +239,7 @@ const generateUpgradeEmail = (sessionType: string, email: string, upgradeCredit:
           </tr>
           <!-- Footer -->
           <tr>
-            <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 36px 30px; text-align: center;">
+            <td style="background-color: #0f172a; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 36px 30px; text-align: center;">
               <div style="font-size: 24px; font-weight: 800; color: white; margin-bottom: 8px;">Talendro<span style="font-size: 12px; vertical-align: super; color: #10b981;">™</span></div>
               <p style="color: #10b981; font-style: italic; font-size: 15px; margin: 12px 0 20px 0;">"Your partner in interview success"</p>
               <p style="margin: 20px 0; font-size: 13px; color: #94a3b8;">🇺🇸 American-Built • 🎖️ Veteran-Led • ✅ Recruiter-Tested</p>
