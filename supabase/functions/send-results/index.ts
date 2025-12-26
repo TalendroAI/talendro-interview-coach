@@ -209,7 +209,8 @@ serve(async (req) => {
     let emailResponse;
     try {
       emailResponse = await resend.emails.send({
-        from: "Talendro Interview Coach <greg@talendro.com>",
+        from: "Talendro Interview Coach <noreply@talendro.com>",
+        reply_to: "greg@talendro.com",
         to: [email],
         subject: `Your ${sessionLabel} Results - Talendro™`,
         html: emailHtml,
