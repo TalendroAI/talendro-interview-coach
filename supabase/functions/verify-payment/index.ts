@@ -21,9 +21,11 @@ const logStep = (step: string, details?: any) => {
 };
 
 // Generate email HTML for new/standard purchase (Template A)
-const generateNewPurchaseEmail = (sessionType: string, email: string) => {
+const generateNewPurchaseEmail = (sessionType: string, email: string, customerName?: string) => {
   const productName = PRICE_CONFIG[sessionType as keyof typeof PRICE_CONFIG]?.name || "Interview Coaching Session";
   const sessionUrl = `https://coach.talendro.com/interview-coach?session_type=${sessionType}&email=${encodeURIComponent(email)}`;
+  const firstName = customerName ? customerName.split(' ')[0] : null;
+  const greeting = firstName ? `Hi ${firstName}!` : 'Hi There!';
   
   return `
 <!DOCTYPE html>
@@ -32,56 +34,76 @@ const generateNewPurchaseEmail = (sessionType: string, email: string) => {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.8; color: #2C2F38; margin: 0; padding: 0; background-color: #f5f5f5; }
-    .container { max-width: 600px; margin: 0 auto; background: #ffffff; }
-    .header { background: linear-gradient(135deg, #2F6DF6, #00C4CC); padding: 40px 30px; text-align: center; }
-    .logo-text { font-size: 32px; font-weight: 700; color: white; margin-bottom: 8px; letter-spacing: -0.5px; }
-    .logo-text span { color: #00C4CC; }
-    .header h1 { color: white; margin: 0; font-size: 24px; font-weight: 600; }
-    .header p { color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 16px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.8; color: #1a1a2e; margin: 0; padding: 0; background-color: #f0f4f8; }
+    .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+    .header { background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0d4b3e 100%); padding: 40px 30px; text-align: center; position: relative; }
+    .header::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); opacity: 0.5; }
+    .logo-container { position: relative; z-index: 1; margin-bottom: 16px; }
+    .logo-text { font-size: 36px; font-weight: 800; color: white; letter-spacing: -1px; }
+    .logo-text .tm { font-size: 16px; vertical-align: super; color: #10b981; font-weight: 600; }
+    .header-content { position: relative; z-index: 1; }
+    .header h1 { color: white; margin: 0; font-size: 26px; font-weight: 700; }
+    .header p { color: rgba(255,255,255,0.85); margin: 10px 0 0 0; font-size: 16px; }
+    .hero-banner { background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%); padding: 30px; text-align: center; border-bottom: 1px solid #e5e7eb; }
+    .hero-banner .icon { font-size: 48px; margin-bottom: 12px; }
+    .hero-banner h2 { color: #0f172a; font-size: 20px; font-weight: 600; margin: 0 0 8px 0; }
+    .hero-banner p { color: #64748b; font-size: 15px; margin: 0; }
     .content { padding: 40px 30px; }
-    .content p { margin: 16px 0; font-size: 16px; }
-    .product-box { background: #f8fafc; border-left: 4px solid #2F6DF6; padding: 20px; margin: 24px 0; border-radius: 0 8px 8px 0; }
-    .product-box h3 { margin: 0 0 8px 0; color: #2F6DF6; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .product-box a { margin: 0; font-size: 18px; font-weight: 600; color: #2C2F38; text-decoration: none; }
-    .product-box a:hover { color: #2F6DF6; text-decoration: underline; }
-    .cta-container { text-align: center; margin: 32px 0; }
-    .cta { display: inline-block; background: #2F6DF6; color: #ffffff !important; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; }
-    .cta:hover { background: #1e5bc6; }
-    .what-next { background: #f0f9ff; border-radius: 8px; padding: 20px; margin: 24px 0; }
-    .what-next h3 { margin: 0 0 12px 0; color: #2F6DF6; font-size: 16px; }
+    .content p { margin: 16px 0; font-size: 16px; color: #374151; }
+    .product-box { background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-left: 4px solid #10b981; padding: 24px; margin: 28px 0; border-radius: 0 12px 12px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .product-box h3 { margin: 0 0 10px 0; color: #10b981; font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; }
+    .product-box a { margin: 0; font-size: 20px; font-weight: 700; color: #0f172a; text-decoration: none; }
+    .product-box a:hover { color: #10b981; text-decoration: underline; }
+    .cta-container { text-align: center; margin: 36px 0; }
+    .cta { display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff !important; padding: 18px 48px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4); transition: transform 0.2s, box-shadow 0.2s; }
+    .cta:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5); }
+    .what-next { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 24px; margin: 28px 0; }
+    .what-next h3 { margin: 0 0 16px 0; color: #059669; font-size: 17px; font-weight: 700; }
     .what-next ul { margin: 0; padding-left: 20px; }
-    .what-next li { margin: 8px 0; color: #374151; }
-    .signature { margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb; }
-    .signature p { margin: 8px 0; }
-    .footer { background: #2C2F38; color: white; padding: 30px; text-align: center; }
-    .footer p { margin: 8px 0; font-size: 14px; }
-    .footer .tagline { color: #00C4CC; font-style: italic; margin-bottom: 16px; }
-    .footer .badges { margin: 16px 0; font-size: 13px; }
-    .footer .copyright { color: #9ca3af; font-size: 12px; margin-top: 16px; }
+    .what-next li { margin: 10px 0; color: #374151; font-size: 15px; }
+    .signature { margin-top: 36px; padding-top: 28px; border-top: 1px solid #e5e7eb; }
+    .signature p { margin: 8px 0; color: #374151; }
+    .footer { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 36px 30px; text-align: center; }
+    .footer-logo { font-size: 24px; font-weight: 800; color: white; margin-bottom: 8px; }
+    .footer-logo .tm { font-size: 12px; vertical-align: super; color: #10b981; }
+    .footer .tagline { color: #10b981; font-style: italic; font-size: 15px; margin: 12px 0 20px 0; }
+    .footer .badges { margin: 20px 0; font-size: 13px; color: #94a3b8; }
+    .footer .social-links { margin: 20px 0; }
+    .footer .social-links a { color: #94a3b8; text-decoration: none; margin: 0 12px; font-size: 14px; }
+    .footer .social-links a:hover { color: #10b981; }
+    .footer .copyright { color: #64748b; font-size: 12px; margin-top: 20px; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <div class="logo-text">Talendro<span>&trade;</span></div>
-      <h1>Welcome!</h1>
-      <p>Your interview coaching session is ready</p>
+      <div class="logo-container">
+        <div class="logo-text">Talendro<span class="tm">™</span></div>
+      </div>
+      <div class="header-content">
+        <h1>Welcome to Interview Success!</h1>
+        <p>Your coaching session is ready to begin</p>
+      </div>
+    </div>
+    <div class="hero-banner">
+      <div class="icon">🎯</div>
+      <h2>Be the Most Prepared Candidate in the Room</h2>
+      <p>AI-powered coaching backed by 30 years of recruiting experience</p>
     </div>
     <div class="content">
-      <p>Hi There!</p>
+      <p>${greeting}</p>
       
-      <p>Thank you for choosing <strong>Talendro&trade; Interview Coach</strong>! Your purchase is confirmed and your session is ready to begin.</p>
+      <p>Thank you for choosing <strong>Talendro™ Interview Coach</strong>! Your purchase is confirmed and your personalized coaching session is ready.</p>
       
       <div class="product-box">
         <h3>Your Purchase</h3>
         <a href="${sessionUrl}">${productName}</a>
       </div>
       
-      <p>You now have access to everything included in your plan. Our AI-powered coaching system is designed to help you walk into your next interview with confidence.</p>
+      <p>Our AI-powered coaching system is designed to help you walk into your next interview with unshakeable confidence.</p>
       
       <div class="what-next">
-        <h3>What Happens Next?</h3>
+        <h3>🚀 What Happens Next?</h3>
         <ul>
           <li>Click the button below to start your session</li>
           <li>Upload your resume and job description for personalized coaching</li>
@@ -91,21 +113,25 @@ const generateNewPurchaseEmail = (sessionType: string, email: string) => {
       </div>
       
       <div class="cta-container">
-        <a href="${sessionUrl}" class="cta">Start Your Session</a>
+        <a href="${sessionUrl}" class="cta">Start Your Session →</a>
       </div>
       
       <p>If you have any questions or need assistance, simply reply to this email. We're here to help you succeed.</p>
       
       <div class="signature">
         <p>Let's ace your next interview together.</p>
-        <p><strong>&mdash; Greg Jackson</strong><br>Founder, Talendro&trade;</p>
+        <p><strong>— Greg Jackson</strong><br>Founder, Talendro™</p>
       </div>
     </div>
     <div class="footer">
-      <p class="tagline">Precision Matches. Faster Results.</p>
-      <p><strong>Talendro&trade;</strong></p>
-      <p class="badges">&#127482;&#127480; American-Built &bull; &#127894; Veteran-Led &bull; &#10004; Recruiter-Tested</p>
-      <p class="copyright">&copy; ${new Date().getFullYear()} Talendro. All rights reserved.</p>
+      <div class="footer-logo">Talendro<span class="tm">™</span></div>
+      <p class="tagline">"Your partner in interview success"</p>
+      <p class="badges">🇺🇸 American-Built • 🎖️ Veteran-Led • ✅ Recruiter-Tested</p>
+      <div class="social-links">
+        <a href="https://www.linkedin.com/company/talendro">LinkedIn</a>
+        <a href="https://talendro.com">Website</a>
+      </div>
+      <p class="copyright">© ${new Date().getFullYear()} Talendro. All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -114,10 +140,12 @@ const generateNewPurchaseEmail = (sessionType: string, email: string) => {
 };
 
 // Generate email HTML for upgrade purchase (Template B)
-const generateUpgradeEmail = (sessionType: string, email: string, upgradeCredit: number, previousPurchase: string) => {
+const generateUpgradeEmail = (sessionType: string, email: string, upgradeCredit: number, previousPurchase: string, customerName?: string) => {
   const productName = PRICE_CONFIG[sessionType as keyof typeof PRICE_CONFIG]?.name || "Interview Coaching Session";
   const previousProductName = PRICE_CONFIG[previousPurchase as keyof typeof PRICE_CONFIG]?.name || previousPurchase;
   const sessionUrl = `https://coach.talendro.com/interview-coach?session_type=${sessionType}&email=${encodeURIComponent(email)}`;
+  const firstName = customerName ? customerName.split(' ')[0] : null;
+  const greeting = firstName ? `Hi ${firstName}!` : 'Hi There!';
   
   return `
 <!DOCTYPE html>
@@ -126,50 +154,70 @@ const generateUpgradeEmail = (sessionType: string, email: string, upgradeCredit:
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.8; color: #2C2F38; margin: 0; padding: 0; background-color: #f5f5f5; }
-    .container { max-width: 600px; margin: 0 auto; background: #ffffff; }
-    .header { background: linear-gradient(135deg, #2F6DF6, #00C4CC); padding: 40px 30px; text-align: center; }
-    .logo-text { font-size: 32px; font-weight: 700; color: white; margin-bottom: 8px; letter-spacing: -0.5px; }
-    .logo-text span { color: #00C4CC; }
-    .header h1 { color: white; margin: 0; font-size: 24px; font-weight: 600; }
-    .header p { color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 16px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.8; color: #1a1a2e; margin: 0; padding: 0; background-color: #f0f4f8; }
+    .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+    .header { background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0d4b3e 100%); padding: 40px 30px; text-align: center; position: relative; }
+    .header::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); opacity: 0.5; }
+    .logo-container { position: relative; z-index: 1; margin-bottom: 16px; }
+    .logo-text { font-size: 36px; font-weight: 800; color: white; letter-spacing: -1px; }
+    .logo-text .tm { font-size: 16px; vertical-align: super; color: #10b981; font-weight: 600; }
+    .header-content { position: relative; z-index: 1; }
+    .header h1 { color: white; margin: 0; font-size: 26px; font-weight: 700; }
+    .header p { color: rgba(255,255,255,0.85); margin: 10px 0 0 0; font-size: 16px; }
+    .hero-banner { background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 100%); padding: 30px; text-align: center; border-bottom: 1px solid #e5e7eb; }
+    .hero-banner .icon { font-size: 48px; margin-bottom: 12px; }
+    .hero-banner h2 { color: #0f172a; font-size: 20px; font-weight: 600; margin: 0 0 8px 0; }
+    .hero-banner p { color: #64748b; font-size: 15px; margin: 0; }
     .content { padding: 40px 30px; }
-    .content p { margin: 16px 0; font-size: 16px; }
-    .product-box { background: #f8fafc; border-left: 4px solid #2F6DF6; padding: 20px; margin: 24px 0; border-radius: 0 8px 8px 0; }
-    .product-box h3 { margin: 0 0 8px 0; color: #2F6DF6; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .product-box a { margin: 0; font-size: 18px; font-weight: 600; color: #2C2F38; text-decoration: none; }
-    .product-box a:hover { color: #2F6DF6; text-decoration: underline; }
-    .upgrade-details { background: #ecfdf5; border: 1px solid #10b981; padding: 20px; margin: 24px 0; border-radius: 8px; }
-    .upgrade-details h3 { margin: 0 0 12px 0; color: #059669; font-size: 16px; }
+    .content p { margin: 16px 0; font-size: 16px; color: #374151; }
+    .product-box { background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-left: 4px solid #10b981; padding: 24px; margin: 28px 0; border-radius: 0 12px 12px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .product-box h3 { margin: 0 0 10px 0; color: #10b981; font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; }
+    .product-box a { margin: 0; font-size: 20px; font-weight: 700; color: #0f172a; text-decoration: none; }
+    .product-box a:hover { color: #10b981; text-decoration: underline; }
+    .upgrade-details { background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border: 1px solid #10b981; padding: 24px; margin: 28px 0; border-radius: 12px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1); }
+    .upgrade-details h3 { margin: 0 0 16px 0; color: #059669; font-size: 17px; font-weight: 700; }
     .upgrade-details ul { margin: 0; padding-left: 20px; }
-    .upgrade-details li { margin: 8px 0; color: #065f46; }
-    .cta-container { text-align: center; margin: 32px 0; }
-    .cta { display: inline-block; background: #2F6DF6; color: #ffffff !important; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; }
-    .cta:hover { background: #1e5bc6; }
-    .what-next { background: #f0f9ff; border-radius: 8px; padding: 20px; margin: 24px 0; }
-    .what-next h3 { margin: 0 0 12px 0; color: #2F6DF6; font-size: 16px; }
+    .upgrade-details li { margin: 10px 0; color: #065f46; font-size: 15px; }
+    .cta-container { text-align: center; margin: 36px 0; }
+    .cta { display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff !important; padding: 18px 48px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4); transition: transform 0.2s, box-shadow 0.2s; }
+    .cta:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5); }
+    .what-next { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 24px; margin: 28px 0; }
+    .what-next h3 { margin: 0 0 16px 0; color: #059669; font-size: 17px; font-weight: 700; }
     .what-next ul { margin: 0; padding-left: 20px; }
-    .what-next li { margin: 8px 0; color: #374151; }
-    .signature { margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb; }
-    .signature p { margin: 8px 0; }
-    .footer { background: #2C2F38; color: white; padding: 30px; text-align: center; }
-    .footer p { margin: 8px 0; font-size: 14px; }
-    .footer .tagline { color: #00C4CC; font-style: italic; margin-bottom: 16px; }
-    .footer .badges { margin: 16px 0; font-size: 13px; }
-    .footer .copyright { color: #9ca3af; font-size: 12px; margin-top: 16px; }
+    .what-next li { margin: 10px 0; color: #374151; font-size: 15px; }
+    .signature { margin-top: 36px; padding-top: 28px; border-top: 1px solid #e5e7eb; }
+    .signature p { margin: 8px 0; color: #374151; }
+    .footer { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 36px 30px; text-align: center; }
+    .footer-logo { font-size: 24px; font-weight: 800; color: white; margin-bottom: 8px; }
+    .footer-logo .tm { font-size: 12px; vertical-align: super; color: #10b981; }
+    .footer .tagline { color: #10b981; font-style: italic; font-size: 15px; margin: 12px 0 20px 0; }
+    .footer .badges { margin: 20px 0; font-size: 13px; color: #94a3b8; }
+    .footer .social-links { margin: 20px 0; }
+    .footer .social-links a { color: #94a3b8; text-decoration: none; margin: 0 12px; font-size: 14px; }
+    .footer .social-links a:hover { color: #10b981; }
+    .footer .copyright { color: #64748b; font-size: 12px; margin-top: 20px; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <div class="logo-text">Talendro<span>&trade;</span></div>
-      <h1>Your Upgrade Is Complete</h1>
-      <p>You're now on a more powerful plan</p>
+      <div class="logo-container">
+        <div class="logo-text">Talendro<span class="tm">™</span></div>
+      </div>
+      <div class="header-content">
+        <h1>🚀 Your Upgrade Is Complete!</h1>
+        <p>You're now on a more powerful plan</p>
+      </div>
+    </div>
+    <div class="hero-banner">
+      <div class="icon">⬆️</div>
+      <h2>Unlocking Your Full Interview Potential</h2>
+      <p>Enhanced AI coaching with deeper, more personalized insights</p>
     </div>
     <div class="content">
-      <p>Hi There!</p>
+      <p>${greeting}</p>
       
-      <p>Thank you for upgrading your Talendro&trade; experience! Your new plan is now active and ready to go.</p>
+      <p>Thank you for upgrading your <strong>Talendro™</strong> experience! Your enhanced plan is now active and ready to elevate your interview preparation.</p>
       
       <div class="product-box">
         <h3>Your Upgraded Plan</h3>
@@ -177,7 +225,7 @@ const generateUpgradeEmail = (sessionType: string, email: string, upgradeCredit:
       </div>
       
       <div class="upgrade-details">
-        <h3>&#128176; Upgrade Credit Applied</h3>
+        <h3>💰 Upgrade Credit Applied</h3>
         <ul>
           <li><strong>Previous purchase:</strong> ${previousProductName}</li>
           <li><strong>Credit applied:</strong> $${(upgradeCredit / 100).toFixed(2)}</li>
@@ -188,7 +236,7 @@ const generateUpgradeEmail = (sessionType: string, email: string, upgradeCredit:
       <p>You now have full access to everything included in your enhanced plan. We're excited to help you take your interview preparation to the next level.</p>
       
       <div class="what-next">
-        <h3>What's Included in Your Upgrade?</h3>
+        <h3>✨ What's Included in Your Upgrade?</h3>
         <ul>
           <li>Enhanced AI coaching with deeper analysis</li>
           <li>More comprehensive feedback and recommendations</li>
@@ -197,21 +245,25 @@ const generateUpgradeEmail = (sessionType: string, email: string, upgradeCredit:
       </div>
       
       <div class="cta-container">
-        <a href="${sessionUrl}" class="cta">Continue Your Session</a>
+        <a href="${sessionUrl}" class="cta">Continue Your Session →</a>
       </div>
       
       <p>If you'd like guidance, strategic prep advice, or help getting the most from your new plan, reply to this email anytime. You've got support here.</p>
       
       <div class="signature">
         <p>Let's strengthen your next interview together.</p>
-        <p><strong>&mdash; Greg Jackson</strong><br>Founder, Talendro&trade;</p>
+        <p><strong>— Greg Jackson</strong><br>Founder, Talendro™</p>
       </div>
     </div>
     <div class="footer">
-      <p class="tagline">Precision Matches. Faster Results.</p>
-      <p><strong>Talendro&trade;</strong></p>
-      <p class="badges">&#127482;&#127480; American-Built &bull; &#127894; Veteran-Led &bull; &#10004; Recruiter-Tested</p>
-      <p class="copyright">&copy; ${new Date().getFullYear()} Talendro. All rights reserved.</p>
+      <div class="footer-logo">Talendro<span class="tm">™</span></div>
+      <p class="tagline">"Your partner in interview success"</p>
+      <p class="badges">🇺🇸 American-Built • 🎖️ Veteran-Led • ✅ Recruiter-Tested</p>
+      <div class="social-links">
+        <a href="https://www.linkedin.com/company/talendro">LinkedIn</a>
+        <a href="https://talendro.com">Website</a>
+      </div>
+      <p class="copyright">© ${new Date().getFullYear()} Talendro. All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -226,17 +278,21 @@ const sendPurchaseEmail = async (
   sessionType: string,
   isUpgrade: boolean,
   upgradeCredit: number,
-  previousPurchase: string
+  previousPurchase: string,
+  customerName?: string
 ) => {
   const productName = PRICE_CONFIG[sessionType as keyof typeof PRICE_CONFIG]?.name || "Interview Coaching Session";
+  const firstName = customerName ? customerName.split(' ')[0] : null;
   
   const subject = isUpgrade 
     ? `Your Talendro Upgrade Is Complete 🚀`
-    : `Welcome to Talendro™ - ${productName}`;
+    : firstName 
+      ? `${firstName}, Welcome to Talendro™ - ${productName}`
+      : `Welcome to Talendro™ - ${productName}`;
   
   const html = isUpgrade 
-    ? generateUpgradeEmail(sessionType, email, upgradeCredit, previousPurchase)
-    : generateNewPurchaseEmail(sessionType, email);
+    ? generateUpgradeEmail(sessionType, email, upgradeCredit, previousPurchase, customerName)
+    : generateNewPurchaseEmail(sessionType, email, customerName);
   
   try {
     const result = await resend.emails.send({
@@ -251,6 +307,7 @@ const sendPurchaseEmail = async (
       email, 
       sessionType, 
       isUpgrade,
+      customerName: customerName || 'not provided',
       result: result.data ? 'success' : 'failed',
       error: result.error 
     });
@@ -388,6 +445,9 @@ serve(async (req) => {
           previousPurchase = previousSession?.session_type || '';
         }
 
+        // Get customer name from Stripe checkout session
+        const customerName = checkoutSession.customer_details?.name || undefined;
+
         // Send purchase confirmation email
         if (resend && customerEmail && sessionTypeFromMetadata) {
           try {
@@ -397,7 +457,8 @@ serve(async (req) => {
               sessionTypeFromMetadata,
               isUpgrade,
               upgradeCredit,
-              previousPurchase
+              previousPurchase,
+              customerName
             );
           } catch (emailError) {
             // Don't fail the whole request if email fails
