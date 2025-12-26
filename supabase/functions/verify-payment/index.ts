@@ -314,7 +314,49 @@ serve(async (req) => {
   try {
     logStep("Function started");
     
-    const { checkout_session_id, email, session_type } = await req.json();
+    const { checkout_session_id, email, session_type, test_email } = await req.json();
+    
+    // Test email mode - just send a sample email without verification
+    if (test_email && email) {
+      logStep("Test email mode triggered", { email, session_type });
+      
+      const resendKeyRaw = Deno.env.get("RESEND_API_KEY") ?? "";
+      const resendKey = resendKeyRaw
+        .replace(/[\u200B-\u200D\uFEFF]/g, "")
+        .replace(/\s+/g, "")
+        .trim();
+      
+      if (!resendKey || resendKey.includes("*")) {
+        return new Response(JSON.stringify({ 
+          error: "RESEND_API_KEY not configured properly" 
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 500,
+        });
+      }
+      
+      const resend = new Resend(resendKey);
+      const testSessionType = session_type || "quick_prep";
+      const emailHtml = generateNewPurchaseEmail(testSessionType, email, "Test User");
+      
+      const emailResult = await resend.emails.send({
+        from: "Talendro Interview Coach <coaching@talendro.com>",
+        to: [email],
+        subject: "🎯 [TEST] Your Talendro Interview Coaching Session is Ready!",
+        html: emailHtml,
+      });
+      
+      logStep("Test email sent", { emailResult });
+      
+      return new Response(JSON.stringify({ 
+        success: true,
+        message: "Test email sent",
+        emailResult 
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
     
     if (!checkout_session_id && !email) {
       throw new Error("checkout_session_id or email is required");
