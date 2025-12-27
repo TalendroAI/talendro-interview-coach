@@ -119,28 +119,57 @@ serve(async (req) => {
       }
     }
 
-    // Calculate promo discount (applied AFTER upgrade credit)
+    // Calculate promo discount amount
     let promoDiscountAmount = 0;
     if (discount_percent && discount_percent > 0) {
-      // Calculate discount on the REMAINING amount after upgrade credit
-      const priceAfterUpgrade = priceConfig.amount - upgradeCredit;
-      promoDiscountAmount = Math.floor(priceAfterUpgrade * (discount_percent / 100));
+      promoDiscountAmount = Math.floor(priceConfig.amount * (discount_percent / 100));
       logStep("Promo discount calculated", { 
         discount_percent,
-        priceAfterUpgrade: priceAfterUpgrade / 100,
         promoDiscountAmount: promoDiscountAmount / 100 
       });
     }
 
-    // Total discount (upgrade credit + promo)
-    const totalDiscount = upgradeCredit + promoDiscountAmount;
-    const finalPrice = Math.max(0, priceConfig.amount - totalDiscount);
+    // ADMIN RULE: Users can only use ONE discount - the GREATER of:
+    // 1. Upgrade credit (from previous purchase within 24hrs)
+    // 2. Promo code discount
+    // They CANNOT be combined.
+    let appliedDiscount = 0;
+    let discountType: 'none' | 'upgrade' | 'promo' = 'none';
+    let appliedDiscountCodeId: string | null = null;
 
-    logStep("Final pricing", {
+    if (upgradeCredit > 0 || promoDiscountAmount > 0) {
+      if (upgradeCredit >= promoDiscountAmount) {
+        // Upgrade credit wins - ignore promo code
+        appliedDiscount = upgradeCredit;
+        discountType = 'upgrade';
+        appliedDiscountCodeId = null; // Don't record promo code usage
+        logStep("Using UPGRADE credit (greater value)", { 
+          upgradeCredit: upgradeCredit / 100,
+          promoDiscountAmount: promoDiscountAmount / 100,
+          winner: 'upgrade'
+        });
+      } else {
+        // Promo code wins - ignore upgrade credit
+        appliedDiscount = promoDiscountAmount;
+        discountType = 'promo';
+        appliedDiscountCodeId = discount_code_id || null;
+        upgradedFromSession = null; // Clear upgrade reference since we're not using it
+        logStep("Using PROMO code (greater value)", { 
+          upgradeCredit: upgradeCredit / 100,
+          promoDiscountAmount: promoDiscountAmount / 100,
+          winner: 'promo'
+        });
+      }
+    }
+
+    const finalPrice = Math.max(0, priceConfig.amount - appliedDiscount);
+
+    logStep("Final pricing (single discount applied)", {
       originalPrice: priceConfig.amount / 100,
       upgradeCredit: upgradeCredit / 100,
       promoDiscount: promoDiscountAmount / 100,
-      totalDiscount: totalDiscount / 100,
+      discountType,
+      appliedDiscount: appliedDiscount / 100,
       finalPrice: finalPrice / 100,
     });
 
@@ -162,12 +191,12 @@ serve(async (req) => {
 
     logStep("Created pending session", { sessionId: sessionData.id });
 
-    // Record the discount code usage if a code was applied
-    if (discount_code_id && promoDiscountAmount > 0) {
+    // Record the discount code usage ONLY if promo code was the winning discount
+    if (appliedDiscountCodeId && discountType === 'promo') {
       const { error: usageError } = await supabaseClient
         .from("discount_code_usage")
         .insert({
-          code_id: discount_code_id,
+          code_id: appliedDiscountCodeId,
           email: email.toLowerCase().trim(),
           session_id: sessionData.id,
         });
@@ -176,7 +205,7 @@ serve(async (req) => {
         logStep("Warning: Failed to record discount usage", { error: usageError });
         // Don't throw - we still want to proceed with checkout
       } else {
-        logStep("Recorded discount code usage", { code_id: discount_code_id, email });
+        logStep("Recorded discount code usage", { code_id: appliedDiscountCodeId, email });
       }
     }
 
@@ -199,24 +228,21 @@ serve(async (req) => {
       metadata: {
         session_id: sessionData.id,
         session_type,
-        upgraded_from_session: upgradedFromSession?.id || null,
-        upgrade_credit_applied: upgradeCredit > 0 ? (upgradeCredit / 100).toString() : null,
-        promo_discount_applied: promoDiscountAmount > 0 ? (promoDiscountAmount / 100).toString() : null,
-        discount_code_id: discount_code_id || null,
+        discount_type: discountType,
+        upgraded_from_session: discountType === 'upgrade' ? upgradedFromSession?.id : null,
+        discount_applied: appliedDiscount > 0 ? (appliedDiscount / 100).toString() : null,
+        discount_code_id: discountType === 'promo' ? appliedDiscountCodeId : null,
       },
     };
 
-    // Apply combined discount as a single coupon if there's any discount
-    if (totalDiscount > 0 && !isSubscription) {
-      // Create a one-time coupon for the total discount
-      const couponName = upgradeCredit > 0 && promoDiscountAmount > 0
-        ? `Upgrade + Promo discount`
-        : upgradeCredit > 0
-          ? `Upgrade credit from ${upgradedFromSession?.session_type}`
-          : `Promo discount (${discount_percent}% off)`;
+    // Apply the single winning discount as a coupon
+    if (appliedDiscount > 0 && !isSubscription) {
+      const couponName = discountType === 'upgrade'
+        ? `Upgrade credit from ${upgradedFromSession?.session_type}`
+        : `Promo discount (${discount_percent}% off)`;
 
       const coupon = await stripe.coupons.create({
-        amount_off: totalDiscount,
+        amount_off: appliedDiscount,
         currency: "usd",
         duration: "once",
         name: couponName,
@@ -225,7 +251,8 @@ serve(async (req) => {
       
       logStep("Created discount coupon", { 
         couponId: coupon.id, 
-        amountOff: totalDiscount / 100,
+        discountType,
+        amountOff: appliedDiscount / 100,
         originalPrice: priceConfig.amount / 100,
         finalPrice: finalPrice / 100
       });
@@ -258,7 +285,8 @@ serve(async (req) => {
       checkoutLivemode: (checkoutSession as any).livemode ?? null,
       urlHasTestPrefix:
         typeof checkoutSession.url === "string" ? checkoutSession.url.includes("/test_") : null,
-      totalDiscountApplied: totalDiscount > 0 ? totalDiscount / 100 : 0,
+      discountType,
+      discountApplied: appliedDiscount > 0 ? appliedDiscount / 100 : 0,
     });
 
     return new Response(
@@ -269,8 +297,10 @@ serve(async (req) => {
           stripe_account_livemode: stripeAccountLivemode,
           checkout_url_host: checkoutUrlHost,
         },
-        upgrade_credit_applied: upgradeCredit > 0 ? upgradeCredit / 100 : 0,
-        promo_discount_applied: promoDiscountAmount > 0 ? promoDiscountAmount / 100 : 0,
+        discount_type: discountType,
+        discount_applied: appliedDiscount > 0 ? appliedDiscount / 100 : 0,
+        upgrade_credit_available: upgradeCredit > 0 ? upgradeCredit / 100 : 0,
+        promo_discount_available: promoDiscountAmount > 0 ? promoDiscountAmount / 100 : 0,
         original_price: priceConfig.amount / 100,
         final_price: finalPrice / 100,
       }),
