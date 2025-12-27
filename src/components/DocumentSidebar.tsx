@@ -60,7 +60,12 @@ export function DocumentSidebar({
         {/* 1. Resume Section */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <span className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
+            <span className={cn(
+              "flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold transition-all duration-300",
+              isResumeComplete 
+                ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
+                : "bg-primary text-primary-foreground"
+            )}>
               1
             </span>
             <Label htmlFor="resume" className="font-semibold text-foreground">
@@ -89,7 +94,12 @@ export function DocumentSidebar({
         {/* 2. Job Description Section */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <span className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
+            <span className={cn(
+              "flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold transition-all duration-300",
+              isJobComplete 
+                ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
+                : "bg-primary text-primary-foreground"
+            )}>
               2
             </span>
             <Label htmlFor="jobDescription" className="font-semibold text-foreground">
@@ -118,7 +128,12 @@ export function DocumentSidebar({
         {/* 3. Company URL Section */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <span className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
+            <span className={cn(
+              "flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold transition-all duration-300",
+              isCompanyComplete 
+                ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
+                : "bg-primary text-primary-foreground"
+            )}>
               3
             </span>
             <Label htmlFor="companyUrl" className="font-semibold text-foreground">
@@ -147,7 +162,12 @@ export function DocumentSidebar({
 
         {/* 4. Save Documents Button */}
         <div className="flex items-start gap-2">
-          <span className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs font-bold mt-1">
+          <span className={cn(
+            "flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold mt-1 transition-all duration-300",
+            isDocumentsSaved 
+              ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
+              : "bg-primary text-primary-foreground"
+          )}>
             4
           </span>
           <Button
@@ -162,10 +182,14 @@ export function DocumentSidebar({
         </div>
       </div>
 
-      {/* 5. Complete Session Button */}
       <div className="border-t border-border p-5">
         <div className="flex items-start gap-2">
-          <span className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs font-bold mt-1">
+          <span className={cn(
+            "flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold mt-1 transition-all duration-300",
+            isContentReady 
+              ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
+              : "bg-primary text-primary-foreground"
+          )}>
             5
           </span>
           <Button
