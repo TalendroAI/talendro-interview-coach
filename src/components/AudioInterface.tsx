@@ -1,10 +1,12 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useConversation } from '@elevenlabs/react';
-import { MicOff, Volume2, PhoneOff, Loader2, Lightbulb, RefreshCw } from 'lucide-react';
+import { MicOff, Volume2, PhoneOff, Loader2, Lightbulb, RefreshCw, Video, VideoOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import sarahHeadshot from '@/assets/sarah-headshot.jpg';
 
 interface AudioInterfaceProps {
@@ -23,6 +25,10 @@ interface AudioInterfaceProps {
 // Replace with your ElevenLabs agent ID
 const ELEVENLABS_AGENT_ID = 'agent_1901kb0ray8kfph9x9bh4w97bbe4';
 
+// Sarah's headshot URL for D-ID (needs to be publicly accessible)
+// Using a placeholder - in production, upload Sarah's photo to Supabase storage
+const SARAH_IMAGE_URL = 'https://yufholjudwhxgznyyzax.supabase.co/storage/v1/object/public/avatars/sarah-headshot.jpg';
+
 export function AudioInterface({ 
   isActive, 
   sessionId, 
@@ -35,12 +41,17 @@ export function AudioInterface({
   const [isMuted, setIsMuted] = useState(false);
   const [connectionDropped, setConnectionDropped] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
+  const [enableLipSync, setEnableLipSync] = useState(false);
+  const [lipSyncVideoUrl, setLipSyncVideoUrl] = useState<string | null>(null);
+  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const { toast } = useToast();
   
   // Track if user intentionally ended the session
   const userEndedSession = useRef(false);
   // Track if interview has started (to distinguish intentional end vs drop)
   const interviewStarted = useRef(false);
+  // Video element ref for lip-sync playback
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   // Keep a rolling transcript so we can resume after reconnect (ElevenLabs sessions don't persist across reconnects)
   const transcriptRef = useRef<Array<{ role: 'user' | 'assistant'; text: string; ts: number }>>([]);
@@ -380,6 +391,32 @@ export function AudioInterface({
             </div>
           </div>
 
+          {/* Lip Sync Toggle (Experimental) */}
+          <div className="mb-6 p-4 bg-secondary/10 rounded-lg border border-secondary/30">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {enableLipSync ? (
+                  <Video className="h-5 w-5 text-secondary" />
+                ) : (
+                  <VideoOff className="h-5 w-5 text-muted-foreground" />
+                )}
+                <div>
+                  <Label htmlFor="lip-sync-toggle" className="font-semibold text-foreground cursor-pointer">
+                    AI Lip Sync (Beta)
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Animate Sarah's photo with lip-sync. May add 2-5s delay.
+                  </p>
+                </div>
+              </div>
+              <Switch
+                id="lip-sync-toggle"
+                checked={enableLipSync}
+                onCheckedChange={setEnableLipSync}
+              />
+            </div>
+          </div>
+
           {/* Tips Section - Moved above button */}
           <div className="mb-8 p-4 bg-card rounded-lg border border-border">
             <div className="flex items-start gap-2 mb-3">
@@ -416,7 +453,7 @@ export function AudioInterface({
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-8">
       <div className="max-w-md w-full text-center animate-slide-up">
-        {/* Voice Visualization with Sarah's Headshot */}
+        {/* Voice Visualization with Sarah's Headshot or D-ID Video */}
         <div className="relative mb-8">
           <div
             className={cn(
@@ -431,22 +468,54 @@ export function AudioInterface({
             {isConnecting ? (
               <Loader2 className="h-16 w-16 text-primary animate-spin" />
             ) : isConnected ? (
-              <img 
-                src={sarahHeadshot} 
-                alt="Sarah - Your AI Interview Coach" 
-                className="h-full w-full object-cover"
-              />
+              <>
+                {/* Show D-ID video when lip-sync is enabled and video is available */}
+                {enableLipSync && lipSyncVideoUrl && isSpeaking ? (
+                  <video
+                    ref={videoRef}
+                    src={lipSyncVideoUrl}
+                    autoPlay
+                    playsInline
+                    muted={false}
+                    className="h-full w-full object-cover"
+                    onEnded={() => setLipSyncVideoUrl(null)}
+                  />
+                ) : (
+                  <img 
+                    src={sarahHeadshot} 
+                    alt="Sarah - Your AI Interview Coach" 
+                    className={cn(
+                      "h-full w-full object-cover transition-transform duration-300",
+                      isSpeaking && "scale-105"
+                    )}
+                  />
+                )}
+                {/* Loading overlay when generating D-ID video */}
+                {enableLipSync && isGeneratingVideo && (
+                  <div className="absolute inset-0 bg-background/50 flex items-center justify-center rounded-full">
+                    <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                  </div>
+                )}
+              </>
             ) : (
               <Volume2 className="h-16 w-16 text-muted-foreground" />
             )}
           </div>
           
           {/* Ripple effect when speaking */}
-          {isConnected && isSpeaking && (
+          {isConnected && isSpeaking && !lipSyncVideoUrl && (
             <>
               <div className="absolute inset-0 h-40 w-40 mx-auto rounded-full bg-session-audio/20 animate-ping" />
               <div className="absolute inset-0 h-40 w-40 mx-auto rounded-full bg-session-audio/10 animate-ping animation-delay-200" />
             </>
+          )}
+
+          {/* Lip-sync indicator badge */}
+          {enableLipSync && isConnected && (
+            <div className="absolute -top-2 -right-2 bg-secondary text-secondary-foreground px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+              <Video className="h-3 w-3" />
+              {isGeneratingVideo ? 'Generating...' : 'Lip Sync'}
+            </div>
           )}
         </div>
 
