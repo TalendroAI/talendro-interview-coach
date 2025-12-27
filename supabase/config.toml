@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.resolve-error]
 verify_jwt = false
+
+[functions.d-id-talk]
+verify_jwt = false
