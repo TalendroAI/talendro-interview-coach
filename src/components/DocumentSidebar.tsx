@@ -165,19 +165,12 @@ export function DocumentSidebar({
       {/* 5. Complete Session Button */}
       <div className="border-t border-border p-5">
         <div className="flex items-start gap-2">
-          <span className={cn(
-            "flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold mt-1",
-            canCompleteSession ? "bg-secondary text-secondary-foreground" : "bg-muted text-muted-foreground"
-          )}>
+          <span className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs font-bold mt-1">
             5
           </span>
           <Button
-            variant={canCompleteSession ? "default" : "outline"}
             size="lg"
-            className={cn(
-              "flex-1 font-semibold shadow-sm hover:shadow-md transition-all disabled:bg-muted disabled:text-muted-foreground",
-              canCompleteSession && "bg-secondary hover:bg-secondary/90 text-secondary-foreground"
-            )}
+            className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm hover:shadow-md transition-all disabled:bg-muted disabled:text-muted-foreground"
             onClick={onStartSession}
             disabled={!canCompleteSession || isLoading}
           >
