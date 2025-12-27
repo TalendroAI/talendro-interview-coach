@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
 import { DocumentInputs, SessionType, SESSION_CONFIGS } from '@/types/session';
 import { cn } from '@/lib/utils';
 
@@ -41,6 +42,16 @@ export function DocumentSidebar({
   const canSaveDocuments = allFieldsComplete && !isDocumentsSaved;
   const canCompleteSession = isContentReady && sessionType;
 
+  // Calculate progress percentage (5 steps total)
+  const completedSteps = [
+    isResumeComplete,
+    isJobComplete,
+    isCompanyComplete,
+    isDocumentsSaved,
+    isContentReady
+  ].filter(Boolean).length;
+  const progressPercentage = (completedSteps / 5) * 100;
+
   const handleSaveDocuments = () => {
     if (onSaveDocuments) {
       onSaveDocuments();
@@ -49,11 +60,22 @@ export function DocumentSidebar({
 
   return (
     <aside className="w-full lg:w-[380px] bg-soft border-r border-border flex flex-col h-full">
-      {/* YOUR DOCUMENTS Section */}
-      <div className="p-5 border-b border-border">
-        <h2 className="font-extrabold text-sm uppercase tracking-wide text-foreground">
-          Your Documents
-        </h2>
+      {/* YOUR DOCUMENTS Section with Progress */}
+      <div className="p-5 border-b border-border space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="font-extrabold text-sm uppercase tracking-wide text-foreground">
+            Your Documents
+          </h2>
+          <span className="text-xs font-medium text-muted-foreground">
+            {completedSteps}/5 complete
+          </span>
+        </div>
+        <div className="space-y-1">
+          <Progress 
+            value={progressPercentage} 
+            className="h-2 bg-muted"
+          />
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
