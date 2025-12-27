@@ -77,16 +77,18 @@ export function AudioInterface({
       await navigator.mediaDevices.getUserMedia({ audio: true });
       console.log('Microphone permission granted');
 
-      // Get conversation token from backend function
-      console.log('Fetching conversation token...');
+      // Get signed URL from backend function (more reliable than WebRTC token in some browsers)
+      console.log('Fetching signed URL...');
       const { data, error } = await supabase.functions.invoke('elevenlabs-conversation-token', {
-        body: { agentId: ELEVENLABS_AGENT_ID },
+        body: { agentId: ELEVENLABS_AGENT_ID, mode: 'signed_url' },
       });
 
-      console.log('Token response:', { data, error });
+      console.log('Signed URL response:', { data, error });
 
-      if (error || !data?.token) {
-        throw new Error(error?.message || 'No token received');
+      const signedUrl = (data as any)?.signedUrl;
+
+      if (error || !signedUrl) {
+        throw new Error(error?.message || 'No signed URL received');
       }
 
       // Build context from documents (sent as contextual update once connected)
@@ -95,18 +97,28 @@ export function AudioInterface({
       if (documents?.jobDescription) contextParts.push(`Job Description:\n${documents.jobDescription}`);
       if (documents?.companyUrl) contextParts.push(`Company URL: ${documents.companyUrl}`);
 
-      console.log('Starting ElevenLabs session...');
+      console.log('Starting ElevenLabs session (signed URL)...');
 
-      // Start the conversation with WebRTC
-      await conversation.startSession({
-        conversationToken: data.token,
-        connectionType: 'webrtc',
-      });
+      await conversation.startSession({ signedUrl });
 
       if (contextParts.length > 0) {
         console.log('Sending contextual update with documents:', contextParts.length);
         conversation.sendContextualUpdate(contextParts.join('\n\n'));
       }
+
+      // If the agent doesn't start speaking on its own (no configured first message), nudge it.
+      window.setTimeout(() => {
+        try {
+          if (conversation.status === 'connected' && !conversation.isSpeaking) {
+            console.log('No greeting detected; nudging Sandra to greet.');
+            conversation.sendUserMessage(
+              'Start the interview now. Greet the candidate warmly by saying: "Hello, I\'m Sandra. Thank you for your interest in the opportunity. I\'ll be conducting your interview today." Then ask your first question.'
+            );
+          }
+        } catch (e) {
+          console.error('Failed to send greeting nudge:', e);
+        }
+      }, 900);
 
       console.log('ElevenLabs session started successfully');
     } catch (error) {
