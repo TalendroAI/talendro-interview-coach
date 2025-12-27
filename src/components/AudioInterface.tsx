@@ -1,10 +1,11 @@
 import { useState, useCallback } from 'react';
 import { useConversation } from '@elevenlabs/react';
-import { Mic, MicOff, Volume2, Phone, PhoneOff, Loader2 } from 'lucide-react';
+import { MicOff, Volume2, PhoneOff, Loader2, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import sandraHeadshot from '@/assets/sandra-headshot.jpg';
 
 interface AudioInterfaceProps {
   isActive: boolean;
@@ -117,27 +118,90 @@ export function AudioInterface({ isActive, sessionId, documents }: AudioInterfac
   const isConnected = conversation.status === 'connected';
   const isSpeaking = conversation.isSpeaking;
 
+  // Pre-interview welcome screen (brand-standard layout)
+  if (!isConnected && !isConnecting) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-hero">
+        <div className="max-w-2xl w-full animate-slide-up">
+          {/* Title */}
+          <div className="text-center mb-10">
+            <h1 className="text-3xl md:text-4xl font-extrabold text-foreground flex items-center justify-center gap-3">
+              <span className="text-4xl">🎙️</span>
+              Premium Audio Mock Interview
+            </h1>
+          </div>
+
+          {/* Sandra's Headshot */}
+          <div className="flex justify-center mb-8">
+            <div className="relative">
+              <img 
+                src={sandraHeadshot} 
+                alt="Sandra - Your AI Interview Coach" 
+                className="h-40 w-40 rounded-full object-cover border-4 border-primary shadow-lg"
+              />
+              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-semibold">
+                Sandra
+              </div>
+            </div>
+          </div>
+
+          {/* Tips Section - Moved above button */}
+          <div className="mb-8 p-4 bg-accent/50 rounded-lg border border-accent">
+            <div className="flex items-start gap-2 mb-3">
+              <Lightbulb className="h-5 w-5 text-secondary flex-shrink-0 mt-0.5" />
+              <h3 className="font-semibold text-accent-foreground">Tips for audio interviews:</h3>
+            </div>
+            <ul className="text-sm text-accent-foreground/80 space-y-2 ml-7">
+              <li>• Speak clearly and at a natural pace</li>
+              <li>• Use a quiet environment for best results</li>
+              <li>• Wait for Sandra to finish before responding</li>
+              <li>• Structure your answers using STAR method</li>
+              <li>• This is a completely natural conversation — you may ask Sandra to repeat herself, slow down, speed up, rephrase, clarify, etc.</li>
+            </ul>
+          </div>
+
+          {/* Start Button */}
+          <div className="flex justify-center">
+            <Button
+              variant="audio"
+              size="xl"
+              onClick={startConversation}
+              className="gap-2 text-lg px-8 py-6"
+            >
+              Start Voice Interview
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Active interview or connecting state
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-8">
       <div className="max-w-md w-full text-center animate-slide-up">
-        {/* Voice Visualization */}
+        {/* Voice Visualization with Sandra's Headshot */}
         <div className="relative mb-8">
           <div
             className={cn(
-              "h-40 w-40 mx-auto rounded-full flex items-center justify-center transition-all duration-300",
+              "h-40 w-40 mx-auto rounded-full flex items-center justify-center transition-all duration-300 overflow-hidden",
               isConnected
                 ? isSpeaking
-                  ? "bg-gradient-to-br from-session-audio to-primary animate-pulse"
-                  : "bg-gradient-to-br from-session-audio/70 to-primary/70"
+                  ? "ring-4 ring-session-audio animate-pulse"
+                  : "ring-2 ring-primary/50"
                 : "bg-muted"
             )}
           >
             {isConnecting ? (
               <Loader2 className="h-16 w-16 text-primary animate-spin" />
             ) : isConnected ? (
-              <Volume2 className="h-16 w-16 text-primary-foreground" />
+              <img 
+                src={sandraHeadshot} 
+                alt="Sandra - Your AI Interview Coach" 
+                className="h-full w-full object-cover"
+              />
             ) : (
-              <Mic className="h-16 w-16 text-muted-foreground" />
+              <Volume2 className="h-16 w-16 text-muted-foreground" />
             )}
           </div>
           
@@ -152,87 +216,44 @@ export function AudioInterface({ isActive, sessionId, documents }: AudioInterfac
 
         <h2 className="font-heading text-2xl font-bold text-foreground mb-2">
           {isConnecting 
-            ? 'Connecting...' 
-            : isConnected 
-              ? 'Interview in Progress' 
-              : 'Premium Audio Interview'}
+            ? 'Connecting to Sandra...' 
+            : isSpeaking
+              ? 'Sandra is speaking...'
+              : 'Listening to your response...'}
         </h2>
         
         <p className="text-muted-foreground mb-8">
           {isConnecting
             ? 'Setting up your voice connection...'
-            : isConnected
-              ? isSpeaking
-                ? 'AI is speaking...'
-                : 'Listening to your response...'
-              : 'Click the button below to start your voice interview with our AI interviewer.'}
+            : isSpeaking
+              ? 'Wait for Sandra to finish before responding'
+              : 'Speak naturally — Sandra is listening'}
         </p>
 
         {/* Controls */}
         <div className="flex items-center justify-center gap-4">
-          {!isConnected ? (
-            <Button
-              variant="audio"
-              size="xl"
-              onClick={startConversation}
-              disabled={isConnecting}
-              className="gap-2"
-            >
-              {isConnecting ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  Connecting...
-                </>
-              ) : (
-                <>
-                  <Phone className="h-5 w-5" />
-                  Start Voice Interview
-                </>
-              )}
-            </Button>
-          ) : (
-            <>
-              <Button
-                variant={isMuted ? 'destructive' : 'outline'}
-                size="icon"
-                className="h-14 w-14 rounded-full"
-                onClick={toggleMute}
-              >
-                {isMuted ? (
-                  <MicOff className="h-6 w-6" />
-                ) : (
-                  <Mic className="h-6 w-6" />
-                )}
-              </Button>
-              
-              <Button
-                variant="destructive"
-                size="icon"
-                className="h-14 w-14 rounded-full"
-                onClick={stopConversation}
-              >
-                <PhoneOff className="h-6 w-6" />
-              </Button>
-            </>
-          )}
+          <Button
+            variant={isMuted ? 'destructive' : 'outline'}
+            size="icon"
+            className="h-14 w-14 rounded-full"
+            onClick={toggleMute}
+          >
+            <MicOff className="h-6 w-6" />
+          </Button>
+          
+          <Button
+            variant="destructive"
+            size="icon"
+            className="h-14 w-14 rounded-full"
+            onClick={stopConversation}
+          >
+            <PhoneOff className="h-6 w-6" />
+          </Button>
         </div>
 
-        {isConnected && (
-          <p className="text-sm text-muted-foreground mt-6">
-            {isMuted ? 'Microphone muted' : 'Microphone active'}
-          </p>
-        )}
-
-        {/* Info card */}
-        <div className="mt-8 p-4 bg-accent/50 rounded-lg border border-accent text-left">
-          <h3 className="font-semibold text-accent-foreground mb-2">Tips for audio interviews:</h3>
-          <ul className="text-sm text-accent-foreground/80 space-y-1">
-            <li>• Speak clearly and at a natural pace</li>
-            <li>• Use a quiet environment for best results</li>
-            <li>• Wait for the AI to finish before responding</li>
-            <li>• Structure your answers using STAR method</li>
-          </ul>
-        </div>
+        <p className="text-sm text-muted-foreground mt-6">
+          {isMuted ? 'Microphone muted' : 'Microphone active'}
+        </p>
       </div>
     </div>
   );
