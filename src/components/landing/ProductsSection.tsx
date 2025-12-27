@@ -77,13 +77,13 @@ const products = [
 
 export function ProductsSection() {
   return (
-    <section id="products" className="py-20 bg-soft">
+    <section id="products" className="py-20 bg-tal-soft">
       <div className="container">
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-foreground mb-4">
+          <h2 className="text-4xl font-heading font-bold text-primary mb-4">
             Choose Your Competitive Advantage
           </h2>
-          <p className="text-xl text-muted-foreground">
+          <p className="text-xl text-tal-gray font-sans">
             Four ways to show up ready
           </p>
         </div>
@@ -100,28 +100,28 @@ export function ProductsSection() {
               )}
             >
               <div className="mb-6">
-                <h3 className="text-2xl font-bold text-foreground mb-1">{product.name}</h3>
-                <p className="text-sm text-muted-foreground mb-4">{product.tagline}</p>
-                <p className="text-3xl font-extrabold text-primary">
-                  {product.price} <span className="text-base font-medium text-muted-foreground">{product.priceNote}</span>
+                <h3 className="text-2xl font-heading font-bold text-primary mb-1">{product.name}</h3>
+                <p className="text-sm text-tal-gray font-sans mb-4">{product.tagline}</p>
+                <p className="text-3xl font-heading font-bold text-primary">
+                  {product.price} <span className="text-base font-sans font-medium text-tal-gray">{product.priceNote}</span>
                 </p>
               </div>
 
-              <p className="text-muted-foreground mb-6 leading-relaxed text-sm">
+              <p className="text-tal-slate font-sans mb-6 leading-relaxed text-sm">
                 {product.description}
               </p>
 
               <ul className="space-y-2 mb-6">
                 {product.features.map((feature, idx) => (
-                  <li key={idx} className="text-foreground text-sm flex items-start gap-2">
-                    <span className="text-tal-lime font-bold">✓</span>
+                  <li key={idx} className="text-tal-slate font-sans text-sm flex items-start gap-2">
+                    <span className="text-secondary font-bold">✓</span>
                     {feature}
                   </li>
                 ))}
               </ul>
 
               {product.note && (
-                <p className="text-sm text-muted-foreground italic border-t border-border pt-4 mb-6">
+                <p className="text-sm text-tal-gray font-sans italic border-t border-border pt-4 mb-6">
                   {product.note}
                 </p>
               )}

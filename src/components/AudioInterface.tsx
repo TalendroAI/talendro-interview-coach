@@ -134,11 +134,11 @@ export function AudioInterface({
   // Pre-interview welcome screen (brand-standard layout)
   if (!isConnected && !isConnecting) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-hero">
+      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-tal-soft">
         <div className="max-w-2xl w-full animate-slide-up">
           {/* Title */}
           <div className="text-center mb-10">
-            <h1 className="text-3xl md:text-4xl font-extrabold text-foreground flex items-center justify-center gap-3">
+            <h1 className="text-3xl md:text-4xl font-heading font-bold text-primary flex items-center justify-center gap-3">
               <span className="text-4xl">🎙️</span>
               Premium Audio Mock Interview
             </h1>
@@ -159,12 +159,12 @@ export function AudioInterface({
           </div>
 
           {/* Tips Section - Moved above button */}
-          <div className="mb-8 p-4 bg-accent/50 rounded-lg border border-accent">
+          <div className="mb-8 p-4 bg-card rounded-lg border border-border">
             <div className="flex items-start gap-2 mb-3">
               <Lightbulb className="h-5 w-5 text-secondary flex-shrink-0 mt-0.5" />
-              <h3 className="font-semibold text-accent-foreground">Tips for audio interviews:</h3>
+              <h3 className="font-heading font-semibold text-tal-navy">Tips for audio interviews:</h3>
             </div>
-            <ul className="text-sm text-accent-foreground/80 space-y-2 ml-7">
+            <ul className="text-sm text-tal-gray font-sans space-y-2 ml-7">
               <li>• Speak clearly and at a natural pace</li>
               <li>• Use a quiet environment for best results</li>
               <li>• Wait for Sandra to finish before responding</li>
