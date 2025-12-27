@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useConversation } from '@elevenlabs/react';
-import { MicOff, Volume2, PhoneOff, Loader2, Lightbulb } from 'lucide-react';
+import { MicOff, Volume2, PhoneOff, Loader2, Lightbulb, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -33,12 +33,22 @@ export function AudioInterface({
 }: AudioInterfaceProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [connectionDropped, setConnectionDropped] = useState(false);
+  const [isReconnecting, setIsReconnecting] = useState(false);
   const { toast } = useToast();
+  
+  // Track if user intentionally ended the session
+  const userEndedSession = useRef(false);
+  // Track if interview has started (to distinguish intentional end vs drop)
+  const interviewStarted = useRef(false);
 
   const conversation = useConversation({
     onConnect: () => {
       console.log('Connected to ElevenLabs agent');
       setIsConnecting(false);
+      setIsReconnecting(false);
+      setConnectionDropped(false);
+      interviewStarted.current = true;
       toast({
         title: 'Connected!',
         description: 'Your voice interview has started.',
@@ -48,7 +58,22 @@ export function AudioInterface({
     onDisconnect: () => {
       console.log('Disconnected from ElevenLabs agent');
       setIsConnecting(false);
-      onInterviewComplete?.();
+      setIsReconnecting(false);
+      
+      // Only complete the interview if user intentionally ended it
+      if (userEndedSession.current) {
+        userEndedSession.current = false;
+        interviewStarted.current = false;
+        onInterviewComplete?.();
+      } else if (interviewStarted.current) {
+        // Unexpected disconnect - show reconnect option
+        setConnectionDropped(true);
+        toast({
+          variant: 'destructive',
+          title: 'Connection Lost',
+          description: 'Sandra got disconnected. Click "Reconnect" to continue your interview.',
+        });
+      }
     },
     onMessage: (message) => {
       console.log('Message from agent:', message);
@@ -61,6 +86,7 @@ export function AudioInterface({
         description: 'Failed to connect to voice agent. Please try again.',
       });
       setIsConnecting(false);
+      setIsReconnecting(false);
     },
   });
 
@@ -133,8 +159,58 @@ export function AudioInterface({
   }, [conversation, documents, isDocumentsSaved, toast]);
 
   const stopConversation = useCallback(async () => {
+    userEndedSession.current = true;
     await conversation.endSession();
   }, [conversation]);
+
+  const reconnect = useCallback(async () => {
+    setIsReconnecting(true);
+    setConnectionDropped(false);
+    
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      const { data, error } = await supabase.functions.invoke('elevenlabs-conversation-token', {
+        body: { agentId: ELEVENLABS_AGENT_ID, mode: 'signed_url' },
+      });
+
+      const signedUrl = (data as any)?.signedUrl;
+      if (error || !signedUrl) {
+        throw new Error(error?.message || 'No signed URL received');
+      }
+
+      await conversation.startSession({ signedUrl });
+
+      // Restore context
+      const contextParts: string[] = [];
+      if (documents?.resume) contextParts.push(`Candidate Resume:\n${documents.resume}`);
+      if (documents?.jobDescription) contextParts.push(`Job Description:\n${documents.jobDescription}`);
+      if (documents?.companyUrl) contextParts.push(`Company URL: ${documents.companyUrl}`);
+
+      if (contextParts.length > 0) {
+        conversation.sendContextualUpdate(contextParts.join('\n\n'));
+      }
+
+      // Prompt Sandra to acknowledge reconnection
+      setTimeout(() => {
+        if (conversation.status === 'connected') {
+          conversation.sendUserMessage(
+            'We just reconnected after a brief connection issue. Please acknowledge the reconnection and continue the interview from where we left off.'
+          );
+        }
+      }, 800);
+
+    } catch (error) {
+      console.error('Reconnection failed:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Reconnection Failed',
+        description: 'Could not reconnect. Please try again.',
+      });
+      setConnectionDropped(true);
+      setIsReconnecting(false);
+    }
+  }, [conversation, documents, toast]);
 
   const toggleMute = useCallback(() => {
     setIsMuted(!isMuted);
@@ -148,8 +224,67 @@ export function AudioInterface({
   const isSpeaking = conversation.isSpeaking;
   const canStartInterview = isDocumentsSaved;
 
+  // Connection dropped - show reconnect UI
+  if (connectionDropped && !isConnected && !isConnecting) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-tal-soft">
+        <div className="max-w-md w-full text-center animate-slide-up">
+          <div className="relative mb-8">
+            <div className="h-40 w-40 mx-auto rounded-full flex items-center justify-center bg-destructive/10 border-4 border-destructive/30">
+              <img 
+                src={sandraHeadshot} 
+                alt="Sandra - Your AI Interview Coach" 
+                className="h-full w-full object-cover rounded-full opacity-60"
+              />
+            </div>
+          </div>
+
+          <h2 className="font-heading text-2xl font-bold text-foreground mb-2">
+            Connection Lost
+          </h2>
+          <p className="text-muted-foreground mb-8">
+            Sandra got disconnected unexpectedly. Don't worry — you can reconnect and continue your interview.
+          </p>
+
+          <div className="flex items-center justify-center gap-4">
+            <Button
+              variant="audio"
+              size="lg"
+              onClick={reconnect}
+              disabled={isReconnecting}
+              className="gap-2"
+            >
+              {isReconnecting ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Reconnecting...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-5 w-5" />
+                  Reconnect
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => {
+                setConnectionDropped(false);
+                interviewStarted.current = false;
+                onInterviewComplete?.();
+              }}
+            >
+              End Interview
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Pre-interview welcome screen (brand-standard layout)
-  if (!isConnected && !isConnecting) {
+  if (!isConnected && !isConnecting && !isReconnecting) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 bg-tal-soft">
         <div className="max-w-2xl w-full animate-slide-up">
