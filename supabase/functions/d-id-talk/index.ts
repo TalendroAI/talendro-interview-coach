@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { audioUrl, imageUrl } = await req.json();
+    const { audioUrl, imageBase64, imageUrl } = await req.json();
     const D_ID_API_KEY = Deno.env.get('D_ID_API_KEY');
 
     if (!D_ID_API_KEY) {
@@ -22,11 +22,17 @@ serve(async (req) => {
       throw new Error('audioUrl is required');
     }
 
-    if (!imageUrl) {
-      throw new Error('imageUrl is required');
+    // Accept either base64 image data or a URL
+    const sourceUrl = imageBase64 
+      ? `data:image/jpeg;base64,${imageBase64}`
+      : imageUrl;
+
+    if (!sourceUrl) {
+      throw new Error('Either imageBase64 or imageUrl is required');
     }
 
-    console.log('Creating D-ID talk video with:', { audioUrl, imageUrl });
+    console.log('Creating D-ID talk video with audio:', audioUrl);
+    console.log('Image source type:', imageBase64 ? 'base64' : 'url');
 
     // Create a talk video
     const createResponse = await fetch('https://api.d-id.com/talks', {
@@ -36,7 +42,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        source_url: imageUrl,
+        source_url: sourceUrl,
         script: {
           type: 'audio',
           audio_url: audioUrl,
@@ -62,7 +68,7 @@ serve(async (req) => {
 
     // Poll for completion
     let attempts = 0;
-    const maxAttempts = 30; // 30 seconds timeout
+    const maxAttempts = 60; // 60 seconds timeout (D-ID can take a while)
     let resultUrl = null;
 
     while (attempts < maxAttempts) {
@@ -81,7 +87,7 @@ serve(async (req) => {
       }
 
       const statusData = await statusResponse.json();
-      console.log('D-ID talk status:', statusData.status);
+      console.log('D-ID talk status:', statusData.status, `(attempt ${attempts + 1})`);
 
       if (statusData.status === 'done') {
         resultUrl = statusData.result_url;
