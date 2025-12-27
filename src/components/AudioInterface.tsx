@@ -64,16 +64,25 @@ export function AudioInterface({
   });
 
   const startConversation = useCallback(async () => {
+    console.log('Begin Interview clicked - starting conversation...');
+    console.log('isDocumentsSaved:', isDocumentsSaved);
+    console.log('documents:', documents);
+    
     setIsConnecting(true);
     
     try {
       // Request microphone permission
+      console.log('Requesting microphone permission...');
       await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log('Microphone permission granted');
 
       // Get conversation token from edge function
+      console.log('Fetching conversation token...');
       const { data, error } = await supabase.functions.invoke('elevenlabs-conversation-token', {
         body: { agentId: ELEVENLABS_AGENT_ID },
       });
+      
+      console.log('Token response:', { data, error });
 
       if (error || !data?.token) {
         throw new Error(error?.message || 'No token received');
@@ -91,6 +100,8 @@ export function AudioInterface({
         contextParts.push(`Company URL: ${documents.companyUrl}`);
       }
 
+      console.log('Starting ElevenLabs session with context parts:', contextParts.length);
+
       // Start the conversation with WebRTC
       await conversation.startSession({
         conversationToken: data.token,
@@ -100,10 +111,12 @@ export function AudioInterface({
             prompt: {
               prompt: `You are a professional interview coach conducting a mock interview. Use the following context about the candidate and role to personalize the interview:\n\n${contextParts.join('\n\n')}\n\nConduct a realistic behavioral interview, asking relevant questions based on the job requirements and the candidate's background. Provide constructive feedback after each answer.`,
             },
-            firstMessage: "Hello! I'm your AI interview coach. I've reviewed your resume and the job description. Let's start with a warm-up question - can you briefly tell me about yourself and why you're interested in this role?",
+            firstMessage: "Hello! I'm Sandra, and I'll be your interviewer today. Thank you for your interest in this opportunity. I've reviewed your resume and the job description, so I'm excited to learn more about you. Before we dive into the interview questions, could you start by telling me a bit about yourself and why you're interested in this role?",
           },
         } : undefined,
       });
+      
+      console.log('ElevenLabs session started successfully');
     } catch (error) {
       console.error('Failed to start conversation:', error);
       toast({
@@ -113,7 +126,7 @@ export function AudioInterface({
       });
       setIsConnecting(false);
     }
-  }, [conversation, documents, toast]);
+  }, [conversation, documents, isDocumentsSaved, toast]);
 
   const stopConversation = useCallback(async () => {
     await conversation.endSession();
