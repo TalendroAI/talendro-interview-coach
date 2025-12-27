@@ -42,18 +42,44 @@ export function AudioInterface({
   // Track if interview has started (to distinguish intentional end vs drop)
   const interviewStarted = useRef(false);
 
+  // Keep a rolling transcript so we can resume after reconnect (ElevenLabs sessions don't persist across reconnects)
+  const transcriptRef = useRef<Array<{ role: 'user' | 'assistant'; text: string; ts: number }>>([]);
+
+  const appendTranscriptTurn = useCallback((role: 'user' | 'assistant', text: unknown) => {
+    const clean = typeof text === 'string' ? text.trim() : '';
+    if (!clean) return;
+
+    const last = transcriptRef.current[transcriptRef.current.length - 1];
+    if (last && last.role === role && last.text === clean) return;
+
+    transcriptRef.current.push({ role, text: clean, ts: Date.now() });
+
+    // Prevent unbounded growth
+    if (transcriptRef.current.length > 60) {
+      transcriptRef.current = transcriptRef.current.slice(-60);
+    }
+  }, []);
+
   const conversation = useConversation({
     onConnect: () => {
       console.log('Connected to ElevenLabs agent');
       setIsConnecting(false);
       setIsReconnecting(false);
       setConnectionDropped(false);
+
+      const wasAlreadyStarted = interviewStarted.current;
       interviewStarted.current = true;
+
       toast({
         title: 'Connected!',
-        description: 'Your voice interview has started.',
+        description: wasAlreadyStarted
+          ? 'Reconnected — continuing your interview.'
+          : 'Your voice interview has started.',
       });
-      onInterviewStarted?.();
+
+      if (!wasAlreadyStarted) {
+        onInterviewStarted?.();
+      }
     },
     onDisconnect: () => {
       console.log('Disconnected from ElevenLabs agent');
@@ -77,6 +103,29 @@ export function AudioInterface({
     },
     onMessage: (message) => {
       console.log('Message from agent:', message);
+
+      // Capture transcript events so we can restore context after reconnect
+      try {
+        const type = (message as any)?.type;
+
+        if (type === 'user_transcript') {
+          const text =
+            (message as any)?.user_transcription_event?.user_transcript ??
+            (message as any)?.user_transcript ??
+            (message as any)?.text;
+          appendTranscriptTurn('user', text);
+        }
+
+        if (type === 'agent_response') {
+          const text =
+            (message as any)?.agent_response_event?.agent_response ??
+            (message as any)?.agent_response ??
+            (message as any)?.text;
+          appendTranscriptTurn('assistant', text);
+        }
+      } catch (e) {
+        console.warn('Failed to parse transcript message:', e);
+      }
     },
     onError: (error) => {
       console.error('Conversation error:', error);
@@ -94,6 +143,12 @@ export function AudioInterface({
     console.log('Begin Interview clicked - starting conversation...');
     console.log('isDocumentsSaved:', isDocumentsSaved);
     console.log('documents:', documents);
+
+    // Fresh interview run
+    transcriptRef.current = [];
+    interviewStarted.current = false;
+    userEndedSession.current = false;
+    setConnectionDropped(false);
 
     setIsConnecting(true);
 
@@ -181,21 +236,36 @@ export function AudioInterface({
 
       await conversation.startSession({ signedUrl });
 
-      // Restore context
+      // Restore context (documents + a rolling transcript so Sarah can resume instead of restarting)
       const contextParts: string[] = [];
       if (documents?.resume) contextParts.push(`Candidate Resume:\n${documents.resume}`);
       if (documents?.jobDescription) contextParts.push(`Job Description:\n${documents.jobDescription}`);
       if (documents?.companyUrl) contextParts.push(`Company URL: ${documents.companyUrl}`);
 
+      const recentTurns = transcriptRef.current.slice(-12);
+      const transcriptText = recentTurns
+        .map((t) => `${t.role === 'user' ? 'Candidate' : 'Sarah'}: ${t.text}`)
+        .join('\n');
+
+      if (transcriptText) {
+        contextParts.push(`Interview transcript so far (most recent):\n${transcriptText}`);
+      }
+
       if (contextParts.length > 0) {
         conversation.sendContextualUpdate(contextParts.join('\n\n'));
       }
 
-      // Prompt Sarah to acknowledge reconnection
+      const lastSarahMessage = [...transcriptRef.current]
+        .reverse()
+        .find((t) => t.role === 'assistant')?.text;
+
+      // Prompt Sarah to resume from where we left off
       setTimeout(() => {
         if (conversation.status === 'connected') {
           conversation.sendUserMessage(
-            'We just reconnected after a brief connection issue. Please acknowledge the reconnection and continue the interview from where we left off.'
+            lastSarahMessage
+              ? `We just reconnected after a brief connection issue. Do NOT restart the interview. Continue from where we left off. Your last message was: "${lastSarahMessage}". If you were waiting for my answer, ask me to continue my answer from there; otherwise ask the next interview question.`
+              : 'We just reconnected after a brief connection issue. Please continue the interview from where we left off (do not restart).'
           );
         }
       }, 800);
