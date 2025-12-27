@@ -25,7 +25,7 @@ const generateNewPurchaseEmail = (sessionType: string, email: string, customerNa
   const productName = PRICE_CONFIG[sessionType as keyof typeof PRICE_CONFIG]?.name || "Interview Coaching Session";
   const sessionUrl = `https://coach.talendro.com/interview-coach?session_type=${sessionType}&email=${encodeURIComponent(email)}`;
   const firstName = customerName ? customerName.split(' ')[0].charAt(0).toUpperCase() + customerName.split(' ')[0].slice(1).toLowerCase() : null;
-  const greeting = firstName ? `Hi ${firstName}!` : 'Hi there!';
+  const greeting = firstName ? `Hello ${firstName}!` : 'Hello there!';
   
   return `
 <!DOCTYPE html>
@@ -140,7 +140,7 @@ const generateUpgradeEmail = (sessionType: string, email: string, upgradeCredit:
   const previousProductName = PRICE_CONFIG[previousPurchase as keyof typeof PRICE_CONFIG]?.name || previousPurchase;
   const sessionUrl = `https://coach.talendro.com/interview-coach?session_type=${sessionType}&email=${encodeURIComponent(email)}`;
   const firstName = customerName ? customerName.split(' ')[0].charAt(0).toUpperCase() + customerName.split(' ')[0].slice(1).toLowerCase() : null;
-  const greeting = firstName ? `Hi ${firstName}!` : 'Hi there!';
+  const greeting = firstName ? `Hello ${firstName}!` : 'Hello there!';
   
   return `
 <!DOCTYPE html>
