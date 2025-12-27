@@ -1,4 +1,4 @@
-import { Save, Send } from 'lucide-react';
+import { Save, Send, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -66,7 +66,7 @@ export function DocumentSidebar({
                 ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
                 : "bg-primary text-primary-foreground"
             )}>
-              1
+              {isResumeComplete ? <Check className="h-3.5 w-3.5" /> : "1"}
             </span>
             <Label htmlFor="resume" className="font-semibold text-foreground">
               Résumé
@@ -100,7 +100,7 @@ export function DocumentSidebar({
                 ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
                 : "bg-primary text-primary-foreground"
             )}>
-              2
+              {isJobComplete ? <Check className="h-3.5 w-3.5" /> : "2"}
             </span>
             <Label htmlFor="jobDescription" className="font-semibold text-foreground">
               Job Description
@@ -134,7 +134,7 @@ export function DocumentSidebar({
                 ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
                 : "bg-primary text-primary-foreground"
             )}>
-              3
+              {isCompanyComplete ? <Check className="h-3.5 w-3.5" /> : "3"}
             </span>
             <Label htmlFor="companyUrl" className="font-semibold text-foreground">
               Company Website URL
@@ -168,7 +168,7 @@ export function DocumentSidebar({
               ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
               : "bg-primary text-primary-foreground"
           )}>
-            4
+            {isDocumentsSaved ? <Check className="h-3.5 w-3.5" /> : "4"}
           </span>
           <Button
             size="default"
@@ -190,7 +190,7 @@ export function DocumentSidebar({
               ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
               : "bg-primary text-primary-foreground"
           )}>
-            5
+            {isContentReady ? <Check className="h-3.5 w-3.5" /> : "5"}
           </span>
           <Button
             size="default"
