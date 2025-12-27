@@ -25,9 +25,22 @@ interface AudioInterfaceProps {
 // Replace with your ElevenLabs agent ID
 const ELEVENLABS_AGENT_ID = 'agent_1901kb0ray8kfph9x9bh4w97bbe4';
 
-// Sarah's headshot URL for D-ID (needs to be publicly accessible)
-// Using a placeholder - in production, upload Sarah's photo to Supabase storage
-const SARAH_IMAGE_URL = 'https://yufholjudwhxgznyyzax.supabase.co/storage/v1/object/public/avatars/sarah-headshot.jpg';
+// Helper function to convert image URL to base64
+const imageToBase64 = async (imageUrl: string): Promise<string> => {
+  const response = await fetch(imageUrl);
+  const blob = await response.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      // Remove the data:image/xxx;base64, prefix
+      const base64Data = base64.split(',')[1];
+      resolve(base64Data);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
 
 export function AudioInterface({ 
   isActive, 
@@ -44,6 +57,7 @@ export function AudioInterface({
   const [enableLipSync, setEnableLipSync] = useState(false);
   const [lipSyncVideoUrl, setLipSyncVideoUrl] = useState<string | null>(null);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
+  const [sarahImageBase64, setSarahImageBase64] = useState<string | null>(null);
   const { toast } = useToast();
   
   // Track if user intentionally ended the session
@@ -52,6 +66,20 @@ export function AudioInterface({
   const interviewStarted = useRef(false);
   // Video element ref for lip-sync playback
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Pre-load Sarah's image as base64 for D-ID
+  useEffect(() => {
+    if (enableLipSync && !sarahImageBase64) {
+      imageToBase64(sarahHeadshot)
+        .then(base64 => {
+          setSarahImageBase64(base64);
+          console.log('Sarah image converted to base64, length:', base64.length);
+        })
+        .catch(err => {
+          console.error('Failed to convert Sarah image to base64:', err);
+        });
+    }
+  }, [enableLipSync, sarahImageBase64]);
 
   // Keep a rolling transcript so we can resume after reconnect (ElevenLabs sessions don't persist across reconnects)
   const transcriptRef = useRef<Array<{ role: 'user' | 'assistant'; text: string; ts: number }>>([]);
@@ -405,7 +433,7 @@ export function AudioInterface({
                     AI Lip Sync (Beta)
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    Animate Sarah's photo with lip-sync. May add 2-5s delay.
+                    Animates Sarah's greeting. Real-time sync not yet available.
                   </p>
                 </div>
               </div>
@@ -415,6 +443,11 @@ export function AudioInterface({
                 onCheckedChange={setEnableLipSync}
               />
             </div>
+            {enableLipSync && (
+              <p className="text-xs text-muted-foreground mt-2 ml-8">
+                ⚠️ D-ID generates video from audio files, so there's a delay. This demo shows the greeting animation.
+              </p>
+            )}
           </div>
 
           {/* Tips Section - Moved above button */}
