@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Save, Send, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -6,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { DocumentInputs, SessionType, SESSION_CONFIGS } from '@/types/session';
 import { cn } from '@/lib/utils';
+import confetti from 'canvas-confetti';
 
 interface DocumentSidebarProps {
   documents: DocumentInputs;
@@ -51,6 +53,43 @@ export function DocumentSidebar({
     isContentReady
   ].filter(Boolean).length;
   const progressPercentage = (completedSteps / 5) * 100;
+  const hasTriggeredConfetti = useRef(false);
+
+  // Trigger confetti when all steps are complete
+  useEffect(() => {
+    if (completedSteps === 5 && !hasTriggeredConfetti.current) {
+      hasTriggeredConfetti.current = true;
+      
+      // Fire confetti from both sides
+      const duration = 2000;
+      const end = Date.now() + duration;
+
+      const frame = () => {
+        confetti({
+          particleCount: 3,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0, y: 0.6 },
+          colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
+        });
+        confetti({
+          particleCount: 3,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1, y: 0.6 },
+          colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
+        });
+
+        if (Date.now() < end) {
+          requestAnimationFrame(frame);
+        }
+      };
+      
+      frame();
+    } else if (completedSteps < 5) {
+      hasTriggeredConfetti.current = false;
+    }
+  }, [completedSteps]);
 
   const handleSaveDocuments = () => {
     if (onSaveDocuments) {
