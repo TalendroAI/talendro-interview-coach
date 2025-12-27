@@ -157,7 +157,7 @@ export function DocumentSidebar({
             disabled={!canSaveDocuments}
           >
             <Save className="h-4 w-4 mr-2" />
-            Save Documents & Begin
+            Save Documents & Proceed
           </Button>
         </div>
       </div>
@@ -197,6 +197,12 @@ export function DocumentSidebar({
         {isSessionStarted && !canCompleteSession && sessionType === 'full_mock' && (
           <p className="text-xs text-muted-foreground text-center mt-4">
             Complete all interview questions to unlock your results
+          </p>
+        )}
+        
+        {isSessionStarted && !canCompleteSession && sessionType === 'premium_audio' && (
+          <p className="text-xs text-muted-foreground text-center mt-4">
+            Complete your voice interview to unlock your results
           </p>
         )}
       </div>

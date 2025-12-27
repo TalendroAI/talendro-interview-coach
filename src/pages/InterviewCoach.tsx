@@ -39,6 +39,10 @@ export default function InterviewCoach() {
   const [mockInterviewMessages, setMockInterviewMessages] = useState<any[]>([]);
   const [isMockInterviewComplete, setIsMockInterviewComplete] = useState(false);
   
+  // Audio interview state
+  const [isAudioInterviewStarted, setIsAudioInterviewStarted] = useState(false);
+  const [isAudioInterviewComplete, setIsAudioInterviewComplete] = useState(false);
+  
   // Completed session dialog state
   const [showCompletedDialog, setShowCompletedDialog] = useState(false);
   const [completedSessionResults, setCompletedSessionResults] = useState<any>(null);
@@ -86,16 +90,14 @@ export default function InterviewCoach() {
           setIsGeneratingContent(false);
         }
       } else if (isPaymentVerified && sessionType) {
-        // For other session types, just start the session
-        setIsLoading(true);
-        setTimeout(() => {
-          setIsSessionStarted(true);
-          setIsLoading(false);
-          toast({
-            title: 'Session started!',
-            description: 'Your personalized coaching session has begun.',
-          });
-        }, 500);
+        // For other session types, transition to session view (mid-page button handles actual start for audio)
+        setIsSessionStarted(true);
+        toast({
+          title: 'Documents saved!',
+          description: sessionType === 'premium_audio' 
+            ? 'Click "Begin Interview" when you\'re ready to start.'
+            : 'Your personalized coaching session has begun.',
+        });
       }
     }
   };
@@ -294,6 +296,9 @@ export default function InterviewCoach() {
           isActive={isSessionStarted} 
           sessionId={sessionId}
           documents={documents}
+          isDocumentsSaved={isDocumentsSaved}
+          onInterviewStarted={() => setIsAudioInterviewStarted(true)}
+          onInterviewComplete={() => setIsAudioInterviewComplete(true)}
         />
       );
     }
@@ -328,7 +333,7 @@ export default function InterviewCoach() {
           isContentReady={
             (sessionType === 'quick_prep' && !!quickPrepContent && !isGeneratingContent) ||
             (sessionType === 'full_mock' && isMockInterviewComplete) ||
-            (sessionType === 'premium_audio' && isSessionStarted)
+            (sessionType === 'premium_audio' && isAudioInterviewComplete)
           }
         />
         
