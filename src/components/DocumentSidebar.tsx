@@ -151,8 +151,8 @@ export function DocumentSidebar({
             4
           </span>
           <Button
-            size="lg"
-            className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm hover:shadow-md transition-all disabled:bg-muted disabled:text-muted-foreground"
+            size="default"
+            className="flex-1 px-3 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm hover:shadow-md transition-all disabled:bg-muted disabled:text-muted-foreground"
             onClick={handleSaveDocuments}
             disabled={!canSaveDocuments}
           >
@@ -169,8 +169,8 @@ export function DocumentSidebar({
             5
           </span>
           <Button
-            size="lg"
-            className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm hover:shadow-md transition-all disabled:bg-muted disabled:text-muted-foreground"
+            size="default"
+            className="flex-1 px-3 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm hover:shadow-md transition-all disabled:bg-muted disabled:text-muted-foreground"
             onClick={onStartSession}
             disabled={!canCompleteSession || isLoading}
           >
