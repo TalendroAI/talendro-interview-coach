@@ -1,12 +1,10 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useConversation } from '@elevenlabs/react';
-import { MicOff, Volume2, PhoneOff, Loader2, Lightbulb, RefreshCw, Video, VideoOff } from 'lucide-react';
+import { MicOff, Volume2, PhoneOff, Loader2, Lightbulb, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import sarahHeadshot from '@/assets/sarah-headshot.jpg';
 
 interface AudioInterfaceProps {
@@ -25,24 +23,7 @@ interface AudioInterfaceProps {
 // Replace with your ElevenLabs agent ID
 const ELEVENLABS_AGENT_ID = 'agent_1901kb0ray8kfph9x9bh4w97bbe4';
 
-// Helper function to convert image URL to base64
-const imageToBase64 = async (imageUrl: string): Promise<string> => {
-  const response = await fetch(imageUrl);
-  const blob = await response.blob();
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64 = reader.result as string;
-      // Remove the data:image/xxx;base64, prefix
-      const base64Data = base64.split(',')[1];
-      resolve(base64Data);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-};
-
-export function AudioInterface({ 
+export function AudioInterface({
   isActive, 
   sessionId, 
   documents, 
@@ -54,32 +35,12 @@ export function AudioInterface({
   const [isMuted, setIsMuted] = useState(false);
   const [connectionDropped, setConnectionDropped] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
-  const [enableLipSync, setEnableLipSync] = useState(false);
-  const [lipSyncVideoUrl, setLipSyncVideoUrl] = useState<string | null>(null);
-  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
-  const [sarahImageBase64, setSarahImageBase64] = useState<string | null>(null);
   const { toast } = useToast();
   
   // Track if user intentionally ended the session
   const userEndedSession = useRef(false);
   // Track if interview has started (to distinguish intentional end vs drop)
   const interviewStarted = useRef(false);
-  // Video element ref for lip-sync playback
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  // Pre-load Sarah's image as base64 for D-ID
-  useEffect(() => {
-    if (enableLipSync && !sarahImageBase64) {
-      imageToBase64(sarahHeadshot)
-        .then(base64 => {
-          setSarahImageBase64(base64);
-          console.log('Sarah image converted to base64, length:', base64.length);
-        })
-        .catch(err => {
-          console.error('Failed to convert Sarah image to base64:', err);
-        });
-    }
-  }, [enableLipSync, sarahImageBase64]);
 
   // Keep a rolling transcript so we can resume after reconnect (ElevenLabs sessions don't persist across reconnects)
   const transcriptRef = useRef<Array<{ role: 'user' | 'assistant'; text: string; ts: number }>>([]);
@@ -419,37 +380,6 @@ export function AudioInterface({
             </div>
           </div>
 
-          {/* Lip Sync Toggle (Experimental) */}
-          <div className="mb-6 p-4 bg-secondary/10 rounded-lg border border-secondary/30">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {enableLipSync ? (
-                  <Video className="h-5 w-5 text-secondary" />
-                ) : (
-                  <VideoOff className="h-5 w-5 text-muted-foreground" />
-                )}
-                <div>
-                  <Label htmlFor="lip-sync-toggle" className="font-semibold text-foreground cursor-pointer">
-                    AI Lip Sync (Beta)
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    Animates Sarah's greeting. Real-time sync not yet available.
-                  </p>
-                </div>
-              </div>
-              <Switch
-                id="lip-sync-toggle"
-                checked={enableLipSync}
-                onCheckedChange={setEnableLipSync}
-              />
-            </div>
-            {enableLipSync && (
-              <p className="text-xs text-muted-foreground mt-2 ml-8">
-                ⚠️ D-ID generates video from audio files, so there's a delay. This demo shows the greeting animation.
-              </p>
-            )}
-          </div>
-
           {/* Tips Section - Moved above button */}
           <div className="mb-8 p-4 bg-card rounded-lg border border-border">
             <div className="flex items-start gap-2 mb-3">
@@ -486,7 +416,7 @@ export function AudioInterface({
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-8">
       <div className="max-w-md w-full text-center animate-slide-up">
-        {/* Voice Visualization with Sarah's Headshot or D-ID Video */}
+        {/* Voice Visualization with Sarah's Headshot */}
         <div className="relative mb-8">
           <div
             className={cn(
@@ -501,54 +431,25 @@ export function AudioInterface({
             {isConnecting ? (
               <Loader2 className="h-16 w-16 text-primary animate-spin" />
             ) : isConnected ? (
-              <>
-                {/* Show D-ID video when lip-sync is enabled and video is available */}
-                {enableLipSync && lipSyncVideoUrl && isSpeaking ? (
-                  <video
-                    ref={videoRef}
-                    src={lipSyncVideoUrl}
-                    autoPlay
-                    playsInline
-                    muted={false}
-                    className="h-full w-full object-cover"
-                    onEnded={() => setLipSyncVideoUrl(null)}
-                  />
-                ) : (
-                  <img 
-                    src={sarahHeadshot} 
-                    alt="Sarah - Your AI Interview Coach" 
-                    className={cn(
-                      "h-full w-full object-cover transition-transform duration-300",
-                      isSpeaking && "scale-105"
-                    )}
-                  />
+              <img 
+                src={sarahHeadshot} 
+                alt="Sarah - Your AI Interview Coach" 
+                className={cn(
+                  "h-full w-full object-cover transition-transform duration-300",
+                  isSpeaking && "scale-105"
                 )}
-                {/* Loading overlay when generating D-ID video */}
-                {enableLipSync && isGeneratingVideo && (
-                  <div className="absolute inset-0 bg-background/50 flex items-center justify-center rounded-full">
-                    <Loader2 className="h-8 w-8 text-primary animate-spin" />
-                  </div>
-                )}
-              </>
+              />
             ) : (
               <Volume2 className="h-16 w-16 text-muted-foreground" />
             )}
           </div>
           
           {/* Ripple effect when speaking */}
-          {isConnected && isSpeaking && !lipSyncVideoUrl && (
+          {isConnected && isSpeaking && (
             <>
               <div className="absolute inset-0 h-40 w-40 mx-auto rounded-full bg-session-audio/20 animate-ping" />
               <div className="absolute inset-0 h-40 w-40 mx-auto rounded-full bg-session-audio/10 animate-ping animation-delay-200" />
             </>
-          )}
-
-          {/* Lip-sync indicator badge */}
-          {enableLipSync && isConnected && (
-            <div className="absolute -top-2 -right-2 bg-secondary text-secondary-foreground px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
-              <Video className="h-3 w-3" />
-              {isGeneratingVideo ? 'Generating...' : 'Lip Sync'}
-            </div>
           )}
         </div>
 
