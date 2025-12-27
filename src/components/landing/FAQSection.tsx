@@ -26,22 +26,22 @@ export function FAQSection() {
     <section className="py-20 bg-background">
       <div className="container">
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-foreground mb-4">
+          <h2 className="text-4xl font-heading font-bold text-primary mb-4">
             Questions
           </h2>
-          <p className="text-xl text-muted-foreground mb-2">
+          <p className="text-xl text-tal-slate font-sans mb-2">
             Questions from job seekers like you
           </p>
-          <p className="text-muted-foreground">
+          <p className="text-tal-gray font-sans">
             If you're stressed, busy, or feeling behind — you're exactly who we built this for.
           </p>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {faqs.map((faq, idx) => (
-            <div key={idx} className="bg-muted rounded-xl p-6 border border-border">
-              <h4 className="font-semibold text-foreground mb-2">{faq.question}</h4>
-              <p className="text-muted-foreground text-sm leading-relaxed">{faq.answer}</p>
+            <div key={idx} className="bg-tal-soft rounded-xl p-6 border border-border">
+              <h4 className="font-heading font-semibold text-tal-navy mb-2">{faq.question}</h4>
+              <p className="text-tal-gray font-sans text-sm leading-relaxed">{faq.answer}</p>
             </div>
           ))}
         </div>

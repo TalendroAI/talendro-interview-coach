@@ -28,13 +28,13 @@ export function HowItWorksSection() {
         <div className="grid lg:grid-cols-2 gap-16 items-start">
           {/* Left Column - Description */}
           <div>
-            <p className="text-sm text-primary font-semibold tracking-wider uppercase mb-2">
+            <p className="text-sm text-secondary font-sans font-semibold tracking-wider uppercase mb-2">
               See it in action
             </p>
-            <h2 className="text-4xl font-bold text-foreground leading-tight mb-4">
+            <h2 className="text-4xl font-heading font-bold text-primary leading-tight mb-4">
               Here's what you'll walk in with
             </h2>
-            <p className="text-lg text-muted-foreground mb-8">
+            <p className="text-lg text-tal-gray font-sans mb-8">
               Upload your résumé, job description, and company URL. Get a comprehensive intelligence report with everything you need to own the interview.
             </p>
 
@@ -45,8 +45,8 @@ export function HowItWorksSection() {
                     {step.number}
                   </div>
                   <div>
-                    <h4 className="font-semibold text-foreground mb-1">{step.title}</h4>
-                    <p className="text-muted-foreground text-sm">{step.description}</p>
+                    <h4 className="font-heading font-semibold text-tal-navy mb-1">{step.title}</h4>
+                    <p className="text-tal-gray font-sans text-sm">{step.description}</p>
                   </div>
                 </div>
               ))}

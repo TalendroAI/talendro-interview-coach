@@ -4,103 +4,119 @@
 
 @layer base {
   :root {
-    /* Talendro Brand Colors */
-    --tal-blue: 223 93% 57%;
-    --tal-aqua: 181 100% 40%;
-    --tal-lime: 79 100% 48%;
-    --tal-gray: 219 13% 64%;
-    --tal-navy: 222 47% 11%;
+    /* ========================================
+       TALENDRO™ BRAND STANDARDS
+       DO NOT DEVIATE FROM THESE EXACT VALUES
+       ======================================== */
     
-    /* Primary Brand Colors */
-    --primary: 223 93% 57%;
+    /* Brand Colors (exact hex codes) */
+    --tal-blue: 220 91% 57%;        /* #2F6DF6 - Primary brand, CTAs, links, headlines */
+    --tal-aqua: 183 100% 40%;       /* #00C4CC - Accents, highlights, taglines, ™ symbol */
+    --tal-lime: 79 100% 48%;        /* #A4F400 - Highlights, success (use sparingly) */
+    --tal-navy: 222 47% 11%;        /* #0F172A - Headlines, body text, footer backgrounds */
+    --tal-slate: 225 12% 20%;       /* #2C2F38 - Body text */
+    --tal-gray: 218 11% 66%;        /* #9FA6B2 - Secondary text, descriptions */
+    --tal-soft: 224 100% 98%;       /* #F4F7FF - Section backgrounds */
+    
+    /* Primary = Talendro Blue */
+    --primary: 220 91% 57%;
     --primary-foreground: 0 0% 100%;
     
-    --secondary: 181 100% 40%;
+    /* Secondary = Vibrant Aqua */
+    --secondary: 183 100% 40%;
     --secondary-foreground: 0 0% 100%;
     
+    /* Background & Foreground */
     --background: 0 0% 100%;
     --foreground: 222 47% 11%;
     
+    /* Cards */
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
     
+    /* Popovers */
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
     
-    --muted: 227 71% 97%;
-    --muted-foreground: 219 13% 64%;
+    /* Muted surfaces */
+    --muted: 224 100% 98%;
+    --muted-foreground: 218 11% 66%;
     
-    --accent: 227 71% 97%;
+    /* Accent = Background Soft */
+    --accent: 224 100% 98%;
     --accent-foreground: 222 47% 11%;
     
+    /* Destructive */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
     
-    --border: 226 71% 92%;
+    /* Borders & Inputs */
+    --border: 220 20% 90%;
     --input: 220 13% 91%;
-    --ring: 223 93% 57%;
+    --ring: 220 91% 57%;
     
     --radius: 0.5rem;
     
     /* Custom Tokens */
-    --bg-soft: 229 100% 97%;
-    --bg-hero: 227 100% 97%;
-    --border-soft: 226 100% 92%;
+    --bg-soft: 224 100% 98%;
+    --bg-hero: 224 100% 98%;
+    --border-soft: 220 20% 90%;
     --shadow-soft: 0 18px 45px hsla(222, 47%, 11%, 0.08);
     
-    /* Session Type Colors */
-    --session-quick: 160 84% 39%;
-    --session-mock: 223 93% 57%;
-    --session-audio: 280 65% 60%;
-    --session-pro: 181 100% 40%;
+    /* Session Type Colors - All using brand palette */
+    --session-quick: 79 100% 48%;     /* Bright Lime */
+    --session-mock: 220 91% 57%;      /* Talendro Blue */
+    --session-audio: 183 100% 40%;    /* Vibrant Aqua */
+    --session-pro: 220 91% 57%;       /* Talendro Blue */
     
+    /* Sidebar */
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 223 93% 57%;
+    --sidebar-primary: 220 91% 57%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 227 71% 97%;
+    --sidebar-accent: 224 100% 98%;
     --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 226 71% 92%;
-    --sidebar-ring: 223 93% 57%;
+    --sidebar-border: 220 20% 90%;
+    --sidebar-ring: 220 91% 57%;
   }
 
   .dark {
     --background: 222 47% 8%;
-    --foreground: 227 71% 97%;
+    --foreground: 224 100% 98%;
     
     --card: 222 47% 11%;
-    --card-foreground: 227 71% 97%;
+    --card-foreground: 224 100% 98%;
     
     --popover: 222 47% 11%;
-    --popover-foreground: 227 71% 97%;
+    --popover-foreground: 224 100% 98%;
     
-    --primary: 223 93% 65%;
+    --primary: 220 91% 62%;
     --primary-foreground: 222 47% 11%;
     
-    --secondary: 181 100% 45%;
+    --secondary: 183 100% 45%;
     --secondary-foreground: 222 47% 11%;
     
     --muted: 222 47% 15%;
-    --muted-foreground: 219 13% 64%;
+    --muted-foreground: 218 11% 66%;
     
     --accent: 222 47% 18%;
-    --accent-foreground: 227 71% 97%;
+    --accent-foreground: 224 100% 98%;
     
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
     
     --border: 222 47% 20%;
     --input: 222 47% 20%;
-    --ring: 223 93% 65%;
+    --ring: 220 91% 62%;
     
     --sidebar-background: 222 47% 10%;
-    --sidebar-foreground: 227 71% 97%;
-    --sidebar-primary: 223 93% 65%;
+    --sidebar-foreground: 224 100% 98%;
+    --sidebar-primary: 220 91% 62%;
     --sidebar-primary-foreground: 222 47% 11%;
     --sidebar-accent: 222 47% 15%;
-    --sidebar-accent-foreground: 227 71% 97%;
+    --sidebar-accent-foreground: 224 100% 98%;
     --sidebar-border: 222 47% 20%;
-    --sidebar-ring: 223 93% 65%;
+    --sidebar-ring: 220 91% 62%;
   }
 }
 
@@ -111,21 +127,25 @@
   
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter Tight', system-ui, -apple-system, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
   
+  /* Headlines: Montserrat Bold */
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Inter Tight', system-ui, -apple-system, sans-serif;
+    font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
+    font-weight: 700;
   }
 }
 
 @layer utilities {
+  /* Background Soft (#F4F7FF) */
   .bg-soft {
     background-color: hsl(var(--bg-soft));
   }
   
+  /* Hero background - clean gradient using brand Background Soft */
   .bg-hero {
-    background: linear-gradient(135deg, hsl(var(--bg-hero)) 0%, hsl(var(--background)) 100%);
+    background: linear-gradient(135deg, hsl(var(--bg-soft)) 0%, hsl(var(--background)) 100%);
   }
   
   .shadow-soft {
@@ -137,7 +157,28 @@
   }
   
   .gradient-card {
-    background: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(227 71% 98%) 100%);
+    background: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(224 100% 98%) 100%);
+  }
+  
+  /* Tagline/Callout styling - DM Serif Display Italic in Vibrant Aqua */
+  .tagline {
+    font-family: 'DM Serif Display', serif;
+    font-style: italic;
+    color: hsl(var(--tal-aqua));
+  }
+  
+  /* Body text - Inter Regular in Talendro Slate */
+  .body-text {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    color: hsl(var(--tal-slate));
+  }
+  
+  /* Secondary text - Inter Regular in Warm Gray */
+  .text-secondary {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    color: hsl(var(--tal-gray));
   }
   
   .animate-fade-in {

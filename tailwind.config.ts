@@ -14,8 +14,10 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Inter Tight', 'system-ui', '-apple-system', 'sans-serif'],
-        heading: ['Inter Tight', 'system-ui', '-apple-system', 'sans-serif'],
+        /* TALENDRO™ BRAND TYPOGRAPHY */
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        heading: ['Montserrat', 'system-ui', '-apple-system', 'sans-serif'],
+        tagline: ['DM Serif Display', 'serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -51,18 +53,21 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        /* TALENDRO™ BRAND COLORS - EXACT HEX VALUES */
         tal: {
-          blue: "hsl(var(--tal-blue))",
-          aqua: "hsl(var(--tal-aqua))",
-          lime: "hsl(var(--tal-lime))",
-          gray: "hsl(var(--tal-gray))",
-          navy: "hsl(var(--tal-navy))",
+          blue: "hsl(var(--tal-blue))",       /* #2F6DF6 */
+          aqua: "hsl(var(--tal-aqua))",       /* #00C4CC */
+          lime: "hsl(var(--tal-lime))",       /* #A4F400 */
+          navy: "hsl(var(--tal-navy))",       /* #0F172A */
+          slate: "hsl(var(--tal-slate))",     /* #2C2F38 */
+          gray: "hsl(var(--tal-gray))",       /* #9FA6B2 */
+          soft: "hsl(var(--tal-soft))",       /* #F4F7FF */
         },
         session: {
-          quick: "hsl(var(--session-quick))",
-          mock: "hsl(var(--session-mock))",
-          audio: "hsl(var(--session-audio))",
-          pro: "hsl(var(--session-pro))",
+          quick: "hsl(var(--session-quick))",   /* Bright Lime */
+          mock: "hsl(var(--session-mock))",     /* Talendro Blue */
+          audio: "hsl(var(--session-audio))",   /* Vibrant Aqua */
+          pro: "hsl(var(--session-pro))",       /* Talendro Blue */
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
@@ -83,8 +88,8 @@ export default {
       },
       boxShadow: {
         'soft': '0 18px 45px hsla(222, 47%, 11%, 0.08)',
-        'brand': '0 4px 12px hsla(223, 93%, 57%, 0.3)',
-        'brand-lg': '0 8px 25px hsla(223, 93%, 57%, 0.4)',
+        'brand': '0 4px 12px hsla(220, 91%, 57%, 0.3)',
+        'brand-lg': '0 8px 25px hsla(220, 91%, 57%, 0.4)',
       },
       keyframes: {
         "accordion-down": {

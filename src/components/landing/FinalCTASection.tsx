@@ -4,10 +4,10 @@ import { Link } from 'react-router-dom';
 
 export function FinalCTASection() {
   return (
-    <section className="py-20 bg-soft text-center">
+    <section className="py-20 bg-tal-soft text-center">
       <div className="container">
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-3xl font-bold text-foreground mb-8">
+          <h2 className="text-3xl font-heading font-bold text-primary mb-8">
             Your next interview is coming.<br />
             The only question is whether you'll be ready.
           </h2>
@@ -21,14 +21,14 @@ export function FinalCTASection() {
             </Button>
           </div>
 
-          <p className="text-muted-foreground mb-6">
+          <p className="text-tal-gray font-sans mb-6">
             Or go deeper with{' '}
             <Link to="/?type=full_mock&email=" className="text-primary font-semibold hover:underline">
               Full Mock — $29
             </Link>
           </p>
 
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-tal-gray font-sans">
             Built by a recruiter. Powered by AI. Focused on getting you hired.
           </p>
         </div>
