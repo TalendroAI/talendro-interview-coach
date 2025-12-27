@@ -15,12 +15,22 @@ interface AudioInterfaceProps {
     jobDescription: string;
     companyUrl: string;
   };
+  isDocumentsSaved?: boolean;
+  onInterviewStarted?: () => void;
+  onInterviewComplete?: () => void;
 }
 
 // Replace with your ElevenLabs agent ID
 const ELEVENLABS_AGENT_ID = 'agent_1901kb0ray8kfph9x9bh4w97bbe4';
 
-export function AudioInterface({ isActive, sessionId, documents }: AudioInterfaceProps) {
+export function AudioInterface({ 
+  isActive, 
+  sessionId, 
+  documents, 
+  isDocumentsSaved = false,
+  onInterviewStarted,
+  onInterviewComplete 
+}: AudioInterfaceProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const { toast } = useToast();
@@ -32,10 +42,12 @@ export function AudioInterface({ isActive, sessionId, documents }: AudioInterfac
         title: 'Connected!',
         description: 'Your voice interview has started.',
       });
+      onInterviewStarted?.();
     },
     onDisconnect: () => {
       console.log('Disconnected from ElevenLabs agent');
       setIsConnecting(false);
+      onInterviewComplete?.();
     },
     onMessage: (message) => {
       console.log('Message from agent:', message);
@@ -117,6 +129,7 @@ export function AudioInterface({ isActive, sessionId, documents }: AudioInterfac
 
   const isConnected = conversation.status === 'connected';
   const isSpeaking = conversation.isSpeaking;
+  const canStartInterview = isDocumentsSaved;
 
   // Pre-interview welcome screen (brand-standard layout)
   if (!isConnected && !isConnecting) {
@@ -166,9 +179,10 @@ export function AudioInterface({ isActive, sessionId, documents }: AudioInterfac
               variant="audio"
               size="xl"
               onClick={startConversation}
+              disabled={!canStartInterview || isConnecting}
               className="gap-2 text-lg px-8 py-6"
             >
-              Start Voice Interview
+              Begin Interview
             </Button>
           </div>
         </div>
