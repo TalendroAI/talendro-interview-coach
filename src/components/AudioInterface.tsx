@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import sandraHeadshot from '@/assets/sandra-headshot.jpg';
+import sarahHeadshot from '@/assets/sarah-headshot.jpg';
 
 interface AudioInterfaceProps {
   isActive: boolean;
@@ -71,7 +71,7 @@ export function AudioInterface({
         toast({
           variant: 'destructive',
           title: 'Connection Lost',
-          description: 'Sandra got disconnected. Click "Reconnect" to continue your interview.',
+          description: 'Sarah got disconnected. Click "Reconnect" to continue your interview.',
         });
       }
     },
@@ -136,9 +136,9 @@ export function AudioInterface({
       window.setTimeout(() => {
         try {
           if (conversation.status === 'connected' && !conversation.isSpeaking) {
-            console.log('No greeting detected; nudging Sandra to greet.');
+            console.log('No greeting detected; nudging Sarah to greet.');
             conversation.sendUserMessage(
-              'Start the interview now. Greet the candidate warmly by saying: "Hello, I\'m Sandra. Thank you for your interest in the opportunity. I\'ll be conducting your interview today." Then ask your first question.'
+              'Start the interview now. Greet the candidate warmly by saying: "Hello, I\'m Sarah. Thank you for your interest in the opportunity. I\'ll be conducting your interview today." Then ask your first question.'
             );
           }
         } catch (e) {
@@ -191,7 +191,7 @@ export function AudioInterface({
         conversation.sendContextualUpdate(contextParts.join('\n\n'));
       }
 
-      // Prompt Sandra to acknowledge reconnection
+      // Prompt Sarah to acknowledge reconnection
       setTimeout(() => {
         if (conversation.status === 'connected') {
           conversation.sendUserMessage(
@@ -232,8 +232,8 @@ export function AudioInterface({
           <div className="relative mb-8">
             <div className="h-40 w-40 mx-auto rounded-full flex items-center justify-center bg-destructive/10 border-4 border-destructive/30">
               <img 
-                src={sandraHeadshot} 
-                alt="Sandra - Your AI Interview Coach" 
+                src={sarahHeadshot} 
+                alt="Sarah - Your AI Interview Coach" 
                 className="h-full w-full object-cover rounded-full opacity-60"
               />
             </div>
@@ -243,7 +243,7 @@ export function AudioInterface({
             Connection Lost
           </h2>
           <p className="text-muted-foreground mb-8">
-            Sandra got disconnected unexpectedly. Don't worry — you can reconnect and continue your interview.
+            Sarah got disconnected unexpectedly. Don't worry — you can reconnect and continue your interview.
           </p>
 
           <div className="flex items-center justify-center gap-4">
@@ -296,16 +296,16 @@ export function AudioInterface({
             </h1>
           </div>
 
-          {/* Sandra's Headshot */}
+          {/* Sarah's Headshot */}
           <div className="flex justify-center mb-8">
             <div className="relative">
               <img 
-                src={sandraHeadshot} 
-                alt="Sandra - Your AI Interview Coach" 
+                src={sarahHeadshot} 
+                alt="Sarah - Your AI Interview Coach" 
                 className="h-40 w-40 rounded-full object-cover border-4 border-primary shadow-lg"
               />
               <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-semibold">
-                Sandra
+                Sarah
               </div>
             </div>
           </div>
@@ -319,9 +319,9 @@ export function AudioInterface({
             <ul className="text-sm text-tal-gray font-sans space-y-2 ml-7">
               <li>• Speak clearly and at a natural pace</li>
               <li>• Use a quiet environment for best results</li>
-              <li>• Wait for Sandra to finish before responding</li>
+              <li>• Wait for Sarah to finish before responding</li>
               <li>• Structure your answers using STAR method</li>
-              <li>• This is a completely natural conversation — you may ask Sandra to repeat herself, slow down, speed up, rephrase, clarify, etc.</li>
+              <li>• This is a completely natural conversation — you may ask Sarah to repeat herself, slow down, speed up, rephrase, clarify, etc.</li>
             </ul>
           </div>
 
@@ -346,7 +346,7 @@ export function AudioInterface({
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-8">
       <div className="max-w-md w-full text-center animate-slide-up">
-        {/* Voice Visualization with Sandra's Headshot */}
+        {/* Voice Visualization with Sarah's Headshot */}
         <div className="relative mb-8">
           <div
             className={cn(
@@ -362,8 +362,8 @@ export function AudioInterface({
               <Loader2 className="h-16 w-16 text-primary animate-spin" />
             ) : isConnected ? (
               <img 
-                src={sandraHeadshot} 
-                alt="Sandra - Your AI Interview Coach" 
+                src={sarahHeadshot} 
+                alt="Sarah - Your AI Interview Coach" 
                 className="h-full w-full object-cover"
               />
             ) : (
@@ -382,9 +382,9 @@ export function AudioInterface({
 
         <h2 className="font-heading text-2xl font-bold text-foreground mb-2">
           {isConnecting 
-            ? 'Connecting to Sandra...' 
+            ? 'Connecting to Sarah...' 
             : isSpeaking
-              ? 'Sandra is speaking...'
+              ? 'Sarah is speaking...'
               : 'Listening to your response...'}
         </h2>
         
@@ -392,8 +392,8 @@ export function AudioInterface({
           {isConnecting
             ? 'Setting up your voice connection...'
             : isSpeaking
-              ? 'Wait for Sandra to finish before responding'
-              : 'Speak naturally — Sandra is listening'}
+              ? 'Wait for Sarah to finish before responding'
+              : 'Speak naturally — Sarah is listening'}
         </p>
 
         {/* Controls */}
