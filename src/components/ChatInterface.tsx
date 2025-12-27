@@ -207,7 +207,7 @@ export function ChatInterface({ sessionType, isActive, sessionId, documents, onI
                   : 'bg-muted text-foreground rounded-tl-md'
               )}
             >
-              <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+              <div className="whitespace-pre-wrap leading-relaxed">{message.content}</div>
               <p
                 className={cn(
                   "text-xs mt-2 opacity-70",
