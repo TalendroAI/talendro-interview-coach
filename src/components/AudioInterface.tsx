@@ -38,6 +38,7 @@ export function AudioInterface({
   const conversation = useConversation({
     onConnect: () => {
       console.log('Connected to ElevenLabs agent');
+      setIsConnecting(false);
       toast({
         title: 'Connected!',
         description: 'Your voice interview has started.',
@@ -67,55 +68,46 @@ export function AudioInterface({
     console.log('Begin Interview clicked - starting conversation...');
     console.log('isDocumentsSaved:', isDocumentsSaved);
     console.log('documents:', documents);
-    
+
     setIsConnecting(true);
-    
+
     try {
       // Request microphone permission
       console.log('Requesting microphone permission...');
       await navigator.mediaDevices.getUserMedia({ audio: true });
       console.log('Microphone permission granted');
 
-      // Get conversation token from edge function
+      // Get conversation token from backend function
       console.log('Fetching conversation token...');
       const { data, error } = await supabase.functions.invoke('elevenlabs-conversation-token', {
         body: { agentId: ELEVENLABS_AGENT_ID },
       });
-      
+
       console.log('Token response:', { data, error });
 
       if (error || !data?.token) {
         throw new Error(error?.message || 'No token received');
       }
 
-      // Build context from documents for the agent
-      const contextParts = [];
-      if (documents?.resume) {
-        contextParts.push(`Candidate Resume: ${documents.resume}`);
-      }
-      if (documents?.jobDescription) {
-        contextParts.push(`Job Description: ${documents.jobDescription}`);
-      }
-      if (documents?.companyUrl) {
-        contextParts.push(`Company URL: ${documents.companyUrl}`);
-      }
+      // Build context from documents (sent as contextual update once connected)
+      const contextParts: string[] = [];
+      if (documents?.resume) contextParts.push(`Candidate Resume:\n${documents.resume}`);
+      if (documents?.jobDescription) contextParts.push(`Job Description:\n${documents.jobDescription}`);
+      if (documents?.companyUrl) contextParts.push(`Company URL: ${documents.companyUrl}`);
 
-      console.log('Starting ElevenLabs session with context parts:', contextParts.length);
+      console.log('Starting ElevenLabs session...');
 
       // Start the conversation with WebRTC
       await conversation.startSession({
         conversationToken: data.token,
         connectionType: 'webrtc',
-        overrides: contextParts.length > 0 ? {
-          agent: {
-            prompt: {
-              prompt: `You are a professional interview coach conducting a mock interview. Use the following context about the candidate and role to personalize the interview:\n\n${contextParts.join('\n\n')}\n\nConduct a realistic behavioral interview, asking relevant questions based on the job requirements and the candidate's background. Provide constructive feedback after each answer.`,
-            },
-            firstMessage: "Hello! I'm Sandra, and I'll be your interviewer today. Thank you for your interest in this opportunity. I've reviewed your resume and the job description, so I'm excited to learn more about you. Before we dive into the interview questions, could you start by telling me a bit about yourself and why you're interested in this role?",
-          },
-        } : undefined,
       });
-      
+
+      if (contextParts.length > 0) {
+        console.log('Sending contextual update with documents:', contextParts.length);
+        conversation.sendContextualUpdate(contextParts.join('\n\n'));
+      }
+
       console.log('ElevenLabs session started successfully');
     } catch (error) {
       console.error('Failed to start conversation:', error);
