@@ -100,13 +100,31 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { data: session } = await supabaseClient
+    // Session validation: Verify session exists and matches email
+    const { data: session, error: sessionError } = await supabaseClient
       .from("coaching_sessions")
       .select("*, chat_messages(*)")
       .eq("id", session_id)
       .single();
 
-    logStep("Session retrieved", { hasSession: !!session });
+    if (sessionError || !session) {
+      logStep("Invalid session", { hasSession: false });
+      throw new Error("Invalid session ID");
+    }
+
+    // Verify the email matches the session owner (prevent spoofing)
+    if (session.email.toLowerCase() !== email.toLowerCase()) {
+      logStep("Email mismatch", { sessionEmail: "***", providedEmail: "***" });
+      throw new Error("Email does not match session");
+    }
+
+    // Only allow active sessions to send results
+    if (session.status !== "active") {
+      logStep("Session not active", { status: session.status });
+      throw new Error("Session is not active");
+    }
+
+    logStep("Session validated", { hasSession: true, status: session.status });
 
     const sessionTypeLabels: Record<string, string> = {
       quick_prep: "Quick Prep Packet",
