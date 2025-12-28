@@ -92,7 +92,7 @@ serve(async (req) => {
       .from("coaching_sessions")
       .select("*")
       .eq("email", email)
-      .eq("status", "active")
+      .in("status", ["active", "completed"]) // paid sessions
       .gte("created_at", twentyFourHoursAgo)
       .order("created_at", { ascending: false });
 
