@@ -49,7 +49,7 @@ serve(async (req) => {
 
     // Test email mode
     if (test_email && email) {
-      logStep("Test email mode triggered", { email, session_type });
+      logStep("Test email mode triggered", { session_type });
       
       const testSessionType = session_type || "quick_prep";
       const sessionTypeLabels: Record<string, string> = {
@@ -106,7 +106,7 @@ serve(async (req) => {
       .eq("id", session_id)
       .single();
 
-    logStep("Session retrieved", { sessionId: session_id });
+    logStep("Session retrieved", { hasSession: !!session });
 
     const sessionTypeLabels: Record<string, string> = {
       quick_prep: "Quick Prep Packet",

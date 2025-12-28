@@ -134,7 +134,7 @@ export async function createCheckout(
   discountCodeId?: string,
   discountPercent?: number
 ): Promise<string> {
-  console.log('[FRONTEND] Calling create-checkout edge function', { sessionType, email, discountCodeId, discountPercent });
+  console.log('[FRONTEND] Calling create-checkout edge function', { sessionType, hasEmail: !!email, hasDiscountCode: !!discountCodeId, discountPercent });
 
   const { data, error } = await supabase.functions.invoke("create-checkout", {
     body: { 
@@ -145,7 +145,7 @@ export async function createCheckout(
     },
   });
 
-  console.log('[FRONTEND] Edge function response:', { data, error });
+  console.log('[FRONTEND] Edge function response:', { hasUrl: !!data?.url, error: error?.message });
 
   if (error) {
     console.error("[FRONTEND] Create checkout error:", error);
@@ -182,7 +182,7 @@ export async function createCheckout(
     );
   }
 
-  console.log('[FRONTEND] Checkout URL received:', { host, debug });
+  console.log('[FRONTEND] Checkout URL received:', { host, keyType: debug?.stripe_key_type });
   return url;
 }
 

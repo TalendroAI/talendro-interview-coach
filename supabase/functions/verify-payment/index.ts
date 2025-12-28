@@ -292,12 +292,10 @@ const sendPurchaseEmail = async (
     });
     
     logStep("Purchase confirmation email sent", { 
-      email, 
       sessionType, 
       isUpgrade,
-      customerName: customerName || 'not provided',
       result: result.data ? 'success' : 'failed',
-      error: result.error 
+      hasError: !!result.error 
     });
     
     return result;
@@ -319,7 +317,7 @@ serve(async (req) => {
     
     // Test email mode - just send a sample email without verification
     if (test_email && email) {
-      logStep("Test email mode triggered", { email, session_type, test_upgrade });
+      logStep("Test email mode triggered", { session_type, test_upgrade });
       
       const resendKeyRaw = Deno.env.get("RESEND_API_KEY") ?? "";
       const resendKey = resendKeyRaw
@@ -372,7 +370,7 @@ serve(async (req) => {
       throw new Error("checkout_session_id or email is required");
     }
 
-    logStep("Request validated", { checkout_session_id, email, session_type });
+    logStep("Request validated", { hasCheckoutSession: !!checkout_session_id, hasEmail: !!email, session_type });
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
@@ -413,8 +411,8 @@ serve(async (req) => {
       
       logStep("Retrieved checkout session", { 
         status: checkoutSession.payment_status,
-        customerEmail: checkoutSession.customer_email,
-        metadata: checkoutSession.metadata
+        hasEmail: !!checkoutSession.customer_email,
+        sessionType: checkoutSession.metadata?.session_type
       });
 
       if (checkoutSession.payment_status === "paid") {

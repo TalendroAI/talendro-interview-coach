@@ -41,7 +41,7 @@ serve(async (req) => {
       throw new Error("Email is required");
     }
 
-    logStep("Request validated", { session_type, email, discount_code_id, discount_percent });
+    logStep("Request validated", { session_type, hasEmail: !!email, hasDiscountCode: !!discount_code_id, discount_percent });
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
@@ -205,7 +205,7 @@ serve(async (req) => {
         logStep("Warning: Failed to record discount usage", { error: usageError });
         // Don't throw - we still want to proceed with checkout
       } else {
-        logStep("Recorded discount code usage", { code_id: appliedDiscountCodeId, email });
+        logStep("Recorded discount code usage", { code_id: appliedDiscountCodeId });
       }
     }
 

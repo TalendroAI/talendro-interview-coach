@@ -44,7 +44,7 @@ serve(async (req) => {
     // Normalize code to uppercase for case-insensitive matching
     const normalizedCode = code.toUpperCase().trim();
 
-    console.log(`[VALIDATE-DISCOUNT] Checking code: ${normalizedCode} for email: ${email}, product: ${session_type}`);
+    console.log(`[VALIDATE-DISCOUNT] Checking code: ${normalizedCode} for product: ${session_type}`);
 
     // Find the discount code
     const { data: discountCode, error: codeError } = await supabaseAdmin
@@ -98,7 +98,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (existingUsage) {
-      console.log(`[VALIDATE-DISCOUNT] Code already used by ${email}: ${normalizedCode}`);
+      console.log(`[VALIDATE-DISCOUNT] Code already used: ${normalizedCode}`);
       return new Response(
         JSON.stringify({ valid: false, error: "You've already used this promo code" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
@@ -122,7 +122,7 @@ serve(async (req) => {
     }
 
     // Code is valid!
-    console.log(`[VALIDATE-DISCOUNT] Code valid! ${discountCode.discount_percent}% off for ${email}`);
+    console.log(`[VALIDATE-DISCOUNT] Code valid! ${discountCode.discount_percent}% off`);
     
     const response: ValidateResponse = {
       valid: true,
