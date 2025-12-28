@@ -20,6 +20,7 @@ interface DocumentSidebarProps {
   onSaveDocuments?: () => void;
   isDocumentsSaved?: boolean;
   isContentReady?: boolean;
+  isSessionCompleted?: boolean;
 }
 
 export function DocumentSidebar({
@@ -33,6 +34,7 @@ export function DocumentSidebar({
   onSaveDocuments,
   isDocumentsSaved = false,
   isContentReady = false,
+  isSessionCompleted = false,
 }: DocumentSidebarProps) {
   const config = sessionType ? SESSION_CONFIGS[sessionType] : null;
 
@@ -247,22 +249,36 @@ export function DocumentSidebar({
         <div className="flex items-start gap-2">
           <span className={cn(
             "flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold mt-1 transition-all duration-300",
-            isContentReady 
-              ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
-              : "bg-primary text-primary-foreground"
+            isSessionCompleted
+              ? "bg-secondary text-secondary-foreground scale-110 shadow-sm"
+              : isContentReady 
+                ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
+                : "bg-muted text-muted-foreground"
           )}>
-            {isContentReady ? <Check className="h-3.5 w-3.5" /> : "5"}
+            {isSessionCompleted ? <Check className="h-3.5 w-3.5" /> : isContentReady ? <Check className="h-3.5 w-3.5" /> : "5"}
           </span>
           <Button
             size="default"
-            className="flex-1 px-3 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm hover:shadow-md transition-all disabled:bg-muted disabled:text-muted-foreground"
+            className={cn(
+              "flex-1 px-3 font-semibold shadow-sm transition-all",
+              isSessionCompleted
+                ? "bg-secondary hover:bg-secondary/90 text-secondary-foreground cursor-default"
+                : canCompleteSession
+                  ? "bg-primary hover:bg-primary/90 text-primary-foreground hover:shadow-md"
+                  : "bg-muted text-muted-foreground cursor-not-allowed"
+            )}
             onClick={onStartSession}
-            disabled={!canCompleteSession || isLoading}
+            disabled={!canCompleteSession || isLoading || isSessionCompleted}
           >
             {isLoading ? (
               <>
                 <span className="animate-spin mr-2">⏳</span>
                 Sending Results...
+              </>
+            ) : isSessionCompleted ? (
+              <>
+                <Check className="h-4 w-4 mr-2" />
+                Results Sent!
               </>
             ) : (
               <>
