@@ -165,13 +165,21 @@ serve(async (req) => {
       throw new Error(`Company URL exceeds maximum length of ${MAX_COMPANY_URL_LENGTH} characters`);
     }
 
-    // Validate company URL format if provided
+    // Validate and normalize company URL format if provided
+    let normalizedCompanyUrl = company_url;
     if (company_url) {
+      // Auto-prepend https:// if no protocol is provided
+      let urlToValidate = company_url.trim();
+      if (!urlToValidate.startsWith('http://') && !urlToValidate.startsWith('https://')) {
+        urlToValidate = `https://${urlToValidate}`;
+      }
+      
       try {
-        const url = new URL(company_url);
+        const url = new URL(urlToValidate);
         if (!['http:', 'https:'].includes(url.protocol)) {
           throw new Error("Invalid URL protocol - only http and https are allowed");
         }
+        normalizedCompanyUrl = urlToValidate;
       } catch (e) {
         if (e instanceof Error && e.message.includes("protocol")) {
           throw e;
@@ -234,8 +242,8 @@ serve(async (req) => {
     if (job_description) {
       documentContext += `\n\n## TARGET JOB DESCRIPTION:\n${job_description}`;
     }
-    if (company_url) {
-      documentContext += `\n\n## TARGET COMPANY URL:\n${company_url}`;
+    if (normalizedCompanyUrl) {
+      documentContext += `\n\n## TARGET COMPANY URL:\n${normalizedCompanyUrl}`;
     }
 
     const systemPrompt = SYSTEM_PROMPTS[session_type as keyof typeof SYSTEM_PROMPTS] || SYSTEM_PROMPTS.full_mock;
