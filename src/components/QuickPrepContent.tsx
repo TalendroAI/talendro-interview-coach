@@ -1,13 +1,18 @@
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { CompleteSessionButton } from './CompleteSessionButton';
 
 interface QuickPrepContentProps {
   content: string | null;
   isLoading: boolean;
   error: string | null;
+  onCompleteSession: () => void;
+  isCompletingSession: boolean;
+  isSessionCompleted: boolean;
+  isContentReady: boolean;
 }
 
-export function QuickPrepContent({ content, isLoading, error }: QuickPrepContentProps) {
+export function QuickPrepContent({ content, isLoading, error, onCompleteSession, isCompletingSession, isSessionCompleted, isContentReady }: QuickPrepContentProps) {
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center p-8 bg-hero">
@@ -186,6 +191,17 @@ export function QuickPrepContent({ content, isLoading, error }: QuickPrepContent
           
           <div className="prose prose-lg max-w-none">
             {renderContent(content)}
+          </div>
+
+          {/* Complete Session Button at bottom of content */}
+          <div className="mt-10 pt-8 border-t border-border flex justify-center">
+            <CompleteSessionButton
+              onClick={onCompleteSession}
+              isLoading={isCompletingSession}
+              isDisabled={!isContentReady}
+              isCompleted={isSessionCompleted}
+              className="min-w-[280px]"
+            />
           </div>
         </div>
       </div>

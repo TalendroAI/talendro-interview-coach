@@ -46,6 +46,7 @@ export default function InterviewCoach() {
   // Completed session dialog state
   const [showCompletedDialog, setShowCompletedDialog] = useState(false);
   const [completedSessionResults, setCompletedSessionResults] = useState<any>(null);
+  const [isSessionCompleted, setIsSessionCompleted] = useState(false);
 
   // Check if documents are ready
   const isResumeComplete = documents.resume.trim().length > 50;
@@ -238,6 +239,9 @@ export default function InterviewCoach() {
         title: 'Results sent!',
         description: 'Your interview results have been emailed to you.',
       });
+      
+      // Mark session as completed
+      setIsSessionCompleted(true);
     } catch (err) {
       console.error('Error sending results:', err);
       toast({
@@ -286,6 +290,10 @@ export default function InterviewCoach() {
           content={quickPrepContent}
           isLoading={isGeneratingContent}
           error={contentError}
+          onCompleteSession={handleStartSession}
+          isCompletingSession={isLoading}
+          isSessionCompleted={isSessionCompleted}
+          isContentReady={!!quickPrepContent && !isGeneratingContent}
         />
       );
     }
@@ -310,6 +318,10 @@ export default function InterviewCoach() {
         sessionId={sessionId}
         documents={documents}
         onInterviewComplete={handleMockInterviewComplete}
+        onCompleteSession={handleStartSession}
+        isCompletingSession={isLoading}
+        isSessionCompleted={isSessionCompleted}
+        isContentReady={isMockInterviewComplete}
       />
     );
   };
@@ -335,6 +347,7 @@ export default function InterviewCoach() {
             (sessionType === 'full_mock' && isMockInterviewComplete) ||
             (sessionType === 'premium_audio' && isAudioInterviewComplete)
           }
+          isSessionCompleted={isSessionCompleted}
         />
         
         {/* Main Content */}

@@ -6,6 +6,7 @@ import { SessionType, SESSION_CONFIGS, DocumentInputs } from '@/types/session';
 import { sendAIMessage } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { CompleteSessionButton } from './CompleteSessionButton';
 
 interface Message {
   id: string;
@@ -20,9 +21,13 @@ interface ChatInterfaceProps {
   sessionId?: string;
   documents: DocumentInputs;
   onInterviewComplete?: (messages: Message[]) => void;
+  onCompleteSession: () => void;
+  isCompletingSession: boolean;
+  isSessionCompleted: boolean;
+  isContentReady: boolean;
 }
 
-export function ChatInterface({ sessionType, isActive, sessionId, documents, onInterviewComplete }: ChatInterfaceProps) {
+export function ChatInterface({ sessionType, isActive, sessionId, documents, onInterviewComplete, onCompleteSession, isCompletingSession, isSessionCompleted, isContentReady }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -235,6 +240,18 @@ export function ChatInterface({ sessionType, isActive, sessionId, documents, onI
                 <span className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
             </div>
+          </div>
+        )}
+        {/* Complete Session Button at end of messages */}
+        {isInterviewComplete && (
+          <div className="flex justify-center py-6">
+            <CompleteSessionButton
+              onClick={onCompleteSession}
+              isLoading={isCompletingSession}
+              isDisabled={!isContentReady}
+              isCompleted={isSessionCompleted}
+              className="min-w-[280px]"
+            />
           </div>
         )}
         
