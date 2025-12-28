@@ -215,48 +215,54 @@ function generateResultsEmail(sessionLabel: string, results: any, prep_content: 
 
   let emailHtml = `
 <!DOCTYPE html>
-<html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <!--[if mso]>
-  <noscript>
-    <xml>
-      <o:OfficeDocumentSettings>
-        <o:PixelsPerInch>96</o:PixelsPerInch>
-      </o:OfficeDocumentSettings>
-    </xml>
-  </noscript>
+  <!--[if gte mso 9]>
+  <xml>
+    <o:OfficeDocumentSettings>
+      <o:AllowPNG/>
+      <o:PixelsPerInch>96</o:PixelsPerInch>
+    </o:OfficeDocumentSettings>
+  </xml>
   <![endif]-->
   <style type="text/css">
-    /* Force Outlook/Windows to render at proper width */
+    /* Force proper width rendering */
     body, table, td, div, p, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
-    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
-    img { -ms-interpolation-mode: bicubic; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: collapse !important; }
+    img { -ms-interpolation-mode: bicubic; border: 0; line-height: 100%; outline: none; text-decoration: none; }
     /* Reset styles */
-    body { margin: 0 !important; padding: 0 !important; width: 100% !important; }
+    body { margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: #f0f4f8; }
     /* Prevent Apple blue links */
-    a[x-apple-data-detectors] { color: inherit !important; text-decoration: none !important; }
+    a[x-apple-data-detectors] { color: inherit !important; text-decoration: none !important; font-size: inherit !important; font-family: inherit !important; font-weight: inherit !important; line-height: inherit !important; }
     /* Gmail fix */
     u + #body a { color: inherit; text-decoration: none; font-size: inherit; font-family: inherit; font-weight: inherit; line-height: inherit; }
     /* Samsung Mail */
     #MessageViewBody a { color: inherit; text-decoration: none; font-size: inherit; font-family: inherit; font-weight: inherit; line-height: inherit; }
+    /* Outlook Desktop specific */
+    .ExternalClass { width: 100%; }
+    .ExternalClass, .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td, .ExternalClass div { line-height: 100%; }
+    /* Desktop responsive - use full width of reading pane */
+    @media screen and (min-width: 700px) {
+      .email-container { max-width: 680px !important; width: 100% !important; }
+    }
   </style>
 </head>
-<body id="body" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #2C2F38; margin: 0; padding: 0; background-color: #f0f4f8; width: 100% !important; min-width: 100%;">
+<body id="body" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #2C2F38; margin: 0; padding: 0; background-color: #f0f4f8; width: 100% !important; -webkit-font-smoothing: antialiased;">
   <!--[if mso]>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-  <tr><td align="center" style="padding: 20px 0;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f0f4f8;">
+  <tr><td align="center" valign="top" style="padding: 30px 20px;">
+  <table role="presentation" width="680" cellpadding="0" cellspacing="0" border="0" style="width: 680px;">
+  <tr><td>
   <![endif]-->
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f0f4f8;">
     <tr>
-      <td align="center" style="padding: 20px 10px;">
-        <!--[if mso]>
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0">
-        <tr><td>
-        <![endif]-->
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+      <td align="center" valign="top" style="padding: 30px 20px;">
+        <table role="presentation" class="email-container" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 680px; width: 100%; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);"
+          <!--[if mso]>width="680"<![endif]-->
+        >
           <!-- Header -->
           <tr>
             <td style="background-color: #2F6DF6; padding: 30px; text-align: center;">
@@ -408,13 +414,11 @@ function generateResultsEmail(sessionLabel: string, results: any, prep_content: 
             </td>
           </tr>
         </table>
-        <!--[if mso]>
-        </td></tr></table>
-        <![endif]-->
       </td>
     </tr>
   </table>
   <!--[if mso]>
+  </td></tr></table>
   </td></tr></table>
   <![endif]-->
 </body>
