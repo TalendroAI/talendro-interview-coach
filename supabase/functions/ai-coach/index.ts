@@ -190,6 +190,42 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
+    // Session validation: Require valid session_id for non-initial calls
+    if (session_id) {
+      const { data: session, error: sessionError } = await supabaseClient
+        .from("coaching_sessions")
+        .select("status, created_at")
+        .eq("id", session_id)
+        .single();
+
+      if (sessionError || !session) {
+        logStep("Invalid session", { hasSession: false });
+        throw new Error("Invalid session ID");
+      }
+
+      // Only allow active sessions to use AI coach
+      if (session.status !== "active") {
+        logStep("Session not active", { status: session.status });
+        throw new Error("Session is not active. Please complete payment first.");
+      }
+
+      // Rate limiting: Max 15 messages per minute per session
+      const oneMinuteAgo = new Date(Date.now() - 60000).toISOString();
+      const { count, error: countError } = await supabaseClient
+        .from("chat_messages")
+        .select("*", { count: "exact", head: true })
+        .eq("session_id", session_id)
+        .gte("created_at", oneMinuteAgo);
+
+      if (!countError && count !== null && count >= 15) {
+        logStep("Rate limit exceeded", { count });
+        throw new Error("Rate limit exceeded. Please wait a moment before sending more messages.");
+      }
+    } else if (!is_initial) {
+      // Non-initial calls must have a session_id
+      throw new Error("session_id is required for ongoing conversations");
+    }
+
     // Build context from documents
     let documentContext = "";
     if (resume) {
