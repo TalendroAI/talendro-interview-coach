@@ -229,62 +229,77 @@ function generateResultsEmail(sessionLabel: string, results: any, prep_content: 
   </xml>
   <![endif]-->
   <style type="text/css">
-    /* Force proper width rendering */
+    /* Base resets */
     body, table, td, div, p, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
     table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: collapse !important; }
     img { -ms-interpolation-mode: bicubic; border: 0; line-height: 100%; outline: none; text-decoration: none; }
-    /* Reset styles */
     body { margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: #f0f4f8; }
-    /* Prevent Apple blue links */
-    a[x-apple-data-detectors] { color: inherit !important; text-decoration: none !important; font-size: inherit !important; font-family: inherit !important; font-weight: inherit !important; line-height: inherit !important; }
-    /* Gmail fix */
-    u + #body a { color: inherit; text-decoration: none; font-size: inherit; font-family: inherit; font-weight: inherit; line-height: inherit; }
-    /* Samsung Mail */
-    #MessageViewBody a { color: inherit; text-decoration: none; font-size: inherit; font-family: inherit; font-weight: inherit; line-height: inherit; }
-    /* Outlook Desktop specific */
+    /* Outlook/Gmail fixes */
     .ExternalClass { width: 100%; }
     .ExternalClass, .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td, .ExternalClass div { line-height: 100%; }
-    /* Desktop responsive - use full width of reading pane */
-    @media screen and (min-width: 700px) {
-      .email-container { max-width: 680px !important; width: 100% !important; }
+    /* Prevent Apple blue links */
+    a[x-apple-data-detectors] { color: inherit !important; text-decoration: none !important; }
+    u + #body a { color: inherit; text-decoration: none; }
+    #MessageViewBody a { color: inherit; text-decoration: none; }
+    
+    /* RESPONSIVE BREAKPOINTS */
+    /* Mobile: constrain width, smaller padding */
+    @media only screen and (max-width: 599px) {
+      .email-container { width: 100% !important; max-width: 100% !important; }
+      .content-padding { padding: 24px 16px !important; }
+      .header-padding { padding: 24px 16px !important; }
+      .hero-padding { padding: 24px 16px !important; }
+      .footer-padding { padding: 24px 16px !important; }
+      .mobile-text-center { text-align: center !important; }
+      .mobile-font-small { font-size: 14px !important; }
+      h1.email-title { font-size: 22px !important; }
+    }
+    /* Tablet: medium width */
+    @media only screen and (min-width: 600px) and (max-width: 899px) {
+      .email-container { width: 90% !important; max-width: 600px !important; }
+    }
+    /* Desktop: full width up to max */
+    @media only screen and (min-width: 900px) {
+      .email-container { width: 100% !important; max-width: 800px !important; }
     }
   </style>
 </head>
 <body id="body" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #2C2F38; margin: 0; padding: 0; background-color: #f0f4f8; width: 100% !important; -webkit-font-smoothing: antialiased;">
+  <!-- Outlook wrapper for fixed width -->
   <!--[if mso]>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f0f4f8;">
   <tr><td align="center" valign="top" style="padding: 30px 20px;">
-  <table role="presentation" width="680" cellpadding="0" cellspacing="0" border="0" style="width: 680px;">
+  <table role="presentation" width="800" cellpadding="0" cellspacing="0" border="0">
   <tr><td>
   <![endif]-->
+  
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f0f4f8;">
     <tr>
       <td align="center" valign="top" style="padding: 30px 20px;">
-        <table role="presentation" class="email-container" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 680px; width: 100%; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);"
-          <!--[if mso]>width="680"<![endif]-->
-        >
+        <!-- Main email container - fluid width -->
+        <table role="presentation" class="email-container" cellpadding="0" cellspacing="0" border="0" style="width: 100%; max-width: 800px; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
           <!-- Header -->
           <tr>
-            <td style="background-color: #2F6DF6; padding: 30px; text-align: center;">
-              <div style="font-size: 32px; font-weight: 800; color: #ffffff; letter-spacing: -1px;">
-                Talendro<span style="font-size: 14px; vertical-align: super; color: #00C4CC; font-weight: 600;">™</span>
+            <td class="header-padding" style="background-color: #2F6DF6; padding: 40px 48px; text-align: center;">
+              <div style="font-size: 36px; font-weight: 800; color: #ffffff; letter-spacing: -1px;">
+                Talendro<span style="font-size: 16px; vertical-align: super; color: #00C4CC; font-weight: 600;">™</span>
               </div>
-              <h1 style="color: white; margin: 16px 0 0 0; font-size: 26px; font-weight: 700;">Your ${sessionLabel} Results</h1>
-              <p style="color: rgba(255,255,255,0.85); margin: 12px 0 0 0; font-size: 16px;">Your interview coaching session is complete</p>
+              <h1 class="email-title" style="color: white; margin: 20px 0 0 0; font-size: 28px; font-weight: 700;">Your ${sessionLabel} Results</h1>
+              <p style="color: rgba(255,255,255,0.9); margin: 12px 0 0 0; font-size: 17px;">Your interview coaching session is complete</p>
             </td>
           </tr>
           <!-- Hero Banner -->
           <tr>
-            <td style="background-color: #E8F4FE; padding: 30px; text-align: center; border-bottom: 1px solid #e5e7eb;">
-              <div style="font-size: 48px; margin-bottom: 12px;">🎉</div>
-              <h2 style="color: #2C2F38; font-size: 20px; font-weight: 600; margin: 0 0 8px 0;">Session Complete!</h2>
-              <p style="color: #9FA6B2; font-size: 15px; margin: 0;">Here's everything you need to ace your interview</p>
+            <td class="hero-padding" style="background-color: #E8F4FE; padding: 36px 48px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+              <div style="font-size: 56px; margin-bottom: 16px;">🎉</div>
+              <h2 style="color: #2C2F38; font-size: 22px; font-weight: 600; margin: 0 0 10px 0;">Session Complete!</h2>
+              <p style="color: #6B7280; font-size: 16px; margin: 0;">Here's everything you need to ace your interview</p>
             </td>
           </tr>
           <!-- Content -->
           <tr>
-            <td style="padding: 40px 30px;">
-              <p style="margin: 0 0 24px 0; font-size: 16px; color: #2C2F38;">Thank you for completing your interview coaching session with <strong>Talendro™</strong>! Below you'll find your personalized results and recommendations.</p>
+            <td class="content-padding" style="padding: 48px;">
+              <p style="margin: 0 0 28px 0; font-size: 17px; color: #2C2F38; line-height: 1.7;">Thank you for completing your interview coaching session with <strong>Talendro™</strong>! Below you'll find your personalized results and recommendations.</p>
   `;
 
   // Add prep content if present
@@ -378,23 +393,23 @@ function generateResultsEmail(sessionLabel: string, results: any, prep_content: 
 
   emailHtml += `
               <!-- CTA Button -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 36px 0;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 40px 0;">
                 <tr>
                   <td align="center">
-                    <p style="margin: 0 0 16px 0; color: #2C2F38; font-size: 16px;">Ready for more practice?</p>
-                    <a href="https://coach.talendro.com/#products" style="display: inline-block; background-color: #2F6DF6; color: #ffffff; padding: 18px 48px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px;">Upgrade Your Prep →</a>
+                    <p style="margin: 0 0 20px 0; color: #2C2F38; font-size: 17px;">Ready for more practice?</p>
+                    <a href="https://coach.talendro.com/#products" style="display: inline-block; background-color: #2F6DF6; color: #ffffff; padding: 18px 52px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 17px;">Upgrade Your Prep →</a>
                   </td>
                 </tr>
               </table>
               
-              <p style="margin: 24px 0 0 0; font-size: 16px; color: #2C2F38;">Questions? Simply reply to this email. We're here to help you succeed.</p>
+              <p style="margin: 28px 0 0 0; font-size: 17px; color: #2C2F38; line-height: 1.6;">Questions? Simply reply to this email. We're here to help you succeed.</p>
               
               <!-- Signature -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin-top: 36px; padding-top: 28px; border-top: 1px solid #e5e7eb;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-top: 40px; padding-top: 32px; border-top: 1px solid #e5e7eb;">
                 <tr>
                   <td>
-                    <p style="margin: 8px 0; color: #2C2F38;">Go crush that interview!</p>
-                    <p style="margin: 8px 0; color: #2C2F38;"><strong>— Greg Jackson</strong><br>Founder, Talendro™</p>
+                    <p style="margin: 10px 0; color: #2C2F38; font-size: 17px;">Go crush that interview!</p>
+                    <p style="margin: 10px 0; color: #2C2F38; font-size: 17px;"><strong>— Greg Jackson</strong><br>Founder, Talendro™</p>
                   </td>
                 </tr>
               </table>
@@ -402,15 +417,15 @@ function generateResultsEmail(sessionLabel: string, results: any, prep_content: 
           </tr>
           <!-- Footer -->
           <tr>
-            <td style="background-color: #0F172A; padding: 36px 30px; text-align: center;">
-              <div style="font-size: 24px; font-weight: 800; color: white; margin-bottom: 8px;">Talendro<span style="font-size: 12px; vertical-align: super; color: #00C4CC;">™</span></div>
-              <p style="color: #00C4CC; font-style: italic; font-size: 15px; margin: 12px 0 20px 0;">"Your partner in interview success"</p>
-              <p style="margin: 20px 0; font-size: 13px; color: #9FA6B2;">🇺🇸 American-Built • 🎖️ Veteran-Led • ✅ Recruiter-Tested</p>
-              <p style="margin: 20px 0;">
-                <a href="https://www.linkedin.com/company/talendro" style="color: #9FA6B2; text-decoration: none; margin: 0 12px; font-size: 14px;">LinkedIn</a>
-                <a href="https://talendro.com" style="color: #9FA6B2; text-decoration: none; margin: 0 12px; font-size: 14px;">Website</a>
+            <td class="footer-padding" style="background-color: #0F172A; padding: 44px 48px; text-align: center;">
+              <div style="font-size: 28px; font-weight: 800; color: white; margin-bottom: 12px;">Talendro<span style="font-size: 14px; vertical-align: super; color: #00C4CC;">™</span></div>
+              <p style="color: #00C4CC; font-style: italic; font-size: 16px; margin: 14px 0 24px 0;">"Your partner in interview success"</p>
+              <p style="margin: 24px 0; font-size: 14px; color: #9FA6B2;">🇺🇸 American-Built • 🎖️ Veteran-Led • ✅ Recruiter-Tested</p>
+              <p style="margin: 24px 0;">
+                <a href="https://www.linkedin.com/company/talendro" style="color: #9FA6B2; text-decoration: none; margin: 0 16px; font-size: 15px;">LinkedIn</a>
+                <a href="https://talendro.com" style="color: #9FA6B2; text-decoration: none; margin: 0 16px; font-size: 15px;">Website</a>
               </p>
-              <p style="color: #9FA6B2; font-size: 12px; margin-top: 20px;">© ${new Date().getFullYear()} Talendro. All rights reserved.</p>
+              <p style="color: #6B7280; font-size: 13px; margin-top: 24px;">© ${new Date().getFullYear()} Talendro. All rights reserved.</p>
             </td>
           </tr>
         </table>
