@@ -149,6 +149,37 @@ serve(async (req) => {
       throw new Error("session_type is required");
     }
 
+    // Input validation constants
+    const MAX_RESUME_LENGTH = 50000;
+    const MAX_JOB_DESC_LENGTH = 20000;
+    const MAX_COMPANY_URL_LENGTH = 2000;
+
+    // Validate input lengths
+    if (resume && resume.length > MAX_RESUME_LENGTH) {
+      throw new Error(`Resume text exceeds maximum length of ${MAX_RESUME_LENGTH} characters`);
+    }
+    if (job_description && job_description.length > MAX_JOB_DESC_LENGTH) {
+      throw new Error(`Job description exceeds maximum length of ${MAX_JOB_DESC_LENGTH} characters`);
+    }
+    if (company_url && company_url.length > MAX_COMPANY_URL_LENGTH) {
+      throw new Error(`Company URL exceeds maximum length of ${MAX_COMPANY_URL_LENGTH} characters`);
+    }
+
+    // Validate company URL format if provided
+    if (company_url) {
+      try {
+        const url = new URL(company_url);
+        if (!['http:', 'https:'].includes(url.protocol)) {
+          throw new Error("Invalid URL protocol - only http and https are allowed");
+        }
+      } catch (e) {
+        if (e instanceof Error && e.message.includes("protocol")) {
+          throw e;
+        }
+        throw new Error("Invalid company URL format");
+      }
+    }
+
     const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
     if (!ANTHROPIC_API_KEY) {
       throw new Error("ANTHROPIC_API_KEY is not configured");
@@ -214,7 +245,7 @@ serve(async (req) => {
       });
     }
 
-    logStep("Calling Anthropic API", { messageCount: messages.length, sessionType: session_type });
+    logStep("Calling Anthropic API", { messageCount: messages.length, sessionType: session_type, hasSession: !!session_id });
 
     // Call Anthropic Claude API
     const response = await fetch("https://api.anthropic.com/v1/messages", {
