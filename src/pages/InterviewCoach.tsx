@@ -8,12 +8,20 @@ import { AudioInterface } from '@/components/AudioInterface';
 import { QuickPrepContent } from '@/components/QuickPrepContent';
 import { SessionCompletedDialog } from '@/components/SessionCompletedDialog';
 import { PausedSessionBanner } from '@/components/PausedSessionBanner';
+import { PausedSessionConflictDialog } from '@/components/PausedSessionConflictDialog';
 import { useSessionParams } from '@/hooks/useSessionParams';
 import { DocumentInputs } from '@/types/session';
 import { useToast } from '@/hooks/use-toast';
 import { verifyPayment } from '@/services/api';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
+
+interface PausedSession {
+  id: string;
+  session_type: string;
+  paused_at: string;
+  current_question_number: number | null;
+}
 
 export default function InterviewCoach() {
   const { sessionType, userEmail } = useSessionParams();
@@ -54,60 +62,162 @@ export default function InterviewCoach() {
   // Resume from pause state
   const [resumeFromPause, setResumeFromPause] = useState(false);
   const [resumingSessionType, setResumingSessionType] = useState<string | null>(null);
+  
+  // Paused session conflict dialog state
+  const [showConflictDialog, setShowConflictDialog] = useState(false);
+  const [conflictPausedSession, setConflictPausedSession] = useState<PausedSession | null>(null);
+  const [isAbandoning, setIsAbandoning] = useState(false);
+  const [pendingSaveAction, setPendingSaveAction] = useState(false);
 
   // Check if documents are ready
   const isResumeComplete = documents.resume.trim().length > 50;
   const isJobComplete = documents.jobDescription.trim().length > 50;
   const isDocumentsReady = isResumeComplete && isJobComplete && isDocumentsSaved;
 
+  // Check for paused sessions before starting new one
+  const checkForPausedSessions = async (): Promise<PausedSession | null> => {
+    if (!userEmail) return null;
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('audio-session', {
+        body: {
+          action: 'get_paused_sessions',
+          email: userEmail,
+        },
+      });
+      
+      if (error) {
+        console.error('Error checking paused sessions:', error);
+        return null;
+      }
+      
+      const sessions = (data?.sessions as PausedSession[]) ?? [];
+      return sessions.length > 0 ? sessions[0] : null;
+    } catch (err) {
+      console.error('Exception checking paused sessions:', err);
+      return null;
+    }
+  };
+
   const handleSaveDocuments = async () => {
     if (isResumeComplete && isJobComplete) {
-      setIsDocumentsSaved(true);
+      // First check if user has any paused sessions
+      const pausedSession = await checkForPausedSessions();
       
-      // For quick_prep, generate content immediately
-      if (isPaymentVerified && sessionType === 'quick_prep' && sessionId) {
-        setIsGeneratingContent(true);
-        setContentError(null);
-        setIsSessionStarted(true);
-        
-        try {
-          const { data, error } = await supabase.functions.invoke('ai-coach', {
-            body: {
-              session_id: sessionId,
-              session_type: sessionType,
-              resume: documents.resume,
-              job_description: documents.jobDescription,
-              company_url: documents.companyUrl,
-              is_initial: true
-            }
-          });
-          
-          if (error) {
-            throw new Error(error.message || 'Failed to generate content');
-          }
-          
-          if (data?.message) {
-            setQuickPrepContent(data.message);
-          } else {
-            throw new Error('No content received from AI');
-          }
-        } catch (err) {
-          console.error('Error generating Quick Prep content:', err);
-          setContentError(err instanceof Error ? err.message : 'Failed to generate content');
-        } finally {
-          setIsGeneratingContent(false);
-        }
-      } else if (isPaymentVerified && sessionType) {
-        // For other session types, transition to session view (mid-page button handles actual start for audio)
-        setIsSessionStarted(true);
-        toast({
-          title: 'Documents saved!',
-          description: sessionType === 'premium_audio' 
-            ? 'Click "Begin Interview" when you\'re ready to start.'
-            : 'Your personalized coaching session has begun.',
-        });
+      if (pausedSession) {
+        // Show conflict dialog
+        setConflictPausedSession(pausedSession);
+        setShowConflictDialog(true);
+        setPendingSaveAction(true);
+        return; // Don't proceed until user makes a choice
       }
+      
+      // No conflict, proceed with saving
+      proceedWithSaveDocuments();
     }
+  };
+
+  const proceedWithSaveDocuments = async () => {
+    setIsDocumentsSaved(true);
+    
+    // For quick_prep, generate content immediately
+    if (isPaymentVerified && sessionType === 'quick_prep' && sessionId) {
+      setIsGeneratingContent(true);
+      setContentError(null);
+      setIsSessionStarted(true);
+      
+      try {
+        const { data, error } = await supabase.functions.invoke('ai-coach', {
+          body: {
+            session_id: sessionId,
+            session_type: sessionType,
+            resume: documents.resume,
+            job_description: documents.jobDescription,
+            company_url: documents.companyUrl,
+            is_initial: true
+          }
+        });
+        
+        if (error) {
+          throw new Error(error.message || 'Failed to generate content');
+        }
+        
+        if (data?.message) {
+          setQuickPrepContent(data.message);
+        } else {
+          throw new Error('No content received from AI');
+        }
+      } catch (err) {
+        console.error('Error generating Quick Prep content:', err);
+        setContentError(err instanceof Error ? err.message : 'Failed to generate content');
+      } finally {
+        setIsGeneratingContent(false);
+      }
+    } else if (isPaymentVerified && sessionType) {
+      // For other session types, transition to session view
+      setIsSessionStarted(true);
+      toast({
+        title: 'Documents saved!',
+        description: sessionType === 'premium_audio' 
+          ? 'Click "Begin Interview" when you\'re ready to start.'
+          : 'Your personalized coaching session has begun.',
+      });
+    }
+  };
+
+  // Handle abandon and start new session
+  const handleAbandonAndStartNew = async (abandonedSessionId: string) => {
+    setIsAbandoning(true);
+    try {
+      // Mark the old session as cancelled
+      const { error } = await supabase
+        .from('coaching_sessions')
+        .update({ 
+          status: 'cancelled',
+          paused_at: null,
+        })
+        .eq('id', abandonedSessionId);
+      
+      if (error) {
+        console.error('Error abandoning session:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Could not abandon the old session. Please try again.',
+        });
+        return;
+      }
+      
+      // Close dialog and proceed with new session
+      setShowConflictDialog(false);
+      setConflictPausedSession(null);
+      setPendingSaveAction(false);
+      
+      toast({
+        title: 'Previous session abandoned',
+        description: 'Starting your new session now.',
+      });
+      
+      // Now proceed with the save
+      proceedWithSaveDocuments();
+    } catch (err) {
+      console.error('Exception abandoning session:', err);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Something went wrong. Please try again.',
+      });
+    } finally {
+      setIsAbandoning(false);
+    }
+  };
+
+  // Handle resume from conflict dialog
+  const handleResumeFromConflict = (pausedSessionId: string, pausedSessionType: string) => {
+    setShowConflictDialog(false);
+    setConflictPausedSession(null);
+    setPendingSaveAction(false);
+    handleResumePausedSession(pausedSessionId, pausedSessionType);
   };
 
   // Verify payment on page load
@@ -463,6 +573,20 @@ export default function InterviewCoach() {
         sessionType={sessionType || ''}
         userEmail={userEmail || ''}
         sessionResults={completedSessionResults}
+      />
+
+      {/* Paused Session Conflict Dialog */}
+      <PausedSessionConflictDialog
+        isOpen={showConflictDialog}
+        onClose={() => {
+          setShowConflictDialog(false);
+          setConflictPausedSession(null);
+          setPendingSaveAction(false);
+        }}
+        pausedSession={conflictPausedSession}
+        onResume={handleResumeFromConflict}
+        onAbandonAndStart={handleAbandonAndStartNew}
+        isAbandoning={isAbandoning}
       />
     </div>
   );
