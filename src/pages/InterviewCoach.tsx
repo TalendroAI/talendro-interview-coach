@@ -70,6 +70,18 @@ export default function InterviewCoach() {
   const [isAbandoning, setIsAbandoning] = useState(false);
   const [pendingSaveAction, setPendingSaveAction] = useState(false);
 
+  // Header pause button state (lifted from ChatInterface)
+  const [headerPauseState, setHeaderPauseState] = useState({
+    showButton: false,
+    isPaused: false,
+    isPausing: false,
+    isResuming: false,
+  });
+  const [pauseHandlers, setPauseHandlers] = useState<{
+    onPause?: () => void;
+    onResume?: () => void;
+  }>({});
+
   // Pro interview type selection state
   const [selectedProInterviewType, setSelectedProInterviewType] = useState<ProInterviewType | null>(null);
 
@@ -652,13 +664,23 @@ export default function InterviewCoach() {
         isContentReady={isMockInterviewComplete}
         userEmail={userEmail}
         resumeFromPause={resumeFromPause}
+        onHeaderPauseStateChange={(state) => setHeaderPauseState(state)}
+        onRegisterPauseHandlers={(handlers) => setPauseHandlers(handlers)}
       />
     );
   };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <Header sessionType={sessionType} />
+      <Header 
+        sessionType={sessionType}
+        showPauseButton={headerPauseState.showButton}
+        isPaused={headerPauseState.isPaused}
+        isPausing={headerPauseState.isPausing}
+        isResuming={headerPauseState.isResuming}
+        onPause={pauseHandlers.onPause}
+        onResume={pauseHandlers.onResume}
+      />
       
       <div className="flex-1 flex flex-col lg:flex-row">
         {/* Sidebar */}

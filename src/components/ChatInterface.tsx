@@ -16,6 +16,13 @@ interface Message {
   timestamp: Date;
 }
 
+interface HeaderPauseState {
+  showButton: boolean;
+  isPaused: boolean;
+  isPausing: boolean;
+  isResuming: boolean;
+}
+
 interface ChatInterfaceProps {
   sessionType: SessionType;
   isActive: boolean;
@@ -29,6 +36,8 @@ interface ChatInterfaceProps {
   userEmail?: string;
   resumeFromPause?: boolean;
   onPauseStateChange?: (isPaused: boolean) => void;
+  onHeaderPauseStateChange?: (state: HeaderPauseState) => void;
+  onRegisterPauseHandlers?: (handlers: { onPause?: () => void; onResume?: () => void }) => void;
 }
 
 export function ChatInterface({ 
@@ -44,6 +53,8 @@ export function ChatInterface({
   userEmail,
   resumeFromPause = false,
   onPauseStateChange,
+  onHeaderPauseStateChange,
+  onRegisterPauseHandlers,
 }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -87,6 +98,17 @@ export function ChatInterface({
       initializeSession();
     }
   }, [isActive, isInitialized, sessionId, resumeFromPause]);
+
+  // Update header pause state whenever relevant state changes
+  useEffect(() => {
+    const showButton = isInitialized && !isInterviewComplete && !isSessionCompleted;
+    onHeaderPauseStateChange?.({
+      showButton,
+      isPaused,
+      isPausing,
+      isResuming,
+    });
+  }, [isInitialized, isInterviewComplete, isSessionCompleted, isPaused, isPausing, isResuming, onHeaderPauseStateChange]);
 
   const handleResumeFromPause = async () => {
     setIsResuming(true);
@@ -281,6 +303,14 @@ export function ChatInterface({
     }
   }, [resumeSession, messages, toast, onPauseStateChange]);
 
+  // Register pause/resume handlers with parent for Header component
+  useEffect(() => {
+    onRegisterPauseHandlers?.({
+      onPause: handlePauseInterview,
+      onResume: handleResumeInterview,
+    });
+  }, [onRegisterPauseHandlers, handlePauseInterview, handleResumeInterview]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading || isPaused) return;
@@ -372,41 +402,6 @@ export function ChatInterface({
             </div>
           </div>
           
-          {/* Pause/Resume Button */}
-          {isInitialized && !isInterviewComplete && !isSessionCompleted && (
-            <div>
-              {isPaused ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleResumeInterview}
-                  disabled={isResuming}
-                  className="gap-2"
-                >
-                  {isResuming ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Play className="h-4 w-4" />
-                  )}
-                  Resume Interview
-                </Button>
-              ) : (
-                <Button
-                  size="sm"
-                  onClick={handlePauseInterview}
-                  disabled={isPausing || isLoading}
-                  className="gap-2 bg-[hsl(var(--tal-slate))] hover:bg-[hsl(var(--tal-slate))]/90 text-white"
-                >
-                  {isPausing ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Pause className="h-4 w-4" />
-                  )}
-                  Pause Interview
-                </Button>
-              )}
-            </div>
-          )}
         </div>
       </div>
 

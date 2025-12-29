@@ -1,7 +1,8 @@
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { SESSION_CONFIGS, SessionType } from '@/types/session';
-import { Shield } from 'lucide-react';
+import { Shield, Pause, Play, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 const VALUE_PROPOSITIONS = [
@@ -14,9 +15,24 @@ const VALUE_PROPOSITIONS = [
 
 interface HeaderProps {
   sessionType: SessionType | null;
+  // Pause/Resume props
+  showPauseButton?: boolean;
+  isPaused?: boolean;
+  isPausing?: boolean;
+  isResuming?: boolean;
+  onPause?: () => void;
+  onResume?: () => void;
 }
 
-export function Header({ sessionType }: HeaderProps) {
+export function Header({ 
+  sessionType, 
+  showPauseButton = false,
+  isPaused = false,
+  isPausing = false,
+  isResuming = false,
+  onPause,
+  onResume,
+}: HeaderProps) {
   const config = sessionType ? SESSION_CONFIGS[sessionType] : null;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
@@ -55,6 +71,42 @@ export function Header({ sessionType }: HeaderProps) {
             <Badge variant={config.badgeVariant} className="animate-fade-in text-sm px-4 py-1.5">
               {config.icon} {config.name}
             </Badge>
+          )}
+          
+          {/* Pause/Resume Button - Always visible in sticky header */}
+          {showPauseButton && (
+            <>
+              {isPaused ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onResume}
+                  disabled={isResuming}
+                  className="gap-2"
+                >
+                  {isResuming ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Play className="h-4 w-4" />
+                  )}
+                  Resume
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={onPause}
+                  disabled={isPausing}
+                  className="gap-2 bg-[hsl(var(--tal-slate))] hover:bg-[hsl(var(--tal-slate))]/90 text-white"
+                >
+                  {isPausing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Pause className="h-4 w-4" />
+                  )}
+                  Pause
+                </Button>
+              )}
+            </>
           )}
         </div>
       </div>
