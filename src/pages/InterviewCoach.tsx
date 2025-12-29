@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { DocumentSidebar } from '@/components/DocumentSidebar';
 import { WelcomeMessage } from '@/components/WelcomeMessage';
@@ -7,6 +7,7 @@ import { ChatInterface } from '@/components/ChatInterface';
 import { AudioInterface } from '@/components/AudioInterface';
 import { QuickPrepContent } from '@/components/QuickPrepContent';
 import { SessionCompletedDialog } from '@/components/SessionCompletedDialog';
+import { PausedSessionBanner } from '@/components/PausedSessionBanner';
 import { useSessionParams } from '@/hooks/useSessionParams';
 import { DocumentInputs } from '@/types/session';
 import { useToast } from '@/hooks/use-toast';
@@ -17,6 +18,7 @@ import { Loader2 } from 'lucide-react';
 export default function InterviewCoach() {
   const { sessionType, userEmail } = useSessionParams();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { toast } = useToast();
   
   const [documents, setDocuments] = useState<DocumentInputs>({
@@ -48,6 +50,10 @@ export default function InterviewCoach() {
   const [showCompletedDialog, setShowCompletedDialog] = useState(false);
   const [completedSessionResults, setCompletedSessionResults] = useState<any>(null);
   const [isSessionCompleted, setIsSessionCompleted] = useState(false);
+  
+  // Resume from pause state
+  const [resumeFromPause, setResumeFromPause] = useState(false);
+  const [resumingSessionType, setResumingSessionType] = useState<string | null>(null);
 
   // Check if documents are ready
   const isResumeComplete = documents.resume.trim().length > 50;
@@ -290,6 +296,50 @@ export default function InterviewCoach() {
     }
   };
 
+  // Handle resume from paused session
+  const handleResumePausedSession = async (pausedSessionId: string, pausedSessionType: string) => {
+    // Set the session to resume
+    setSessionId(pausedSessionId);
+    setResumeFromPause(true);
+    setResumingSessionType(pausedSessionType);
+    setIsPaymentVerified(true);
+    setIsSessionStarted(true);
+    setIsDocumentsSaved(true); // Assume docs were saved before pause
+    
+    // Fetch documents from the paused session
+    try {
+      const { data: sessionData } = await supabase
+        .from('coaching_sessions')
+        .select('resume_text, job_description, company_url')
+        .eq('id', pausedSessionId)
+        .single();
+      
+      if (sessionData) {
+        setDocuments({
+          resume: sessionData.resume_text || '',
+          jobDescription: sessionData.job_description || '',
+          companyUrl: sessionData.company_url || '',
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching paused session documents:', err);
+    }
+    
+    toast({
+      title: 'Resuming Session',
+      description: 'Loading your saved progress...',
+    });
+  };
+
+  const handleAbandonSession = (abandonedSessionId: string) => {
+    // Just clear local state if this was the current session
+    if (abandonedSessionId === sessionId) {
+      setSessionId(undefined);
+      setIsSessionStarted(false);
+      setResumeFromPause(false);
+    }
+  };
+
   const renderMainContent = () => {
     if (isVerifying) {
       return (
@@ -320,7 +370,7 @@ export default function InterviewCoach() {
     }
 
     // For quick_prep, show the generated content
-    if (sessionType === 'quick_prep') {
+    if (sessionType === 'quick_prep' || resumingSessionType === 'quick_prep') {
       return (
         <QuickPrepContent 
           content={quickPrepContent}
@@ -334,7 +384,7 @@ export default function InterviewCoach() {
       );
     }
 
-    if (sessionType === 'premium_audio') {
+    if (sessionType === 'premium_audio' || resumingSessionType === 'premium_audio') {
       return (
         <AudioInterface 
           isActive={isSessionStarted} 
@@ -350,7 +400,7 @@ export default function InterviewCoach() {
 
     return (
       <ChatInterface 
-        sessionType={sessionType!} 
+        sessionType={sessionType || resumingSessionType as any} 
         isActive={isSessionStarted}
         sessionId={sessionId}
         documents={documents}
@@ -359,6 +409,8 @@ export default function InterviewCoach() {
         isCompletingSession={isLoading}
         isSessionCompleted={isSessionCompleted}
         isContentReady={isMockInterviewComplete}
+        userEmail={userEmail}
+        resumeFromPause={resumeFromPause}
       />
     );
   };
@@ -389,6 +441,17 @@ export default function InterviewCoach() {
         
         {/* Main Content */}
         <main className="flex-1 flex flex-col bg-gradient-subtle">
+          {/* Paused Session Banner */}
+          {userEmail && !isSessionStarted && !isVerifying && (
+            <div className="p-4 pb-0">
+              <PausedSessionBanner
+                userEmail={userEmail}
+                onResume={handleResumePausedSession}
+                onAbandon={handleAbandonSession}
+              />
+            </div>
+          )}
+          
           {renderMainContent()}
         </main>
       </div>
