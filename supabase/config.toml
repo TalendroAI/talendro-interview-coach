@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.d-id-talk]
 verify_jwt = false
+
+[functions.audio-session]
+verify_jwt = false
