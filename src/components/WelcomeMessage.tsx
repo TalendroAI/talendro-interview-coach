@@ -85,10 +85,11 @@ export function WelcomeMessage({
             { num: 1, text: 'Select, copy, and paste all of the contents from your **résumé** into the space provided.\n\n**Mac:** Press ⌘ + A (select), then ⌘ + C (copy), then click in the field and press ⌘ + V (paste)\n\n**Windows:** Press Ctrl + A (select), then Ctrl + C (copy), then click in the field and press Ctrl + V (paste)', highlight: 'résumé' },
             { num: 2, text: 'Select, copy, and paste all of the contents from the **job description** into the space provided.\n\n**Mac:** Press ⌘ + A (select), then ⌘ + C (copy), then click in the field and press ⌘ + V (paste)\n\n**Windows:** Press Ctrl + A (select), then Ctrl + C (copy), then click in the field and press Ctrl + V (paste)', highlight: 'job description' },
             { num: 3, text: 'Enter the **company URL** in the sidebar', highlight: 'company URL' },
-            { num: 4, text: 'Click "**📋 Save Documents & Begin**" in the sidebar', highlight: '📋 Save Documents & Begin' },
-            { num: 5, text: 'Click "**Complete Session**" to finish and receive your summary', highlight: 'Complete Session' },
+            { num: 4, text: 'Click "**📋 Save Documents & Proceed**" in the sidebar', highlight: '📋 Save Documents & Proceed' },
+            { num: 5, text: 'Choose your **interview type**: Quick Prep, Mock Interview, or Audio Mock', highlight: 'interview type' },
+            { num: 6, text: 'Click "**Complete Session**" to finish and receive your summary', highlight: 'Complete Session' },
           ],
-          tip: 'Pro members have unlimited access to all session types and priority support.',
+          tip: 'Pro members have unlimited access to all session types. Choose whichever fits your prep needs!',
         };
       default:
         return {
