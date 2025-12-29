@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, User, Bot, Loader2, Pause, Play } from 'lucide-react';
+import { Send, User, Bot, Loader2, Pause, Play, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { SessionType, SESSION_CONFIGS, DocumentInputs } from '@/types/session';
@@ -392,11 +392,10 @@ export function ChatInterface({
                 </Button>
               ) : (
                 <Button
-                  variant="outline"
                   size="sm"
                   onClick={handlePauseInterview}
                   disabled={isPausing || isLoading}
-                  className="gap-2"
+                  className="gap-2 bg-[hsl(var(--tal-slate))] hover:bg-[hsl(var(--tal-slate))]/90 text-white"
                 >
                   {isPausing ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -435,7 +434,7 @@ export function ChatInterface({
 
       {/* Messages */}
       <div className={cn(
-        "flex-1 overflow-y-auto p-4 space-y-4",
+        "flex-1 overflow-y-auto px-4 py-2 space-y-3",
         isPaused && "opacity-75"
       )}>
         {!isInitialized && isLoading && !isResuming && (
@@ -525,16 +524,19 @@ export function ChatInterface({
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className="p-4 border-t border-border bg-card">
+      <form onSubmit={handleSubmit} className="p-3 border-t border-border bg-card">
         <div className="flex gap-2">
-          <Textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={isPaused ? "Interview paused - click Resume to continue" : "Type your response..."}
-            className="min-h-[50px] max-h-[150px] resize-none"
-            disabled={isLoading || !isInitialized || isPaused}
-          />
+          <div className="relative flex-1">
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={isPaused ? "Interview paused - click Resume to continue" : "Type or dictate your response..."}
+              className="min-h-[50px] max-h-[120px] resize-none pr-10"
+              disabled={isLoading || !isInitialized || isPaused}
+            />
+            <Mic className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+          </div>
           <Button
             type="submit"
             size="icon"
@@ -548,8 +550,8 @@ export function ChatInterface({
             )}
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground mt-2 text-center">
-          Press Enter to send, Shift+Enter for new line
+        <p className="text-xs text-muted-foreground mt-1.5 text-center flex items-center justify-center gap-1">
+          <Mic className="h-3 w-3" /> Use keyboard dictation or type • Enter to send
         </p>
       </form>
     </div>
