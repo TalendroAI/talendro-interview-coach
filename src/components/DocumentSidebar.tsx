@@ -8,6 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { DocumentInputs, SessionType, SESSION_CONFIGS } from '@/types/session';
 import { cn } from '@/lib/utils';
 import confetti from 'canvas-confetti';
+import { ProInterviewTypeSelector, ProInterviewType } from './ProInterviewTypeSelector';
 
 interface DocumentSidebarProps {
   documents: DocumentInputs;
@@ -21,6 +22,9 @@ interface DocumentSidebarProps {
   isDocumentsSaved?: boolean;
   isContentReady?: boolean;
   isSessionCompleted?: boolean;
+  // Pro-specific props
+  selectedProInterviewType?: ProInterviewType | null;
+  onProInterviewTypeSelect?: (type: ProInterviewType) => void;
 }
 
 export function DocumentSidebar({
@@ -35,26 +39,32 @@ export function DocumentSidebar({
   isDocumentsSaved = false,
   isContentReady = false,
   isSessionCompleted = false,
+  selectedProInterviewType,
+  onProInterviewTypeSelect,
 }: DocumentSidebarProps) {
   const config = sessionType ? SESSION_CONFIGS[sessionType] : null;
+  const isPro = sessionType === 'pro';
+  const totalSteps = isPro ? 6 : 5;
 
   const isResumeComplete = documents.resume.trim().length > 50;
   const isJobComplete = documents.jobDescription.trim().length > 50;
   const isCompanyComplete = documents.companyUrl.trim().length > 5;
   const allFieldsComplete = isResumeComplete && isJobComplete && isCompanyComplete;
+  const isProTypeSelected = isPro ? !!selectedProInterviewType : true;
 
   const canSaveDocuments = allFieldsComplete && !isDocumentsSaved;
-  const canCompleteSession = isContentReady && sessionType;
+  const canCompleteSession = isContentReady && sessionType && isProTypeSelected;
 
-  // Calculate progress percentage (5 steps total)
+  // Calculate progress percentage (5 or 6 steps depending on Pro)
   const completedSteps = [
     isResumeComplete,
     isJobComplete,
     isCompanyComplete,
     isDocumentsSaved,
+    ...(isPro ? [isProTypeSelected && isDocumentsSaved] : []),
     isContentReady
   ].filter(Boolean).length;
-  const progressPercentage = (completedSteps / 5) * 100;
+  const progressPercentage = (completedSteps / totalSteps) * 100;
   const hasTriggeredConfetti = useRef(false);
 
   // Trigger confetti when all steps are complete
@@ -108,7 +118,7 @@ export function DocumentSidebar({
             Your Documents
           </h2>
           <span className="text-xs font-medium text-muted-foreground">
-            {completedSteps}/5 complete
+            {completedSteps}/{totalSteps} complete
           </span>
         </div>
         <div className="space-y-1">
@@ -243,6 +253,32 @@ export function DocumentSidebar({
             Save Documents & Proceed
           </Button>
         </div>
+
+        {/* 5. Pro Interview Type Selector (Pro only) */}
+        {isPro && isDocumentsSaved && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className={cn(
+                "flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold transition-all duration-300",
+                selectedProInterviewType 
+                  ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
+                  : "bg-primary text-primary-foreground"
+              )}>
+                {selectedProInterviewType ? <Check className="h-3.5 w-3.5" /> : "5"}
+              </span>
+              <Label className="font-semibold text-foreground">
+                Select Interview Type
+              </Label>
+            </div>
+            <div className="ml-8">
+              <ProInterviewTypeSelector
+                selectedType={selectedProInterviewType ?? null}
+                onSelect={onProInterviewTypeSelect ?? (() => {})}
+                disabled={isSessionStarted}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="border-t border-border p-5">
@@ -255,7 +291,7 @@ export function DocumentSidebar({
                 ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
                 : "bg-muted text-muted-foreground"
           )}>
-            {isSessionCompleted ? <Check className="h-3.5 w-3.5" /> : isContentReady ? <Check className="h-3.5 w-3.5" /> : "5"}
+            {isSessionCompleted ? <Check className="h-3.5 w-3.5" /> : isContentReady ? <Check className="h-3.5 w-3.5" /> : isPro ? "6" : "5"}
           </span>
           <Button
             size="default"
