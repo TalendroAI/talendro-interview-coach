@@ -220,9 +220,68 @@ export default function InterviewCoach() {
     handleResumePausedSession(pausedSessionId, pausedSessionType);
   };
 
+  // Check for resume link from email (resume_session param)
+  useEffect(() => {
+    const resumeSessionId = searchParams.get('resume_session');
+    const resumeEmail = searchParams.get('email');
+    
+    if (resumeSessionId && resumeEmail) {
+      // User clicked resume link from email - auto-resume the session
+      const autoResume = async () => {
+        try {
+          const { data, error } = await supabase.functions.invoke('audio-session', {
+            body: {
+              action: 'resume_session',
+              sessionId: resumeSessionId,
+              email: resumeEmail,
+            },
+          });
+          
+          if (error) {
+            throw error;
+          }
+          
+          if (data?.expired) {
+            toast({
+              variant: 'destructive',
+              title: 'Session Expired',
+              description: 'This session has expired. Paused sessions are only resumable within 24 hours.',
+            });
+            // Redirect to home page
+            navigate('/');
+            return;
+          }
+          
+          if (data?.ok) {
+            // Resume successful - trigger the resume flow
+            handleResumePausedSession(resumeSessionId, data.sessionType);
+          }
+        } catch (err) {
+          console.error('Error auto-resuming session:', err);
+          toast({
+            variant: 'destructive',
+            title: 'Resume Failed',
+            description: 'Could not resume your session. It may have expired.',
+          });
+        } finally {
+          setIsVerifying(false);
+        }
+      };
+      
+      autoResume();
+      return; // Skip normal payment verification
+    }
+  }, [searchParams, navigate]);
+
   // Verify payment on page load
   useEffect(() => {
     const checkPayment = async () => {
+      // Skip if resuming from email link
+      const resumeSessionId = searchParams.get('resume_session');
+      if (resumeSessionId) {
+        return; // Handled by the other useEffect
+      }
+      
       const checkoutSessionId = searchParams.get('checkout_session_id');
       
       if (!sessionType || !userEmail) {

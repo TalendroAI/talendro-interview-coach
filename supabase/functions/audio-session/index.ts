@@ -174,11 +174,12 @@ serve(async (req) => {
     // === PAUSE SESSION ===
     if (action === "pause_session") {
       const questionNumber = (body?.questionNumber as number | undefined) ?? session.current_question_number ?? 0;
+      const pausedAt = new Date().toISOString();
 
       const { error } = await supabase
         .from("coaching_sessions")
         .update({
-          paused_at: new Date().toISOString(),
+          paused_at: pausedAt,
           current_question_number: questionNumber,
         })
         .eq("id", sessionId);
@@ -194,7 +195,43 @@ serve(async (req) => {
         context: { questionNumber },
       });
 
-      return new Response(JSON.stringify({ ok: true, pausedAt: new Date().toISOString() }), {
+      // Send pause confirmation email (fire and forget)
+      try {
+        const emailPayload = {
+          session_id: sessionId,
+          email: email,
+          session_type: session.session_type,
+          questions_completed: questionNumber,
+          paused_at: pausedAt,
+          is_reminder: false,
+        };
+
+        console.log("[audio-session] Sending pause email:", emailPayload);
+
+        // Call the send-pause-email function
+        const emailResponse = await fetch(
+          `${SUPABASE_URL}/functions/v1/send-pause-email`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            },
+            body: JSON.stringify(emailPayload),
+          }
+        );
+
+        if (!emailResponse.ok) {
+          console.error("[audio-session] Pause email failed:", await emailResponse.text());
+        } else {
+          console.log("[audio-session] Pause email sent successfully");
+        }
+      } catch (emailError) {
+        console.error("[audio-session] Error sending pause email:", emailError);
+        // Don't fail the pause operation if email fails
+      }
+
+      return new Response(JSON.stringify({ ok: true, pausedAt }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

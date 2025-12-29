@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.audio-session]
 verify_jwt = false
+
+[functions.send-pause-email]
+verify_jwt = false
