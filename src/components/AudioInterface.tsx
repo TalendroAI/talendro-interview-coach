@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import sarahHeadshot from '@/assets/sarah-headshot.jpg';
+import { AudioDeviceSelect } from '@/components/audio/AudioDeviceSelect';
+import { useAudioDevices } from '@/components/audio/useAudioDevices';
 
 interface AudioInterfaceProps {
   isActive: boolean;
@@ -54,8 +56,19 @@ export function AudioInterface({
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [showSilenceWarning, setShowSilenceWarning] = useState(false);
   const [isSessionEnding, setIsSessionEnding] = useState(false);
+  const [inputVolume, setInputVolume] = useState(0);
+  const [showMicInputWarning, setShowMicInputWarning] = useState(false);
   const { toast } = useToast();
-  
+
+  const {
+    inputs: micInputs,
+    selectedInputId,
+    setSelectedInputId,
+    ensurePermissionThenEnumerate,
+    isEnumerating,
+  } = useAudioDevices();
+  const micWarningShownRef = useRef(false);
+
   // Track if user intentionally ended the session
   const userEndedSession = useRef(false);
   // Track if interview has started (to distinguish intentional end vs drop)
@@ -73,6 +86,8 @@ export function AudioInterface({
 
   // Keep a rolling transcript so we can resume after reconnect (ElevenLabs sessions don't persist across reconnects)
   const transcriptRef = useRef<Array<{ role: 'user' | 'assistant'; text: string; ts: number }>>([]);
+  const lastAssistantTurnRef = useRef<string | null>(null);
+  const questionCountRef = useRef(0);
 
   const appendTranscriptTurn = useCallback((role: 'user' | 'assistant', text: unknown) => {
     const clean = typeof text === 'string' ? text.trim() : '';
@@ -379,6 +394,15 @@ export function AudioInterface({
             (message as any)?.agent_response ??
             (message as any)?.text;
           appendTranscriptTurn('assistant', text);
+
+          const clean = typeof text === 'string' ? text.trim() : '';
+          if (clean) {
+            lastAssistantTurnRef.current = clean;
+            // Super light heuristic: count questions by “?”
+            if (clean.includes('?')) {
+              questionCountRef.current += 1;
+            }
+          }
         }
 
         // Handle agent response correction (when user interrupts)
@@ -391,6 +415,9 @@ export function AudioInterface({
             const lastIdx = transcriptRef.current.length - 1;
             if (lastIdx >= 0 && transcriptRef.current[lastIdx].role === 'assistant') {
               transcriptRef.current[lastIdx].text = correctedText;
+            }
+            if (typeof correctedText === 'string') {
+              lastAssistantTurnRef.current = correctedText.trim();
             }
           }
         }
@@ -437,19 +464,25 @@ export function AudioInterface({
     // Fresh interview run
     transcriptRef.current = [];
     vadHistoryRef.current = [];
+    questionCountRef.current = 0;
+    lastAssistantTurnRef.current = null;
+    micWarningShownRef.current = false;
     interviewStarted.current = false;
     userEndedSession.current = false;
     setConnectionDropped(false);
     setReconnectAttempts(0);
     setShowVadWarning(false);
+    setShowMicInputWarning(false);
     setShowSilenceWarning(false);
     setIsConnecting(true);
 
     try {
-      // Request microphone permission and store stream reference
+      // Request microphone permission (and try to use the selected mic if provided)
       console.log('Requesting microphone permission...');
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach(track => track.stop());
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: selectedInputId ? { deviceId: { exact: selectedInputId } } : true,
+      });
+      stream.getTracks().forEach((track) => track.stop());
       console.log('Microphone permission granted');
 
       // Get a WebRTC token from the backend function (recommended for best audio quality)
@@ -474,7 +507,11 @@ export function AudioInterface({
 
       console.log('Starting ElevenLabs session (WebRTC)...');
 
-      await conversation.startSession({ conversationToken: token, connectionType: 'webrtc' });
+      await conversation.startSession({
+        conversationToken: token,
+        connectionType: 'webrtc',
+        inputDeviceId: selectedInputId || undefined,
+      });
 
       if (contextParts.length > 0) {
         console.log('Sending contextual update with documents:', contextParts.length);
@@ -499,7 +536,7 @@ export function AudioInterface({
     } catch (error) {
       console.error('Failed to start conversation:', error);
       cleanup();
-      
+
       let errorMessage = 'Could not start voice interview.';
       if (error instanceof Error) {
         if (error.name === 'NotAllowedError' || error.message.includes('permission')) {
@@ -510,7 +547,7 @@ export function AudioInterface({
           errorMessage = error.message;
         }
       }
-      
+
       toast({
         variant: 'destructive',
         title: 'Connection Failed',
@@ -518,30 +555,32 @@ export function AudioInterface({
       });
       setIsConnecting(false);
     }
-  }, [conversation, documents, isDocumentsSaved, toast, cleanup]);
+  }, [conversation, documents, isDocumentsSaved, toast, cleanup, selectedInputId]);
 
   const stopConversation = useCallback(async () => {
     userEndedSession.current = true;
     setIsSessionEnding(true);
-    
+
     toast({
       title: 'Ending Interview',
       description: 'Wrapping up your session with Sarah...',
     });
-    
+
     await conversation.endSession();
   }, [conversation, toast]);
 
   const reconnect = useCallback(async () => {
     setIsReconnecting(true);
     setConnectionDropped(false);
-    setReconnectAttempts(prev => prev + 1);
-    
+    setReconnectAttempts((prev) => prev + 1);
+
     try {
-      // Re-request microphone permission
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach(track => track.stop());
-      
+      // Re-request microphone permission (try selected device)
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: selectedInputId ? { deviceId: { exact: selectedInputId } } : true,
+      });
+      stream.getTracks().forEach((track) => track.stop());
+
       const { data, error } = await supabase.functions.invoke('elevenlabs-conversation-token', {
         body: { agentId: ELEVENLABS_AGENT_ID, mode: 'token' },
       });
@@ -551,7 +590,22 @@ export function AudioInterface({
         throw new Error(error?.message || 'No token received');
       }
 
-      await conversation.startSession({ conversationToken: token, connectionType: 'webrtc' });
+      const lastSarahMessage = lastAssistantTurnRef.current;
+      const questionsSoFar = questionCountRef.current;
+      const resumeFirstMessage = lastSarahMessage
+        ? `We just reconnected after a brief connection issue. Do NOT restart the interview or re-introduce yourself. Continue from where we left off. You have already asked about ${questionsSoFar} questions. Your last message was: "${lastSarahMessage}". If you were waiting for my answer, ask me to continue from there; otherwise ask the next interview question.`
+        : `We just reconnected after a brief connection issue. Do NOT restart the interview or re-introduce yourself. Continue from where we left off.`;
+
+      await conversation.startSession({
+        conversationToken: token,
+        connectionType: 'webrtc',
+        inputDeviceId: selectedInputId || undefined,
+        overrides: {
+          agent: {
+            firstMessage: resumeFirstMessage,
+          },
+        },
+      });
 
       // Restore context (documents + a rolling transcript so Sarah can resume instead of restarting)
       const contextParts: string[] = [];
@@ -572,31 +626,17 @@ export function AudioInterface({
         conversation.sendContextualUpdate(contextParts.join('\n\n'));
       }
 
-      const lastSarahMessage = [...transcriptRef.current]
-        .reverse()
-        .find((t) => t.role === 'assistant')?.text;
-
-      // Prompt Sarah to resume from where we left off
-      setTimeout(() => {
-        if (conversation.status === 'connected') {
-          conversation.sendUserMessage(
-            lastSarahMessage
-              ? `We just reconnected after a brief connection issue. Do NOT restart the interview. Continue from where we left off. Your last message was: "${lastSarahMessage}". If you were waiting for my answer, ask me to continue my answer from there; otherwise ask the next interview question.`
-              : 'We just reconnected after a brief connection issue. Please continue the interview from where we left off (do not restart).'
-          );
-        }
-      }, 800);
-
     } catch (error) {
       console.error('Reconnection failed:', error);
       toast({
         variant: 'destructive',
         title: 'Reconnection Failed',
-        description: reconnectAttempts >= MAX_RECONNECT_ATTEMPTS - 1
-          ? 'Maximum reconnection attempts reached. Your session will end.'
-          : 'Could not reconnect. Please try again.',
+        description:
+          reconnectAttempts >= MAX_RECONNECT_ATTEMPTS - 1
+            ? 'Maximum reconnection attempts reached. Your session will end.'
+            : 'Could not reconnect. Please try again.',
       });
-      
+
       if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS - 1) {
         handleGracefulEnd('connection_lost');
       } else {
@@ -604,7 +644,7 @@ export function AudioInterface({
         setIsReconnecting(false);
       }
     }
-  }, [conversation, documents, toast, reconnectAttempts, handleGracefulEnd]);
+  }, [conversation, documents, toast, reconnectAttempts, handleGracefulEnd, selectedInputId]);
 
   // Actual mute toggle (controls ElevenLabs SDK mic via `micMuted`)
   const toggleMute = useCallback(() => {
@@ -631,6 +671,62 @@ export function AudioInterface({
       console.warn('Failed to send user activity:', e);
     }
   }, [conversation]);
+
+  // Lightweight mic diagnostics: if we're "listening" but mic level stays near 0,
+  // show a clear warning + meter so users can pick the right device.
+  useEffect(() => {
+    if (conversation.status !== 'connected') {
+      setInputVolume(0);
+      setShowMicInputWarning(false);
+      micWarningShownRef.current = false;
+      return;
+    }
+
+    let lowSince = Date.now();
+
+    const id = window.setInterval(() => {
+      try {
+        const vol = conversation.getInputVolume?.() ?? 0;
+        setInputVolume(vol);
+
+        const shouldCheck = !conversation.isSpeaking && !isMuted;
+
+        if (!shouldCheck) {
+          lowSince = Date.now();
+          setShowMicInputWarning(false);
+          micWarningShownRef.current = false;
+          return;
+        }
+
+        // If user is speaking, input volume and VAD should both spike.
+        const looksLikeNoAudio = vol < 0.02 && vadScore < VAD_LOW_THRESHOLD;
+
+        if (!looksLikeNoAudio) {
+          lowSince = Date.now();
+          setShowMicInputWarning(false);
+          micWarningShownRef.current = false;
+          return;
+        }
+
+        if (Date.now() - lowSince > 3500) {
+          setShowMicInputWarning(true);
+          if (!micWarningShownRef.current) {
+            micWarningShownRef.current = true;
+            toast({
+              variant: 'destructive',
+              title: 'Sarah can’t hear your microphone',
+              description: 'Your mic input looks near-silent. Select the right microphone and try again.',
+              duration: 7000,
+            });
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }, 250);
+
+    return () => window.clearInterval(id);
+  }, [conversation, conversation.status, conversation.isSpeaking, isMuted, toast, vadScore]);
 
   if (!isActive) return null;
 
@@ -774,21 +870,19 @@ export function AudioInterface({
             </div>
           </div>
 
+          {/* Audio device selection */}
+          <div className="mb-6 p-4 bg-card rounded-lg border border-border">
+            <AudioDeviceSelect
+              devices={micInputs}
+              value={selectedInputId}
+              onValueChange={setSelectedInputId}
+              onRefresh={ensurePermissionThenEnumerate}
+              isRefreshing={isEnumerating}
+            />
+          </div>
+
           {/* Tips Section - Moved above button */}
           <div className="mb-8 p-4 bg-card rounded-lg border border-border">
-            <div className="flex items-start gap-2 mb-3">
-              <Lightbulb className="h-5 w-5 text-secondary flex-shrink-0 mt-0.5" />
-              <h3 className="font-heading font-semibold text-tal-navy">Tips for a great interview:</h3>
-            </div>
-            <ul className="text-sm text-tal-gray font-sans space-y-2 ml-7">
-              <li>• Use headphones for best audio quality</li>
-              <li>• Speak clearly and at a natural pace</li>
-              <li>• Use a quiet environment for best results</li>
-              <li>• Wait for Sarah to finish before responding</li>
-              <li>• Structure your answers using STAR method</li>
-              <li>• You can ask Sarah to repeat, slow down, or clarify anytime</li>
-            </ul>
-          </div>
 
           {/* Start Button */}
           <div className="flex justify-center">
