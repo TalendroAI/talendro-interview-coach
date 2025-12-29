@@ -76,11 +76,14 @@ serve(async (req) => {
     const isSubscription = session_type === "pro";
     const currentTierIndex = TIER_ORDER.indexOf(session_type);
 
-    // Create Supabase client
+    // Create Supabase client with service role to bypass RLS
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { persistSession: false } }
     );
+
+    logStep("Checking for upgrade credit eligibility", { email, targetTier: session_type });
 
     // Check for upgrade credit - ONLY applies once per tier jump
     // 1. Find the highest tier this customer has EVER purchased (completed/active)
@@ -94,13 +97,22 @@ serve(async (req) => {
     const { data: allSessions, error: allSessionsError } = await supabaseClient
       .from("coaching_sessions")
       .select("*")
-      .eq("email", email)
+      .eq("email", email.toLowerCase().trim())
       .in("status", ["active", "completed"]) // paid sessions
       .order("created_at", { ascending: false });
+
+    if (allSessionsError) {
+      logStep("ERROR fetching sessions", { error: allSessionsError.message, code: allSessionsError.code });
+    }
 
     let highestTierEverPurchased = -1;
     
     if (!allSessionsError && allSessions && allSessions.length > 0) {
+      logStep("Found existing sessions", { 
+        count: allSessions.length,
+        sessions: allSessions.map(s => ({ id: s.id, type: s.session_type, status: s.status, created: s.created_at }))
+      });
+      
       // Find the highest tier they've ever purchased
       for (const session of allSessions) {
         const sessionTierIndex = TIER_ORDER.indexOf(session.session_type);
@@ -113,24 +125,39 @@ serve(async (req) => {
         highestTierEverPurchased: highestTierEverPurchased >= 0 ? TIER_ORDER[highestTierEverPurchased] : 'none',
         currentTierRequested: session_type
       });
+    } else {
+      logStep("No existing paid sessions found for customer", { email });
     }
 
     // Only consider upgrade credit if:
     // 1. They've NEVER purchased the target tier before (currentTierIndex > highestTierEverPurchased)
     // 2. They have a qualifying purchase within 24 hours
     if (currentTierIndex > highestTierEverPurchased) {
+      logStep("Eligible for upgrade - checking recent purchases", { 
+        currentTierIndex, 
+        highestTierEverPurchased,
+        targetTier: session_type 
+      });
+      
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       
       const { data: recentSessions, error: recentError } = await supabaseClient
         .from("coaching_sessions")
         .select("*")
-        .eq("email", email)
+        .eq("email", email.toLowerCase().trim())
         .in("status", ["active", "completed"]) // paid sessions
         .gte("created_at", twentyFourHoursAgo)
         .order("created_at", { ascending: false });
 
+      if (recentError) {
+        logStep("ERROR fetching recent sessions", { error: recentError.message });
+      }
+
       if (!recentError && recentSessions && recentSessions.length > 0) {
-        logStep("Found recent sessions for upgrade check", { count: recentSessions.length });
+        logStep("Found recent sessions for upgrade check", { 
+          count: recentSessions.length,
+          sessions: recentSessions.map(s => ({ id: s.id, type: s.session_type, status: s.status }))
+        });
         
         // Find the highest tier purchase within 24 hours that is lower than current purchase
         for (const session of recentSessions) {
@@ -142,19 +169,22 @@ serve(async (req) => {
             if (sessionPrice && sessionPrice.amount > upgradeCredit) {
               upgradeCredit = sessionPrice.amount;
               upgradedFromSession = session;
-              logStep("Upgrade credit eligible", { 
+              logStep("Upgrade credit found!", { 
                 from: session.session_type, 
                 to: session_type,
-                credit: upgradeCredit / 100,
+                creditCents: upgradeCredit,
+                creditDollars: upgradeCredit / 100,
                 sessionId: session.id 
               });
             }
           }
         }
+      } else {
+        logStep("No recent sessions found within 24 hours", { cutoff: twentyFourHoursAgo });
       }
     } else {
       logStep("No upgrade credit - customer has already purchased this tier or higher", {
-        highestTierEver: TIER_ORDER[highestTierEverPurchased],
+        highestTierEver: highestTierEverPurchased >= 0 ? TIER_ORDER[highestTierEverPurchased] : 'none',
         requestedTier: session_type
       });
     }
