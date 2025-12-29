@@ -94,8 +94,13 @@ export default function InterviewCoach() {
   const isDocumentsReady = isResumeComplete && isJobComplete && isDocumentsSaved;
 
   // Check for paused sessions before starting new one
+  // Only returns paused sessions of the SAME type as what user is trying to start
   const checkForPausedSessions = async (): Promise<PausedSession | null> => {
     if (!userEmail) return null;
+    
+    // Determine what session type we're trying to start
+    const targetSessionType = effectiveSessionType || sessionType;
+    if (!targetSessionType) return null;
     
     try {
       const { data, error } = await supabase.functions.invoke('audio-session', {
@@ -111,7 +116,10 @@ export default function InterviewCoach() {
       }
       
       const sessions = (data?.sessions as PausedSession[]) ?? [];
-      return sessions.length > 0 ? sessions[0] : null;
+      
+      // BUG FIX: Only return conflict if paused session is SAME type as what user is starting
+      const sameTypeSession = sessions.find(s => s.session_type === targetSessionType);
+      return sameTypeSession || null;
     } catch (err) {
       console.error('Exception checking paused sessions:', err);
       return null;
@@ -120,18 +128,18 @@ export default function InterviewCoach() {
 
   const handleSaveDocuments = async () => {
     if (isResumeComplete && isJobComplete) {
-      // First check if user has any paused sessions
+      // First check if user has any paused sessions of the SAME type
       const pausedSession = await checkForPausedSessions();
       
       if (pausedSession) {
-        // Show conflict dialog
+        // Show conflict dialog only for same session type
         setConflictPausedSession(pausedSession);
         setShowConflictDialog(true);
         setPendingSaveAction(true);
         return; // Don't proceed until user makes a choice
       }
       
-      // No conflict, proceed with saving
+      // No conflict (different type or no paused sessions), proceed with saving
       proceedWithSaveDocuments();
     }
   };
@@ -198,19 +206,28 @@ export default function InterviewCoach() {
 
   // Handle abandon and start new session
   const handleAbandonAndStartNew = async (abandonedSessionId: string) => {
+    if (!userEmail) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'User email not found. Please try again.',
+      });
+      return;
+    }
+    
     setIsAbandoning(true);
     try {
-      // Mark the old session as cancelled
-      const { error } = await supabase
-        .from('coaching_sessions')
-        .update({ 
-          status: 'cancelled',
-          paused_at: null,
-        })
-        .eq('id', abandonedSessionId);
+      // Use edge function to abandon session (bypasses RLS)
+      const { data, error } = await supabase.functions.invoke('audio-session', {
+        body: {
+          action: 'abandon_session',
+          sessionId: abandonedSessionId,
+          email: userEmail,
+        },
+      });
       
-      if (error) {
-        console.error('Error abandoning session:', error);
+      if (error || !data?.ok) {
+        console.error('Error abandoning session:', error || data);
         toast({
           variant: 'destructive',
           title: 'Error',
@@ -244,11 +261,56 @@ export default function InterviewCoach() {
   };
 
   // Handle resume from conflict dialog
-  const handleResumeFromConflict = (pausedSessionId: string, pausedSessionType: string) => {
+  const handleResumeFromConflict = async (pausedSessionId: string, pausedSessionType: string) => {
+    if (!userEmail) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'User email not found. Please try again.',
+      });
+      return;
+    }
+    
+    // Close dialog first
     setShowConflictDialog(false);
     setConflictPausedSession(null);
     setPendingSaveAction(false);
-    handleResumePausedSession(pausedSessionId, pausedSessionType);
+    
+    // Use edge function to resume session (clears paused_at and fetches history)
+    try {
+      const { data, error } = await supabase.functions.invoke('audio-session', {
+        body: {
+          action: 'resume_session',
+          sessionId: pausedSessionId,
+          email: userEmail,
+        },
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data?.expired) {
+        toast({
+          variant: 'destructive',
+          title: 'Session Expired',
+          description: 'This session has expired. Paused sessions are only resumable within 24 hours.',
+        });
+        return;
+      }
+      
+      if (data?.ok) {
+        // Trigger the resume flow with session data
+        handleResumePausedSession(pausedSessionId, pausedSessionType);
+      }
+    } catch (err) {
+      console.error('Error resuming session:', err);
+      toast({
+        variant: 'destructive',
+        title: 'Resume Failed',
+        description: 'Could not resume your session. Please try again.',
+      });
+    }
   };
 
   // Check for resume link from email (resume_session param)

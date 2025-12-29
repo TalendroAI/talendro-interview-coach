@@ -12,7 +12,8 @@ type Action =
   | "log_event"
   | "pause_session"
   | "resume_session"
-  | "get_paused_sessions";
+  | "get_paused_sessions"
+  | "abandon_session";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -292,6 +293,33 @@ serve(async (req) => {
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // === ABANDON SESSION ===
+    if (action === "abandon_session") {
+      // Mark the session as cancelled and clear paused state
+      const { error: updateError } = await supabase
+        .from("coaching_sessions")
+        .update({
+          status: "cancelled",
+          paused_at: null,
+        })
+        .eq("id", sessionId);
+
+      if (updateError) throw updateError;
+
+      // Log the abandon event
+      await supabase.from("error_logs").insert({
+        error_type: "session_abandoned",
+        error_message: `Session abandoned at question ${session.current_question_number}`,
+        session_id: sessionId,
+        user_email: email,
+        context: { currentQuestionNumber: session.current_question_number },
+      });
+
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     throw new Error("Unsupported action");
