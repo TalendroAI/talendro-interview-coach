@@ -22,6 +22,14 @@ const sessionTypeLabels: Record<string, string> = {
   pro: "Pro Coaching Session"
 };
 
+// Total question counts for each session type
+const sessionQuestionCounts: Record<string, number> = {
+  quick_prep: 5,
+  full_mock: 10,
+  premium_audio: 10,
+  pro: 10
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -81,8 +89,7 @@ serve(async (req) => {
     }
 
     // Build resume URL with session parameters
-    const baseUrl = Deno.env.get("SUPABASE_URL")?.replace('.supabase.co', '') || 'https://talendro.com';
-    const appUrl = 'https://talendro.com'; // Production URL
+    const appUrl = 'https://coach.talendro.com'; // Production URL for Interview Coach
     const resumeUrl = `${appUrl}/interview-coach?resume_session=${session_id}&email=${encodeURIComponent(email)}`;
 
     const sessionLabel = sessionTypeLabels[session_type] || "Interview Session";
@@ -90,9 +97,12 @@ serve(async (req) => {
     const expirationDate = new Date(pausedDate.getTime() + 24 * 60 * 60 * 1000);
     const hoursRemaining = Math.max(0, Math.floor((expirationDate.getTime() - Date.now()) / (1000 * 60 * 60)));
 
+    const totalQuestions = sessionQuestionCounts[session_type] || 10;
+    
     const emailHtml = generatePauseEmail({
       sessionLabel,
       questionsCompleted: questions_completed || session.current_question_number || 0,
+      totalQuestions,
       pausedAt: pausedDate,
       expirationDate,
       hoursRemaining,
@@ -106,7 +116,7 @@ serve(async (req) => {
 
     const emailResponse = await resend.emails.send({
       from: "Talendro Interview Coach <noreply@talendro.com>",
-      reply_to: "greg@talendro.com",
+      reply_to: "support@talendro.com",
       to: [email],
       subject,
       html: emailHtml,
@@ -139,6 +149,7 @@ serve(async (req) => {
 interface PauseEmailParams {
   sessionLabel: string;
   questionsCompleted: number;
+  totalQuestions: number;
   pausedAt: Date;
   expirationDate: Date;
   hoursRemaining: number;
@@ -150,6 +161,7 @@ function generatePauseEmail(params: PauseEmailParams): string {
   const {
     sessionLabel,
     questionsCompleted,
+    totalQuestions,
     pausedAt,
     expirationDate,
     hoursRemaining,
@@ -287,7 +299,7 @@ function generatePauseEmail(params: PauseEmailParams): string {
                       </tr>
                       <tr>
                         <td style="padding: 8px 0; color: #6B7280; font-size: 15px;">Questions Completed:</td>
-                        <td style="padding: 8px 0; color: #2C2F38; font-size: 15px; font-weight: 600;">${questionsCompleted} of 5</td>
+                        <td style="padding: 8px 0; color: #2C2F38; font-size: 15px; font-weight: 600;">${questionsCompleted} of ${totalQuestions}</td>
                       </tr>
                       <tr>
                         <td style="padding: 8px 0; color: #6B7280; font-size: 15px;">Paused At:</td>
@@ -333,7 +345,7 @@ function generatePauseEmail(params: PauseEmailParams): string {
                       Good luck with the rest of your interview prep!
                     </p>
                     <p style="margin: 0; color: #2C2F38; font-size: 15px;">
-                      <strong>Greg Rosen</strong><br>
+                      <strong>Greg Jackson</strong><br>
                       <span style="color: #6B7280;">Founder, Talendro</span>
                     </p>
                   </td>
@@ -345,7 +357,7 @@ function generatePauseEmail(params: PauseEmailParams): string {
           <tr>
             <td class="footer-padding" style="background-color: #f8fafc; padding: 32px 48px; text-align: center; border-top: 1px solid #e5e7eb;">
               <p style="margin: 0 0 12px 0; color: #6B7280; font-size: 14px;">
-                Questions? Reply to this email or reach out at <a href="mailto:greg@talendro.com" style="color: #2F6DF6; text-decoration: none;">greg@talendro.com</a>
+                Questions? Reply to this email or reach out at <a href="mailto:support@talendro.com" style="color: #2F6DF6; text-decoration: none;">support@talendro.com</a>
               </p>
               <p style="margin: 0; color: #9CA3AF; font-size: 12px;">
                 © ${new Date().getFullYear()} Talendro™ — AI-Powered Interview Coaching
