@@ -883,6 +883,19 @@ export function AudioInterface({
 
           {/* Tips Section - Moved above button */}
           <div className="mb-8 p-4 bg-card rounded-lg border border-border">
+            <div className="flex items-start gap-2 mb-3">
+              <Lightbulb className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+              <h3 className="font-heading font-semibold text-foreground">Tips for a great interview:</h3>
+            </div>
+            <ul className="text-sm text-muted-foreground space-y-2 ml-7">
+              <li>• Use headphones for best audio quality</li>
+              <li>• Speak clearly and at a natural pace</li>
+              <li>• Use a quiet environment for best results</li>
+              <li>• Wait for Sarah to finish before responding</li>
+              <li>• Structure your answers using the STAR method</li>
+              <li>• Ask Sarah to repeat or clarify anytime</li>
+            </ul>
+          </div>
 
           {/* Start Button */}
           <div className="flex justify-center">
@@ -981,13 +994,13 @@ export function AudioInterface({
 
         {/* Silence warning */}
         {showSilenceWarning && isConnected && (
-          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-sm text-yellow-800 flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4" />
-              Sarah hasn't heard from you in a while. 
-              <button 
+          <div className="mb-4 p-3 bg-accent/10 border border-accent/20 rounded-lg">
+            <p className="text-sm text-foreground flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+              Sarah hasn't heard from you in a while.
+              <button
                 onClick={signalActivity}
-                className="underline font-medium hover:text-yellow-900"
+                className="underline font-medium text-foreground/90 hover:text-foreground"
               >
                 I'm still here
               </button>
