@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useConversation } from '@elevenlabs/react';
-import { MicOff, Volume2, PhoneOff, Loader2, Lightbulb, RefreshCw } from 'lucide-react';
+import { MicOff, Mic, Volume2, PhoneOff, Loader2, Lightbulb, RefreshCw, WifiOff, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,6 +24,15 @@ interface AudioInterfaceProps {
 // Replace with your ElevenLabs agent ID
 const ELEVENLABS_AGENT_ID = 'agent_1901kb0ray8kfph9x9bh4w97bbe4';
 
+// Connection quality thresholds
+const VAD_LOW_THRESHOLD = 0.15; // Below this = mic probably not picking up voice
+const VAD_WARNING_DURATION = 8000; // Show warning after 8s of low VAD
+const HEARTBEAT_INTERVAL = 5000; // Check connection health every 5s
+const SILENCE_TIMEOUT = 45000; // 45s of no activity triggers warning
+const MAX_RECONNECT_ATTEMPTS = 3;
+
+type ConnectionQuality = 'excellent' | 'good' | 'poor' | 'disconnected';
+
 export function AudioInterface({
   isActive, 
   sessionId, 
@@ -38,12 +47,29 @@ export function AudioInterface({
   const [connectionDropped, setConnectionDropped] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [isSendingResults, setIsSendingResults] = useState(false);
+  const [connectionQuality, setConnectionQuality] = useState<ConnectionQuality>('disconnected');
+  const [showVadWarning, setShowVadWarning] = useState(false);
+  const [vadScore, setVadScore] = useState<number>(0);
+  const [lastActivityTime, setLastActivityTime] = useState<number>(Date.now());
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const [showSilenceWarning, setShowSilenceWarning] = useState(false);
+  const [isSessionEnding, setIsSessionEnding] = useState(false);
   const { toast } = useToast();
   
   // Track if user intentionally ended the session
   const userEndedSession = useRef(false);
   // Track if interview has started (to distinguish intentional end vs drop)
   const interviewStarted = useRef(false);
+  // Media stream reference for actual muting
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  // Heartbeat interval reference
+  const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
+  // VAD warning timeout reference
+  const vadWarningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Silence warning timeout reference
+  const silenceWarningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Last VAD scores for averaging
+  const vadHistoryRef = useRef<number[]>([]);
 
   // Keep a rolling transcript so we can resume after reconnect (ElevenLabs sessions don't persist across reconnects)
   const transcriptRef = useRef<Array<{ role: 'user' | 'assistant'; text: string; ts: number }>>([]);
@@ -56,12 +82,38 @@ export function AudioInterface({
     if (last && last.role === role && last.text === clean) return;
 
     transcriptRef.current.push({ role, text: clean, ts: Date.now() });
+    setLastActivityTime(Date.now());
 
     // Prevent unbounded growth
     if (transcriptRef.current.length > 60) {
       transcriptRef.current = transcriptRef.current.slice(-60);
     }
   }, []);
+
+  // Cleanup function for intervals and timeouts
+  const cleanup = useCallback(() => {
+    if (heartbeatRef.current) {
+      clearInterval(heartbeatRef.current);
+      heartbeatRef.current = null;
+    }
+    if (vadWarningTimeoutRef.current) {
+      clearTimeout(vadWarningTimeoutRef.current);
+      vadWarningTimeoutRef.current = null;
+    }
+    if (silenceWarningTimeoutRef.current) {
+      clearTimeout(silenceWarningTimeoutRef.current);
+      silenceWarningTimeoutRef.current = null;
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(track => track.stop());
+      mediaStreamRef.current = null;
+    }
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => cleanup();
+  }, [cleanup]);
 
   // Helper to fetch prep packet from session
   const fetchPrepPacket = async (): Promise<string | null> => {
@@ -145,53 +197,169 @@ export function AudioInterface({
     }
   }, [sessionId, userEmail, toast]);
 
+  // Graceful session ending with user notification
+  const handleGracefulEnd = useCallback(async (reason: 'user_ended' | 'connection_lost' | 'timeout' | 'error') => {
+    setIsSessionEnding(true);
+    cleanup();
+
+    const messages: Record<typeof reason, { title: string; description: string }> = {
+      user_ended: {
+        title: 'Interview Complete',
+        description: 'Great job! Sending your results now...',
+      },
+      connection_lost: {
+        title: 'Session Ended',
+        description: 'The connection was lost. We\'re sending whatever results we captured.',
+      },
+      timeout: {
+        title: 'Session Timed Out',
+        description: 'The session ended due to inactivity. Sending your partial results.',
+      },
+      error: {
+        title: 'Session Ended Unexpectedly',
+        description: 'Something went wrong. We\'ll try to send your results.',
+      },
+    };
+
+    toast(messages[reason]);
+
+    await sendAudioResults();
+    setIsSessionEnding(false);
+    interviewStarted.current = false;
+    onInterviewComplete?.();
+  }, [cleanup, sendAudioResults, toast, onInterviewComplete]);
+
+  // Start heartbeat monitoring
+  const startHeartbeat = useCallback((conversationRef: ReturnType<typeof useConversation>) => {
+    if (heartbeatRef.current) {
+      clearInterval(heartbeatRef.current);
+    }
+
+    heartbeatRef.current = setInterval(() => {
+      const now = Date.now();
+      const timeSinceActivity = now - lastActivityTime;
+
+      // Update connection quality based on activity
+      if (conversationRef.status !== 'connected') {
+        setConnectionQuality('disconnected');
+        return;
+      }
+
+      if (timeSinceActivity < 10000) {
+        setConnectionQuality('excellent');
+      } else if (timeSinceActivity < 30000) {
+        setConnectionQuality('good');
+      } else {
+        setConnectionQuality('poor');
+      }
+
+      // Check for silence timeout
+      if (timeSinceActivity > SILENCE_TIMEOUT && !showSilenceWarning) {
+        setShowSilenceWarning(true);
+        toast({
+          title: 'Are you still there?',
+          description: 'Sarah hasn\'t heard from you in a while. Speak or click the microphone to continue.',
+          duration: 10000,
+        });
+      }
+    }, HEARTBEAT_INTERVAL);
+  }, [lastActivityTime, showSilenceWarning, toast]);
+
+  // Handle VAD score updates
+  const handleVadScore = useCallback((props: { vadScore: number }) => {
+    const score = props.vadScore;
+    setVadScore(score);
+    vadHistoryRef.current.push(score);
+    
+    // Keep last 10 scores
+    if (vadHistoryRef.current.length > 10) {
+      vadHistoryRef.current.shift();
+    }
+
+    // Calculate average VAD
+    const avgVad = vadHistoryRef.current.reduce((a, b) => a + b, 0) / vadHistoryRef.current.length;
+
+    // If VAD is consistently low, show warning
+    if (avgVad < VAD_LOW_THRESHOLD && !showVadWarning) {
+      if (!vadWarningTimeoutRef.current) {
+        vadWarningTimeoutRef.current = setTimeout(() => {
+          setShowVadWarning(true);
+          toast({
+            title: 'Microphone Issue Detected',
+            description: 'Sarah may have trouble hearing you. Check your microphone or move closer.',
+            duration: 8000,
+          });
+        }, VAD_WARNING_DURATION);
+      }
+    } else if (avgVad >= VAD_LOW_THRESHOLD) {
+      // Voice detected, clear warning
+      if (vadWarningTimeoutRef.current) {
+        clearTimeout(vadWarningTimeoutRef.current);
+        vadWarningTimeoutRef.current = null;
+      }
+      if (showVadWarning) {
+        setShowVadWarning(false);
+      }
+    }
+  }, [showVadWarning, toast]);
+
   const conversation = useConversation({
     onConnect: () => {
       console.log('Connected to ElevenLabs agent');
       setIsConnecting(false);
       setIsReconnecting(false);
       setConnectionDropped(false);
+      setConnectionQuality('excellent');
+      setReconnectAttempts(0);
+      setLastActivityTime(Date.now());
 
       const wasAlreadyStarted = interviewStarted.current;
       interviewStarted.current = true;
 
       toast({
-        title: 'Connected!',
+        title: wasAlreadyStarted ? 'Reconnected!' : 'Connected!',
         description: wasAlreadyStarted
-          ? 'Reconnected — continuing your interview.'
-          : 'Your voice interview has started.',
+          ? 'Continuing your interview with Sarah.'
+          : 'Your voice interview has started. Sarah is ready.',
       });
 
       if (!wasAlreadyStarted) {
         onInterviewStarted?.();
       }
+
+      // Start heartbeat monitoring
+      startHeartbeat(conversation);
     },
     onDisconnect: () => {
       console.log('Disconnected from ElevenLabs agent');
       setIsConnecting(false);
       setIsReconnecting(false);
+      setConnectionQuality('disconnected');
+      cleanup();
       
       // Only complete the interview if user intentionally ended it
       if (userEndedSession.current) {
         userEndedSession.current = false;
-        interviewStarted.current = false;
-        
-        // Send results before marking complete
-        sendAudioResults().then(() => {
-          onInterviewComplete?.();
-        });
-      } else if (interviewStarted.current) {
-        // Unexpected disconnect - show reconnect option
-        setConnectionDropped(true);
-        toast({
-          variant: 'destructive',
-          title: 'Connection Lost',
-          description: 'Sarah got disconnected. Click "Reconnect" to continue your interview.',
-        });
+        handleGracefulEnd('user_ended');
+      } else if (interviewStarted.current && !isSessionEnding) {
+        // Unexpected disconnect - check if we should auto-reconnect
+        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+          setConnectionDropped(true);
+          toast({
+            variant: 'destructive',
+            title: 'Connection Lost',
+            description: `Sarah got disconnected. Click "Reconnect" to continue (${MAX_RECONNECT_ATTEMPTS - reconnectAttempts} attempts remaining).`,
+          });
+        } else {
+          // Max reconnects reached, end gracefully
+          handleGracefulEnd('connection_lost');
+        }
       }
     },
     onMessage: (message) => {
       console.log('Message from agent:', message);
+      setLastActivityTime(Date.now());
+      setShowSilenceWarning(false);
 
       // Capture transcript events so we can restore context after reconnect
       try {
@@ -212,20 +380,53 @@ export function AudioInterface({
             (message as any)?.text;
           appendTranscriptTurn('assistant', text);
         }
+
+        // Handle agent response correction (when user interrupts)
+        if (type === 'agent_response_correction') {
+          const correctedText =
+            (message as any)?.agent_response_correction_event?.corrected_agent_response ??
+            (message as any)?.corrected_agent_response;
+          if (correctedText) {
+            // Update the last assistant message with corrected version
+            const lastIdx = transcriptRef.current.length - 1;
+            if (lastIdx >= 0 && transcriptRef.current[lastIdx].role === 'assistant') {
+              transcriptRef.current[lastIdx].text = correctedText;
+            }
+          }
+        }
       } catch (e) {
         console.warn('Failed to parse transcript message:', e);
       }
     },
     onError: (error) => {
       console.error('Conversation error:', error);
+      setConnectionQuality('poor');
+      
+      // Determine error type and show appropriate message
+      const errorMessage = error && typeof error === 'object' && 'message' in (error as object)
+        ? String((error as { message: string }).message) 
+        : 'Unknown error';
+      let userMessage = 'Failed to connect to voice agent.';
+      
+      if (errorMessage.includes('microphone') || errorMessage.includes('permission')) {
+        userMessage = 'Microphone access denied. Please enable microphone permissions.';
+      } else if (errorMessage.includes('network') || errorMessage.includes('connection')) {
+        userMessage = 'Network connection issue. Check your internet connection.';
+      } else if (errorMessage.includes('timeout')) {
+        userMessage = 'Connection timed out. Please try again.';
+      }
+
       toast({
         variant: 'destructive',
         title: 'Connection Error',
-        description: 'Failed to connect to voice agent. Please try again.',
+        description: userMessage,
       });
+      
       setIsConnecting(false);
       setIsReconnecting(false);
     },
+    // VAD score monitoring for voice detection issues
+    onVadScore: handleVadScore,
   });
 
   const startConversation = useCallback(async () => {
@@ -235,16 +436,20 @@ export function AudioInterface({
 
     // Fresh interview run
     transcriptRef.current = [];
+    vadHistoryRef.current = [];
     interviewStarted.current = false;
     userEndedSession.current = false;
     setConnectionDropped(false);
-
+    setReconnectAttempts(0);
+    setShowVadWarning(false);
+    setShowSilenceWarning(false);
     setIsConnecting(true);
 
     try {
-      // Request microphone permission
+      // Request microphone permission and store stream reference
       console.log('Requesting microphone permission...');
-      await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
       console.log('Microphone permission granted');
 
       // Get signed URL from backend function (more reliable than WebRTC token in some browsers)
@@ -293,26 +498,49 @@ export function AudioInterface({
       console.log('ElevenLabs session started successfully');
     } catch (error) {
       console.error('Failed to start conversation:', error);
+      cleanup();
+      
+      let errorMessage = 'Could not start voice interview.';
+      if (error instanceof Error) {
+        if (error.name === 'NotAllowedError' || error.message.includes('permission')) {
+          errorMessage = 'Microphone access was denied. Please allow microphone access and try again.';
+        } else if (error.name === 'NotFoundError') {
+          errorMessage = 'No microphone found. Please connect a microphone and try again.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         variant: 'destructive',
         title: 'Connection Failed',
-        description: error instanceof Error ? error.message : 'Could not start voice interview. Please check your microphone permissions.',
+        description: errorMessage,
       });
       setIsConnecting(false);
     }
-  }, [conversation, documents, isDocumentsSaved, toast]);
+  }, [conversation, documents, isDocumentsSaved, toast, cleanup]);
 
   const stopConversation = useCallback(async () => {
     userEndedSession.current = true;
+    setIsSessionEnding(true);
+    
+    toast({
+      title: 'Ending Interview',
+      description: 'Wrapping up your session with Sarah...',
+    });
+    
     await conversation.endSession();
-  }, [conversation]);
+  }, [conversation, toast]);
 
   const reconnect = useCallback(async () => {
     setIsReconnecting(true);
     setConnectionDropped(false);
+    setReconnectAttempts(prev => prev + 1);
     
     try {
-      await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Re-request microphone permission
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
       
       const { data, error } = await supabase.functions.invoke('elevenlabs-conversation-token', {
         body: { agentId: ELEVENLABS_AGENT_ID, mode: 'signed_url' },
@@ -364,24 +592,107 @@ export function AudioInterface({
       toast({
         variant: 'destructive',
         title: 'Reconnection Failed',
-        description: 'Could not reconnect. Please try again.',
+        description: reconnectAttempts >= MAX_RECONNECT_ATTEMPTS - 1
+          ? 'Maximum reconnection attempts reached. Your session will end.'
+          : 'Could not reconnect. Please try again.',
       });
-      setConnectionDropped(true);
-      setIsReconnecting(false);
+      
+      if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS - 1) {
+        handleGracefulEnd('connection_lost');
+      } else {
+        setConnectionDropped(true);
+        setIsReconnecting(false);
+      }
     }
-  }, [conversation, documents, toast]);
+  }, [conversation, documents, toast, reconnectAttempts, handleGracefulEnd]);
 
+  // Actual mute toggle that affects the media stream
   const toggleMute = useCallback(() => {
+    if (mediaStreamRef.current) {
+      const audioTracks = mediaStreamRef.current.getAudioTracks();
+      audioTracks.forEach(track => {
+        track.enabled = isMuted; // Toggle: if muted, enable; if not muted, disable
+      });
+    }
     setIsMuted(!isMuted);
-    // Note: The ElevenLabs SDK handles audio input internally
-    // For actual muting, you may need to track the media stream
-  }, [isMuted]);
+    
+    toast({
+      title: isMuted ? 'Microphone Unmuted' : 'Microphone Muted',
+      description: isMuted ? 'Sarah can hear you now.' : 'Sarah can\'t hear you. Click again to unmute.',
+      duration: 2000,
+    });
+  }, [isMuted, toast]);
+
+  // Signal user activity to prevent interruption
+  const signalActivity = useCallback(() => {
+    setLastActivityTime(Date.now());
+    setShowSilenceWarning(false);
+    try {
+      conversation.sendUserActivity();
+    } catch (e) {
+      console.warn('Failed to send user activity:', e);
+    }
+  }, [conversation]);
 
   if (!isActive) return null;
 
   const isConnected = conversation.status === 'connected';
   const isSpeaking = conversation.isSpeaking;
   const canStartInterview = isDocumentsSaved;
+
+  // Connection quality indicator component
+  const ConnectionIndicator = () => (
+    <div className="flex items-center gap-2">
+      <div
+        className={cn(
+          "h-2 w-2 rounded-full transition-colors",
+          connectionQuality === 'excellent' && "bg-green-500",
+          connectionQuality === 'good' && "bg-yellow-500",
+          connectionQuality === 'poor' && "bg-orange-500 animate-pulse",
+          connectionQuality === 'disconnected' && "bg-red-500"
+        )}
+      />
+      <span className="text-sm text-muted-foreground">
+        {connectionQuality === 'excellent' && 'Excellent connection'}
+        {connectionQuality === 'good' && 'Good connection'}
+        {connectionQuality === 'poor' && 'Poor connection'}
+        {connectionQuality === 'disconnected' && 'Disconnected'}
+      </span>
+      {showVadWarning && (
+        <span className="text-sm text-orange-500 flex items-center gap-1">
+          <AlertTriangle className="h-3 w-3" />
+          Mic issue
+        </span>
+      )}
+    </div>
+  );
+
+  // Session ending screen
+  if (isSessionEnding) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-tal-soft">
+        <div className="max-w-md w-full text-center animate-slide-up">
+          <div className="relative mb-8">
+            <div className="h-40 w-40 mx-auto rounded-full flex items-center justify-center bg-primary/10 border-4 border-primary/30">
+              <Loader2 className="h-16 w-16 text-primary animate-spin" />
+            </div>
+          </div>
+
+          <h2 className="font-heading text-2xl font-bold text-foreground mb-2">
+            Wrapping Up Your Interview
+          </h2>
+          <p className="text-muted-foreground mb-4">
+            Please wait while we prepare and send your results...
+          </p>
+          
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            <CheckCircle2 className="h-4 w-4 text-green-500" />
+            <span>Transcript captured</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Connection dropped - show reconnect UI
   if (connectionDropped && !isConnected && !isConnecting) {
@@ -390,19 +701,19 @@ export function AudioInterface({
         <div className="max-w-md w-full text-center animate-slide-up">
           <div className="relative mb-8">
             <div className="h-40 w-40 mx-auto rounded-full flex items-center justify-center bg-destructive/10 border-4 border-destructive/30">
-              <img 
-                src={sarahHeadshot} 
-                alt="Sarah - Your AI Interview Coach" 
-                className="h-full w-full object-cover rounded-full opacity-60"
-              />
+              <WifiOff className="h-16 w-16 text-destructive/60" />
             </div>
           </div>
 
           <h2 className="font-heading text-2xl font-bold text-foreground mb-2">
             Connection Lost
           </h2>
-          <p className="text-muted-foreground mb-8">
-            Sarah got disconnected unexpectedly. Don't worry — you can reconnect and continue your interview.
+          <p className="text-muted-foreground mb-4">
+            Sarah got disconnected unexpectedly. Don't worry — your transcript is saved and you can reconnect to continue.
+          </p>
+          
+          <p className="text-sm text-muted-foreground mb-8">
+            {MAX_RECONNECT_ATTEMPTS - reconnectAttempts} reconnection {MAX_RECONNECT_ATTEMPTS - reconnectAttempts === 1 ? 'attempt' : 'attempts'} remaining
           </p>
 
           <div className="flex items-center justify-center gap-4">
@@ -428,16 +739,9 @@ export function AudioInterface({
             <Button
               variant="outline"
               size="lg"
-              onClick={() => {
-                setConnectionDropped(false);
-                interviewStarted.current = false;
-                // Send results even if ended via "End Interview" after disconnect
-                sendAudioResults().then(() => {
-                  onInterviewComplete?.();
-                });
-              }}
+              onClick={() => handleGracefulEnd('connection_lost')}
             >
-              End Interview
+              End & Get Results
             </Button>
           </div>
         </div>
@@ -476,14 +780,15 @@ export function AudioInterface({
           <div className="mb-8 p-4 bg-card rounded-lg border border-border">
             <div className="flex items-start gap-2 mb-3">
               <Lightbulb className="h-5 w-5 text-secondary flex-shrink-0 mt-0.5" />
-              <h3 className="font-heading font-semibold text-tal-navy">Tips for audio interviews:</h3>
+              <h3 className="font-heading font-semibold text-tal-navy">Tips for a great interview:</h3>
             </div>
             <ul className="text-sm text-tal-gray font-sans space-y-2 ml-7">
+              <li>• Use headphones for best audio quality</li>
               <li>• Speak clearly and at a natural pace</li>
               <li>• Use a quiet environment for best results</li>
               <li>• Wait for Sarah to finish before responding</li>
               <li>• Structure your answers using STAR method</li>
-              <li>• This is a completely natural conversation — you may ask Sarah to repeat herself, slow down, speed up, rephrase, clarify, etc.</li>
+              <li>• You can ask Sarah to repeat, slow down, or clarify anytime</li>
             </ul>
           </div>
 
@@ -543,6 +848,19 @@ export function AudioInterface({
               <div className="absolute inset-0 h-40 w-40 mx-auto rounded-full bg-session-audio/10 animate-ping animation-delay-200" />
             </>
           )}
+          
+          {/* VAD indicator */}
+          {isConnected && !isSpeaking && (
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2">
+              <div 
+                className={cn(
+                  "h-1 rounded-full transition-all duration-200",
+                  showVadWarning ? "bg-orange-500 w-16" : "bg-green-500"
+                )}
+                style={{ width: `${Math.max(16, vadScore * 80)}px` }}
+              />
+            </div>
+          )}
         </div>
 
         <h2 className="font-heading text-2xl font-bold text-foreground mb-2">
@@ -552,22 +870,42 @@ export function AudioInterface({
               ? 'Sarah is speaking...'
               : isSendingResults
                 ? 'Sending your results...'
-                : 'Listening to your response...'}
+                : showVadWarning
+                  ? 'Having trouble hearing you...'
+                  : 'Listening to your response...'}
         </h2>
         
-        <p className="text-muted-foreground mb-8">
+        <p className="text-muted-foreground mb-6">
           {isConnecting
             ? 'Setting up your voice connection...'
             : isSpeaking
               ? 'Listen carefully to the question'
               : isSendingResults
                 ? 'Please wait while we email your results'
-                : 'Speak naturally when you\'re ready to respond'}
+                : showVadWarning
+                  ? 'Check your microphone or speak louder'
+                  : 'Speak naturally when you\'re ready to respond'}
         </p>
+
+        {/* Silence warning */}
+        {showSilenceWarning && isConnected && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-sm text-yellow-800 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              Sarah hasn't heard from you in a while. 
+              <button 
+                onClick={signalActivity}
+                className="underline font-medium hover:text-yellow-900"
+              >
+                I'm still here
+              </button>
+            </p>
+          </div>
+        )}
 
         {/* Controls */}
         {isConnected && (
-          <div className="flex items-center justify-center gap-4">
+          <div className="flex items-center justify-center gap-4 mb-6">
             <Button
               variant="outline"
               size="lg"
@@ -577,7 +915,7 @@ export function AudioInterface({
                 isMuted && "bg-destructive/10 border-destructive text-destructive"
               )}
             >
-              <MicOff className="h-6 w-6" />
+              {isMuted ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
             </Button>
             
             <Button
@@ -597,16 +935,8 @@ export function AudioInterface({
         )}
 
         {/* Connection status indicator */}
-        <div className="mt-8 flex items-center justify-center gap-2">
-          <div
-            className={cn(
-              "h-2 w-2 rounded-full",
-              isConnected ? "bg-green-500" : isConnecting ? "bg-yellow-500 animate-pulse" : "bg-muted"
-            )}
-          />
-          <span className="text-sm text-muted-foreground">
-            {isConnected ? 'Connected' : isConnecting ? 'Connecting...' : 'Disconnected'}
-          </span>
+        <div className="mt-4 flex items-center justify-center">
+          <ConnectionIndicator />
         </div>
       </div>
     </div>
