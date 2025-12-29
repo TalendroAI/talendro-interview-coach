@@ -303,7 +303,7 @@ export function AudioInterface({
     }
   }, [showVadWarning, toast]);
 
-  const conversation = useConversation({
+  const conversation = useConversation({ micMuted: isMuted,
     onConnect: () => {
       console.log('Connected to ElevenLabs agent');
       setIsConnecting(false);
@@ -330,8 +330,8 @@ export function AudioInterface({
       // Start heartbeat monitoring
       startHeartbeat(conversation);
     },
-    onDisconnect: () => {
-      console.log('Disconnected from ElevenLabs agent');
+    onDisconnect: (details) => {
+      console.log('Disconnected from ElevenLabs agent', details);
       setIsConnecting(false);
       setIsReconnecting(false);
       setConnectionQuality('disconnected');
@@ -449,21 +449,21 @@ export function AudioInterface({
       // Request microphone permission and store stream reference
       console.log('Requesting microphone permission...');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaStreamRef.current = stream;
+      stream.getTracks().forEach(track => track.stop());
       console.log('Microphone permission granted');
 
-      // Get signed URL from backend function (more reliable than WebRTC token in some browsers)
-      console.log('Fetching signed URL...');
+      // Get a WebRTC token from the backend function (recommended for best audio quality)
+      console.log('Fetching token...');
       const { data, error } = await supabase.functions.invoke('elevenlabs-conversation-token', {
-        body: { agentId: ELEVENLABS_AGENT_ID, mode: 'signed_url' },
+        body: { agentId: ELEVENLABS_AGENT_ID, mode: 'token' },
       });
 
-      console.log('Signed URL response:', { data, error });
+      console.log('Token response:', { data, error });
 
-      const signedUrl = (data as any)?.signedUrl;
+      const token = (data as any)?.token;
 
-      if (error || !signedUrl) {
-        throw new Error(error?.message || 'No signed URL received');
+      if (error || !token) {
+        throw new Error(error?.message || 'No token received');
       }
 
       // Build context from documents (sent as contextual update once connected)
@@ -472,9 +472,9 @@ export function AudioInterface({
       if (documents?.jobDescription) contextParts.push(`Job Description:\n${documents.jobDescription}`);
       if (documents?.companyUrl) contextParts.push(`Company URL: ${documents.companyUrl}`);
 
-      console.log('Starting ElevenLabs session (signed URL)...');
+      console.log('Starting ElevenLabs session (WebRTC)...');
 
-      await conversation.startSession({ signedUrl });
+      await conversation.startSession({ conversationToken: token, connectionType: 'webrtc' });
 
       if (contextParts.length > 0) {
         console.log('Sending contextual update with documents:', contextParts.length);
@@ -540,18 +540,18 @@ export function AudioInterface({
     try {
       // Re-request microphone permission
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaStreamRef.current = stream;
+      stream.getTracks().forEach(track => track.stop());
       
       const { data, error } = await supabase.functions.invoke('elevenlabs-conversation-token', {
-        body: { agentId: ELEVENLABS_AGENT_ID, mode: 'signed_url' },
+        body: { agentId: ELEVENLABS_AGENT_ID, mode: 'token' },
       });
 
-      const signedUrl = (data as any)?.signedUrl;
-      if (error || !signedUrl) {
-        throw new Error(error?.message || 'No signed URL received');
+      const token = (data as any)?.token;
+      if (error || !token) {
+        throw new Error(error?.message || 'No token received');
       }
 
-      await conversation.startSession({ signedUrl });
+      await conversation.startSession({ conversationToken: token, connectionType: 'webrtc' });
 
       // Restore context (documents + a rolling transcript so Sarah can resume instead of restarting)
       const contextParts: string[] = [];
@@ -606,13 +606,11 @@ export function AudioInterface({
     }
   }, [conversation, documents, toast, reconnectAttempts, handleGracefulEnd]);
 
-  // Actual mute toggle that affects the media stream
+  // Actual mute toggle (controls ElevenLabs SDK mic via `micMuted`)
   const toggleMute = useCallback(() => {
     if (mediaStreamRef.current) {
-      const audioTracks = mediaStreamRef.current.getAudioTracks();
-      audioTracks.forEach(track => {
-        track.enabled = isMuted; // Toggle: if muted, enable; if not muted, disable
-      });
+      // No-op: ElevenLabs SDK manages its own mic stream.
+      // We only request mic permission directly for better UX.
     }
     setIsMuted(!isMuted);
     
@@ -646,10 +644,10 @@ export function AudioInterface({
       <div
         className={cn(
           "h-2 w-2 rounded-full transition-colors",
-          connectionQuality === 'excellent' && "bg-green-500",
-          connectionQuality === 'good' && "bg-yellow-500",
-          connectionQuality === 'poor' && "bg-orange-500 animate-pulse",
-          connectionQuality === 'disconnected' && "bg-red-500"
+          connectionQuality === 'excellent' && "bg-primary",
+          connectionQuality === 'good' && "bg-secondary",
+          connectionQuality === 'poor' && "bg-accent animate-pulse",
+          connectionQuality === 'disconnected' && "bg-destructive"
         )}
       />
       <span className="text-sm text-muted-foreground">
@@ -659,7 +657,7 @@ export function AudioInterface({
         {connectionQuality === 'disconnected' && 'Disconnected'}
       </span>
       {showVadWarning && (
-        <span className="text-sm text-orange-500 flex items-center gap-1">
+        <span className="text-sm text-destructive flex items-center gap-1">
           <AlertTriangle className="h-3 w-3" />
           Mic issue
         </span>
@@ -855,7 +853,7 @@ export function AudioInterface({
               <div 
                 className={cn(
                   "h-1 rounded-full transition-all duration-200",
-                  showVadWarning ? "bg-orange-500 w-16" : "bg-green-500"
+                  showVadWarning ? "bg-destructive w-16" : "bg-primary"
                 )}
                 style={{ width: `${Math.max(16, vadScore * 80)}px` }}
               />
