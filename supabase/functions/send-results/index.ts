@@ -12,6 +12,10 @@ const logStep = (step: string, details?: any) => {
   console.log(`[SEND-RESULTS] ${step}${detailsStr}`);
 };
 
+// Responsive email width constants
+const EMAIL_MAX_WIDTH_DESKTOP = 920;
+const EMAIL_MAX_WIDTH_TABLET = 720;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -198,7 +202,7 @@ serve(async (req) => {
   }
 });
 
-// Generate results email HTML with Talendro brand standards
+// Generate results email HTML with Talendro brand standards and RESPONSIVE widths
 function generateResultsEmail(sessionLabel: string, results: any, prep_content: string | null, messageCount: number): string {
   const formatMarkdownToHtml = (markdown: string): string => {
     return markdown
@@ -242,7 +246,7 @@ function generateResultsEmail(sessionLabel: string, results: any, prep_content: 
     u + #body a { color: inherit; text-decoration: none; }
     #MessageViewBody a { color: inherit; text-decoration: none; }
     
-    /* RESPONSIVE BREAKPOINTS */
+    /* RESPONSIVE BREAKPOINTS - UPDATED TO 920/720 */
     /* Mobile: constrain width, smaller padding */
     @media only screen and (max-width: 599px) {
       .email-container { width: 100% !important; max-width: 100% !important; }
@@ -254,30 +258,30 @@ function generateResultsEmail(sessionLabel: string, results: any, prep_content: 
       .mobile-font-small { font-size: 14px !important; }
       h1.email-title { font-size: 22px !important; }
     }
-    /* Tablet: medium width */
+    /* Tablet: medium width - NOW 720px */
     @media only screen and (min-width: 600px) and (max-width: 899px) {
-      .email-container { width: 90% !important; max-width: 600px !important; }
+      .email-container { width: 94% !important; max-width: ${EMAIL_MAX_WIDTH_TABLET}px !important; }
     }
-    /* Desktop: full width up to max */
+    /* Desktop: full width up to max - NOW 920px */
     @media only screen and (min-width: 900px) {
-      .email-container { width: 100% !important; max-width: 800px !important; }
+      .email-container { width: 100% !important; max-width: ${EMAIL_MAX_WIDTH_DESKTOP}px !important; }
     }
   </style>
 </head>
 <body id="body" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #2C2F38; margin: 0; padding: 0; background-color: #f0f4f8; width: 100% !important; -webkit-font-smoothing: antialiased;">
-  <!-- Outlook wrapper for fixed width -->
+  <!-- Outlook wrapper for fixed width - NOW 920px -->
   <!--[if mso]>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f0f4f8;">
-  <tr><td align="center" valign="top" style="padding: 30px 20px;">
-  <table role="presentation" width="800" cellpadding="0" cellspacing="0" border="0">
+  <tr><td align="center" valign="top" style="padding: 24px 12px;">
+  <table role="presentation" width="${EMAIL_MAX_WIDTH_DESKTOP}" cellpadding="0" cellspacing="0" border="0">
   <tr><td>
   <![endif]-->
   
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f0f4f8;">
     <tr>
-      <td align="center" valign="top" style="padding: 30px 20px;">
-        <!-- Main email container - fluid width -->
-        <table role="presentation" class="email-container" cellpadding="0" cellspacing="0" border="0" style="width: 100%; max-width: 800px; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+      <td align="center" valign="top" style="padding: 24px 12px;">
+        <!-- Main email container - fluid width up to 920px -->
+        <table role="presentation" class="email-container" cellpadding="0" cellspacing="0" border="0" style="width: 100%; max-width: ${EMAIL_MAX_WIDTH_DESKTOP}px; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
           <!-- Header -->
           <tr>
             <td class="header-padding" style="background-color: #2F6DF6; padding: 40px 48px; text-align: center;">

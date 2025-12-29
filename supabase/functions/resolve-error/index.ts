@@ -8,6 +8,10 @@ const corsHeaders = {
 
 const ADMIN_EMAIL = "support@interviewcoachpro.com"; // Change to your email
 
+// Responsive email width constants
+const EMAIL_MAX_WIDTH_DESKTOP = 920;
+const EMAIL_MAX_WIDTH_TABLET = 720;
+
 // Error resolution knowledge base - AI uses this to resolve common issues
 const ERROR_RESOLUTIONS = {
   session: {
@@ -61,6 +65,112 @@ const ERROR_RESOLUTIONS = {
     }
   }
 };
+
+// Generate responsive email wrapper
+const getResponsiveEmailWrapper = (title: string, subtitle: string) => `
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <!--[if gte mso 9]>
+  <xml>
+    <o:OfficeDocumentSettings>
+      <o:AllowPNG/>
+      <o:PixelsPerInch>96</o:PixelsPerInch>
+    </o:OfficeDocumentSettings>
+  </xml>
+  <![endif]-->
+  <style type="text/css">
+    body, table, td, div, p, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: collapse !important; }
+    img { -ms-interpolation-mode: bicubic; border: 0; line-height: 100%; outline: none; text-decoration: none; }
+    body { margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: #f0f4f8; }
+    .ExternalClass { width: 100%; }
+    .ExternalClass, .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td, .ExternalClass div { line-height: 100%; }
+    a[x-apple-data-detectors] { color: inherit !important; text-decoration: none !important; }
+    u + #body a { color: inherit; text-decoration: none; }
+    #MessageViewBody a { color: inherit; text-decoration: none; }
+
+    /* RESPONSIVE BREAKPOINTS */
+    @media only screen and (max-width: 599px) {
+      .email-container { width: 100% !important; max-width: 100% !important; }
+      .content-padding { padding: 24px 16px !important; }
+      .header-padding { padding: 24px 16px !important; }
+      .footer-padding { padding: 24px 16px !important; }
+      h1.email-title { font-size: 22px !important; }
+    }
+    @media only screen and (min-width: 600px) and (max-width: 899px) {
+      .email-container { width: 94% !important; max-width: ${EMAIL_MAX_WIDTH_TABLET}px !important; }
+    }
+    @media only screen and (min-width: 900px) {
+      .email-container { width: 100% !important; max-width: ${EMAIL_MAX_WIDTH_DESKTOP}px !important; }
+    }
+  </style>
+</head>
+<body id="body" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #2C2F38; margin: 0; padding: 0; background-color: #f0f4f8; width: 100% !important; -webkit-font-smoothing: antialiased;">
+  <!--[if mso]>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f0f4f8;">
+  <tr><td align="center" valign="top" style="padding: 24px 12px;">
+  <table role="presentation" width="${EMAIL_MAX_WIDTH_DESKTOP}" cellpadding="0" cellspacing="0" border="0">
+  <tr><td>
+  <![endif]-->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f0f4f8;">
+    <tr>
+      <td align="center" valign="top" style="padding: 24px 12px;">
+        <table role="presentation" class="email-container" width="100%" cellpadding="0" cellspacing="0" border="0" style="width: 100%; max-width: ${EMAIL_MAX_WIDTH_DESKTOP}px; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+          <!-- Header -->
+          <tr>
+            <td class="header-padding" style="background-color: #2F6DF6; padding: 40px 48px; text-align: center;">
+              <div style="font-size: 36px; font-weight: 800; color: #ffffff; letter-spacing: -1px;">
+                Talendro<span style="font-size: 16px; vertical-align: super; color: #00C4CC; font-weight: 600;">™</span>
+              </div>
+              <h1 class="email-title" style="color: white; margin: 20px 0 0 0; font-size: 28px; font-weight: 700;">${title}</h1>
+              <p style="color: rgba(255,255,255,0.9); margin: 12px 0 0 0; font-size: 17px;">${subtitle}</p>
+            </td>
+          </tr>
+          <!-- Content -->
+          <tr>
+            <td class="content-padding" style="padding: 48px;">
+`;
+
+const getResponsiveEmailFooter = () => `
+              <!-- Signature -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-top: 40px; padding-top: 32px; border-top: 1px solid #e5e7eb;">
+                <tr>
+                  <td>
+                    <p style="margin: 10px 0; color: #2C2F38; font-size: 17px;">We're here to help!</p>
+                    <p style="margin: 10px 0; color: #2C2F38; font-size: 17px;"><strong>— The Talendro™ Team</strong></p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td class="footer-padding" style="background-color: #0F172A; padding: 44px 48px; text-align: center;">
+              <div style="font-size: 28px; font-weight: 800; color: white; margin-bottom: 12px;">Talendro<span style="font-size: 14px; vertical-align: super; color: #00C4CC;">™</span></div>
+              <p style="color: #00C4CC; font-style: italic; font-size: 16px; margin: 14px 0 24px 0;">"Your partner in interview success"</p>
+              <p style="margin: 24px 0; font-size: 14px; color: #9FA6B2;">🇺🇸 American-Built • 🎖️ Veteran-Led • ✅ Recruiter-Tested</p>
+              <p style="margin: 24px 0;">
+                <a href="https://www.linkedin.com/company/talendro" style="color: #9FA6B2; text-decoration: none; margin: 0 16px; font-size: 15px;">LinkedIn</a>
+                <a href="https://talendro.com" style="color: #9FA6B2; text-decoration: none; margin: 0 16px; font-size: 15px;">Website</a>
+              </p>
+              <p style="color: #6B7280; font-size: 13px; margin-top: 24px;">© ${new Date().getFullYear()} Talendro. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+  <!--[if mso]>
+  </td></tr></table>
+  </td></tr></table>
+  <![endif]-->
+</body>
+</html>
+`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -191,9 +301,39 @@ Please provide a helpful, friendly response to resolve their issue.`
         .eq('id', errorLog.id);
     }
 
-    // Step 5: Send email to user with resolution
+    // Step 5: Send email to user with resolution (using responsive template)
     if (userEmail && resolution && resendApiKey) {
       try {
+        const userEmailHtml = getResponsiveEmailWrapper(
+          "We noticed an issue",
+          "Let us help you get back on track"
+        ) + `
+              <p style="margin: 0 0 20px 0; font-size: 17px; color: #2C2F38;">Hi there,</p>
+              <p style="margin: 20px 0; font-size: 17px; color: #2C2F38; line-height: 1.7;">We detected that you ran into a problem while using Talendro™ Interview Coach. Here's what happened and how we can help:</p>
+              
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
+                <tr>
+                  <td style="background-color: #f8fafc; border-left: 4px solid #F59E0B; padding: 24px; border-radius: 0 12px 12px 0;">
+                    <p style="margin: 0 0 8px 0; color: #D97706; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Issue Detected</p>
+                    <p style="margin: 0; color: #2C2F38; font-size: 15px;">${errorMessage}</p>
+                  </td>
+                </tr>
+              </table>
+              
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
+                <tr>
+                  <td style="background-color: #E8F4FE; border: 1px solid #2F6DF6; padding: 24px; border-radius: 12px;">
+                    <p style="margin: 0 0 12px 0; color: #2F6DF6; font-size: 17px; font-weight: 700;">✅ Resolution</p>
+                    <p style="margin: 0; color: #2C2F38; font-size: 15px; line-height: 1.6;">${resolution}</p>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 20px 0; font-size: 17px; color: #2C2F38; line-height: 1.6;">If you're still experiencing issues, simply reply to this email and a human will get back to you promptly.</p>
+              
+              <p style="margin: 20px 0; font-size: 17px; color: #2C2F38;">Best of luck with your interview prep!</p>
+        ` + getResponsiveEmailFooter();
+
         await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
@@ -201,29 +341,10 @@ Please provide a helpful, friendly response to resolve their issue.`
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            from: 'Interview Coach Pro <support@interviewcoachpro.com>',
+            from: 'Talendro Interview Coach <support@talendro.com>',
             to: userEmail,
-            subject: 'We\'re here to help - Issue Resolution',
-            html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #1a1a2e;">We noticed an issue</h2>
-                <p>Hi there,</p>
-                <p>We detected that you ran into a problem while using Interview Coach Pro. Here's what happened and how we can help:</p>
-                
-                <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                  <p style="margin: 0;"><strong>Issue:</strong> ${errorMessage}</p>
-                </div>
-                
-                <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                  <p style="margin: 0;"><strong>Resolution:</strong> ${resolution}</p>
-                </div>
-                
-                <p>If you're still experiencing issues, simply reply to this email and a human will get back to you promptly.</p>
-                
-                <p>Best of luck with your interview prep!</p>
-                <p>- The Interview Coach Pro Team</p>
-              </div>
-            `,
+            subject: "We're here to help - Issue Resolution",
+            html: userEmailHtml,
           }),
         });
         console.log('[resolve-error] Resolution email sent to user');
@@ -232,36 +353,59 @@ Please provide a helpful, friendly response to resolve their issue.`
       }
     }
 
-    // Step 6: Always notify admin (you) with a copy
+    // Step 6: Always notify admin (you) with a copy (also responsive)
     if (resendApiKey) {
       try {
-        const adminEmailBody = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: ${wasResolved ? '#2e7d32' : '#c62828'};">
-              ${wasResolved ? '✅ Error Auto-Resolved' : '⚠️ Error Needs Attention'}
-            </h2>
-            
-            <table style="width: 100%; border-collapse: collapse;">
-              <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Time:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${new Date().toISOString()}</td></tr>
-              <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>User:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${userEmail || 'Unknown'}</td></tr>
-              <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Type:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${errorType}</td></tr>
-              <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Code:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${errorCode || 'N/A'}</td></tr>
-              <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Message:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${errorMessage}</td></tr>
-              <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Context:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;"><pre>${JSON.stringify(context, null, 2)}</pre></td></tr>
-            </table>
-            
-            ${resolution ? `
-            <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin: 20px 0;">
-              <strong>AI Resolution Sent:</strong><br/>
-              ${resolution}
-            </div>
-            ` : `
-            <div style="background: #ffebee; padding: 15px; border-radius: 8px; margin: 20px 0;">
-              <strong>⚠️ No auto-resolution available. Manual intervention may be needed.</strong>
-            </div>
-            `}
-          </div>
-        `;
+        const adminEmailHtml = getResponsiveEmailWrapper(
+          wasResolved ? '✅ Error Auto-Resolved' : '⚠️ Error Needs Attention',
+          `${errorType}/${errorCode || 'unknown'}`
+        ) + `
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 28px 0; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+                <tr style="background-color: #f8fafc;">
+                  <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #6B7280; width: 120px;">Time</td>
+                  <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; color: #2C2F38;">${new Date().toISOString()}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #6B7280;">User</td>
+                  <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; color: #2C2F38;">${userEmail || 'Unknown'}</td>
+                </tr>
+                <tr style="background-color: #f8fafc;">
+                  <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #6B7280;">Type</td>
+                  <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; color: #2C2F38;">${errorType}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #6B7280;">Code</td>
+                  <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; color: #2C2F38;">${errorCode || 'N/A'}</td>
+                </tr>
+                <tr style="background-color: #f8fafc;">
+                  <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #6B7280;">Message</td>
+                  <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; color: #2C2F38;">${errorMessage}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 16px; font-weight: 600; color: #6B7280; vertical-align: top;">Context</td>
+                  <td style="padding: 12px 16px; color: #2C2F38;"><pre style="margin: 0; font-size: 12px; white-space: pre-wrap; word-break: break-word;">${JSON.stringify(context, null, 2)}</pre></td>
+                </tr>
+              </table>
+              
+              ${resolution ? `
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
+                <tr>
+                  <td style="background-color: #E8F4FE; border: 1px solid #2F6DF6; padding: 24px; border-radius: 12px;">
+                    <p style="margin: 0 0 12px 0; color: #2F6DF6; font-size: 17px; font-weight: 700;">AI Resolution Sent</p>
+                    <p style="margin: 0; color: #2C2F38; font-size: 15px;">${resolution}</p>
+                  </td>
+                </tr>
+              </table>
+              ` : `
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
+                <tr>
+                  <td style="background-color: #FEF3E8; border: 1px solid #F59E0B; padding: 24px; border-radius: 12px;">
+                    <p style="margin: 0; color: #D97706; font-size: 17px; font-weight: 700;">⚠️ No auto-resolution available. Manual intervention may be needed.</p>
+                  </td>
+                </tr>
+              </table>
+              `}
+        ` + getResponsiveEmailFooter();
 
         await fetch('https://api.resend.com/emails', {
           method: 'POST',
@@ -270,10 +414,10 @@ Please provide a helpful, friendly response to resolve their issue.`
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            from: 'Interview Coach Pro <support@interviewcoachpro.com>',
+            from: 'Talendro Interview Coach <support@talendro.com>',
             to: ADMIN_EMAIL,
             subject: `${wasResolved ? '[Resolved]' : '[NEEDS ATTENTION]'} Error: ${errorType}/${errorCode || 'unknown'}`,
-            html: adminEmailBody,
+            html: adminEmailHtml,
           }),
         });
         console.log('[resolve-error] Admin notification sent');

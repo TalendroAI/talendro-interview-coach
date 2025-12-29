@@ -18,6 +18,7 @@ interface AudioInterfaceProps {
   isDocumentsSaved?: boolean;
   onInterviewStarted?: () => void;
   onInterviewComplete?: () => void;
+  userEmail?: string;
 }
 
 // Replace with your ElevenLabs agent ID
@@ -29,12 +30,14 @@ export function AudioInterface({
   documents, 
   isDocumentsSaved = false,
   onInterviewStarted,
-  onInterviewComplete 
+  onInterviewComplete,
+  userEmail
 }: AudioInterfaceProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [connectionDropped, setConnectionDropped] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
+  const [isSendingResults, setIsSendingResults] = useState(false);
   const { toast } = useToast();
   
   // Track if user intentionally ended the session
@@ -59,6 +62,88 @@ export function AudioInterface({
       transcriptRef.current = transcriptRef.current.slice(-60);
     }
   }, []);
+
+  // Helper to fetch prep packet from session
+  const fetchPrepPacket = async (): Promise<string | null> => {
+    if (!sessionId) return null;
+    
+    try {
+      const { data, error } = await supabase
+        .from('coaching_sessions')
+        .select('prep_packet')
+        .eq('id', sessionId)
+        .single();
+      
+      if (error || !data?.prep_packet) {
+        console.log('No prep packet found for session');
+        return null;
+      }
+      
+      // prep_packet is stored as { content: string }
+      const packet = data.prep_packet as { content?: string };
+      return packet?.content || null;
+    } catch (err) {
+      console.error('Error fetching prep packet:', err);
+      return null;
+    }
+  };
+
+  // Send results when audio interview ends
+  const sendAudioResults = useCallback(async () => {
+    if (!sessionId || !userEmail) {
+      console.error('Cannot send results: missing sessionId or userEmail');
+      return;
+    }
+
+    setIsSendingResults(true);
+
+    try {
+      // Fetch the prep packet that was generated at session start
+      const prepPacket = await fetchPrepPacket();
+      
+      // Build transcript from our captured turns
+      const transcriptContent = transcriptRef.current
+        .map(t => `**${t.role === 'user' ? 'Your Answer' : 'Sarah (Coach)'}:**\n${t.text}`)
+        .join('\n\n---\n\n');
+      
+      // Combine prep packet + transcript
+      let contentToSend = '';
+      if (prepPacket) {
+        contentToSend = prepPacket + '\n\n---\n\n# Audio Interview Transcript\n\n' + transcriptContent;
+      } else {
+        contentToSend = '# Audio Interview Transcript\n\n' + transcriptContent;
+      }
+
+      // Send results via the send-results function
+      const { data, error } = await supabase.functions.invoke('send-results', {
+        body: {
+          session_id: sessionId,
+          email: userEmail,
+          session_type: 'premium_audio',
+          prep_content: contentToSend,
+          results: null, // Audio doesn't have structured scores
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to send results');
+      }
+
+      toast({
+        title: 'Results sent!',
+        description: 'Your interview results have been emailed to you.',
+      });
+    } catch (err) {
+      console.error('Error sending audio results:', err);
+      toast({
+        title: 'Error sending email',
+        description: err instanceof Error ? err.message : 'Failed to send your results.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSendingResults(false);
+    }
+  }, [sessionId, userEmail, toast]);
 
   const conversation = useConversation({
     onConnect: () => {
@@ -90,7 +175,11 @@ export function AudioInterface({
       if (userEndedSession.current) {
         userEndedSession.current = false;
         interviewStarted.current = false;
-        onInterviewComplete?.();
+        
+        // Send results before marking complete
+        sendAudioResults().then(() => {
+          onInterviewComplete?.();
+        });
       } else if (interviewStarted.current) {
         // Unexpected disconnect - show reconnect option
         setConnectionDropped(true);
@@ -342,7 +431,10 @@ export function AudioInterface({
               onClick={() => {
                 setConnectionDropped(false);
                 interviewStarted.current = false;
-                onInterviewComplete?.();
+                // Send results even if ended via "End Interview" after disconnect
+                sendAudioResults().then(() => {
+                  onInterviewComplete?.();
+                });
               }}
             >
               End Interview
@@ -458,41 +550,64 @@ export function AudioInterface({
             ? 'Connecting to Sarah...' 
             : isSpeaking
               ? 'Sarah is speaking...'
-              : 'Listening to your response...'}
+              : isSendingResults
+                ? 'Sending your results...'
+                : 'Listening to your response...'}
         </h2>
         
         <p className="text-muted-foreground mb-8">
           {isConnecting
             ? 'Setting up your voice connection...'
             : isSpeaking
-              ? 'Wait for Sarah to finish before responding'
-              : 'Speak naturally — Sarah is listening'}
+              ? 'Listen carefully to the question'
+              : isSendingResults
+                ? 'Please wait while we email your results'
+                : 'Speak naturally when you\'re ready to respond'}
         </p>
 
         {/* Controls */}
-        <div className="flex items-center justify-center gap-4">
-          <Button
-            variant={isMuted ? 'destructive' : 'outline'}
-            size="icon"
-            className="h-14 w-14 rounded-full"
-            onClick={toggleMute}
-          >
-            <MicOff className="h-6 w-6" />
-          </Button>
-          
-          <Button
-            variant="destructive"
-            size="icon"
-            className="h-14 w-14 rounded-full"
-            onClick={stopConversation}
-          >
-            <PhoneOff className="h-6 w-6" />
-          </Button>
-        </div>
+        {isConnected && (
+          <div className="flex items-center justify-center gap-4">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={toggleMute}
+              className={cn(
+                "rounded-full h-14 w-14",
+                isMuted && "bg-destructive/10 border-destructive text-destructive"
+              )}
+            >
+              <MicOff className="h-6 w-6" />
+            </Button>
+            
+            <Button
+              variant="destructive"
+              size="lg"
+              onClick={stopConversation}
+              disabled={isSendingResults}
+              className="rounded-full h-14 w-14"
+            >
+              {isSendingResults ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                <PhoneOff className="h-6 w-6" />
+              )}
+            </Button>
+          </div>
+        )}
 
-        <p className="text-sm text-muted-foreground mt-6">
-          {isMuted ? 'Microphone muted' : 'Microphone active'}
-        </p>
+        {/* Connection status indicator */}
+        <div className="mt-8 flex items-center justify-center gap-2">
+          <div
+            className={cn(
+              "h-2 w-2 rounded-full",
+              isConnected ? "bg-green-500" : isConnecting ? "bg-yellow-500 animate-pulse" : "bg-muted"
+            )}
+          />
+          <span className="text-sm text-muted-foreground">
+            {isConnected ? 'Connected' : isConnecting ? 'Connecting...' : 'Disconnected'}
+          </span>
+        </div>
       </div>
     </div>
   );
