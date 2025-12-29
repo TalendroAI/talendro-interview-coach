@@ -122,6 +122,9 @@ As a Pro subscriber, you have access to:
 Ask what type of session they'd like today, and provide the appropriate coaching based on their choice. Remember previous sessions and build on past feedback when possible.`
 };
 
+// Prompt specifically for generating prep packet (used for mock/audio sessions)
+const PREP_PACKET_PROMPT = SYSTEM_PROMPTS.quick_prep;
+
 const logStep = (step: string, details?: any) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
   console.log(`[AI-COACH] ${step}${detailsStr}`);
@@ -202,7 +205,7 @@ serve(async (req) => {
     if (session_id) {
       const { data: session, error: sessionError } = await supabaseClient
         .from("coaching_sessions")
-        .select("status, created_at")
+        .select("status, created_at, prep_packet")
         .eq("id", session_id)
         .single();
 
@@ -228,6 +231,61 @@ serve(async (req) => {
       if (!countError && count !== null && count >= 15) {
         logStep("Rate limit exceeded", { count });
         throw new Error("Rate limit exceeded. Please wait a moment before sending more messages.");
+      }
+
+      // FOR FULL_MOCK AND PREMIUM_AUDIO: Generate prep packet on initial call if not already present
+      if (is_initial && (session_type === "full_mock" || session_type === "premium_audio") && !session.prep_packet) {
+        logStep("Generating baseline prep packet for " + session_type);
+        
+        // Build context for prep packet generation
+        let prepDocumentContext = "";
+        if (resume) {
+          prepDocumentContext += `\n\n## CANDIDATE'S RESUME:\n${resume}`;
+        }
+        if (job_description) {
+          prepDocumentContext += `\n\n## TARGET JOB DESCRIPTION:\n${job_description}`;
+        }
+        if (normalizedCompanyUrl) {
+          prepDocumentContext += `\n\n## TARGET COMPANY URL:\n${normalizedCompanyUrl}`;
+        }
+
+        const prepSystemPrompt = PREP_PACKET_PROMPT + prepDocumentContext;
+
+        // Call Anthropic to generate prep packet
+        const prepResponse = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": ANTHROPIC_API_KEY,
+            "anthropic-version": "2023-06-01"
+          },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 4096,
+            system: prepSystemPrompt,
+            messages: [{
+              role: "user",
+              content: "Please generate my comprehensive interview preparation packet based on my documents."
+            }]
+          })
+        });
+
+        if (prepResponse.ok) {
+          const prepData = await prepResponse.json();
+          const prepPacketContent = prepData.content[0]?.text || "";
+          
+          if (prepPacketContent) {
+            // Save prep packet to session
+            await supabaseClient
+              .from("coaching_sessions")
+              .update({ prep_packet: { content: prepPacketContent } })
+              .eq("id", session_id);
+            
+            logStep("Prep packet generated and saved for " + session_type, { length: prepPacketContent.length });
+          }
+        } else {
+          logStep("Failed to generate prep packet, continuing without it", { status: prepResponse.status });
+        }
       }
     } else if (!is_initial) {
       // Non-initial calls must have a session_id
@@ -332,7 +390,7 @@ serve(async (req) => {
         });
     }
 
-    // For quick_prep, also save as prep_packet
+    // For quick_prep, also save as prep_packet (this is the main output)
     if (session_type === "quick_prep" && session_id && is_initial) {
       await supabaseClient
         .from("coaching_sessions")

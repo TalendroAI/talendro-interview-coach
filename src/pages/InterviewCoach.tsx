@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { verifyPayment } from '@/services/api';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
+
 export default function InterviewCoach() {
   const { sessionType, userEmail } = useSessionParams();
   const [searchParams] = useSearchParams();
@@ -159,6 +160,31 @@ export default function InterviewCoach() {
     setIsMockInterviewComplete(true);
   };
 
+  // Helper to fetch prep packet from session
+  const fetchPrepPacket = async (): Promise<string | null> => {
+    if (!sessionId) return null;
+    
+    try {
+      const { data, error } = await supabase
+        .from('coaching_sessions')
+        .select('prep_packet')
+        .eq('id', sessionId)
+        .single();
+      
+      if (error || !data?.prep_packet) {
+        console.log('No prep packet found for session');
+        return null;
+      }
+      
+      // prep_packet is stored as { content: string }
+      const packet = data.prep_packet as { content?: string };
+      return packet?.content || null;
+    } catch (err) {
+      console.error('Error fetching prep packet:', err);
+      return null;
+    }
+  };
+
   const handleStartSession = async () => {
     if (!sessionType) {
       toast({
@@ -199,11 +225,21 @@ export default function InterviewCoach() {
       if (sessionType === 'quick_prep') {
         contentToSend = quickPrepContent || '';
       } else if (sessionType === 'full_mock') {
-        // Combine all messages into a comprehensive report
-        const allContent = mockInterviewMessages
+        // FIXED: Fetch the baseline prep packet and combine with transcript
+        const prepPacket = await fetchPrepPacket();
+        
+        // Build transcript from messages
+        const transcriptContent = mockInterviewMessages
           .map(m => `**${m.role === 'user' ? 'Your Answer' : 'Coach'}:**\n${m.content}`)
           .join('\n\n---\n\n');
-        contentToSend = allContent;
+        
+        // Combine prep packet + transcript
+        if (prepPacket) {
+          contentToSend = prepPacket + '\n\n---\n\n# Mock Interview Transcript\n\n' + transcriptContent;
+        } else {
+          // Fallback if no prep packet (shouldn't happen after fix)
+          contentToSend = '# Mock Interview Transcript\n\n' + transcriptContent;
+        }
         
         // Try to extract score from the final message
         const lastAssistantMessage = mockInterviewMessages
@@ -307,6 +343,7 @@ export default function InterviewCoach() {
           isDocumentsSaved={isDocumentsSaved}
           onInterviewStarted={() => setIsAudioInterviewStarted(true)}
           onInterviewComplete={() => setIsAudioInterviewComplete(true)}
+          userEmail={userEmail}
         />
       );
     }
