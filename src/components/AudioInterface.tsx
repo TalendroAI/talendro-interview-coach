@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useConversation } from '@elevenlabs/react';
-import { MicOff, Mic, Volume2, PhoneOff, Loader2, Lightbulb, RefreshCw, WifiOff, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { MicOff, Mic, Volume2, PhoneOff, Loader2, Lightbulb, RefreshCw, WifiOff, AlertTriangle, CheckCircle2, Pause, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import sarahHeadshot from '@/assets/sarah-headshot.jpg';
 import { AudioDeviceSelect } from '@/components/audio/AudioDeviceSelect';
 import { useAudioDevices } from '@/components/audio/useAudioDevices';
+import { useAudioSessionPersistence } from '@/hooks/useAudioSessionPersistence';
 
 interface AudioInterfaceProps {
   isActive: boolean;
@@ -58,6 +59,7 @@ export function AudioInterface({
   const [isSessionEnding, setIsSessionEnding] = useState(false);
   const [inputVolume, setInputVolume] = useState(0);
   const [showMicInputWarning, setShowMicInputWarning] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const { toast } = useToast();
 
   const {
@@ -67,6 +69,10 @@ export function AudioInterface({
     ensurePermissionThenEnumerate,
     isEnumerating,
   } = useAudioDevices();
+  
+  // Real-time persistence hook
+  const { appendTurn, getHistory, logEvent } = useAudioSessionPersistence(sessionId, userEmail);
+  
   const micWarningShownRef = useRef(false);
 
   // Track if user intentionally ended the session
@@ -88,6 +94,8 @@ export function AudioInterface({
   const transcriptRef = useRef<Array<{ role: 'user' | 'assistant'; text: string; ts: number }>>([]);
   const lastAssistantTurnRef = useRef<string | null>(null);
   const questionCountRef = useRef(0);
+  // Track if we're resuming from a pause/reconnect
+  const isResumingRef = useRef(false);
 
   const appendTranscriptTurn = useCallback((role: 'user' | 'assistant', text: unknown) => {
     const clean = typeof text === 'string' ? text.trim() : '';
@@ -100,10 +108,17 @@ export function AudioInterface({
     setLastActivityTime(Date.now());
 
     // Prevent unbounded growth
-    if (transcriptRef.current.length > 60) {
-      transcriptRef.current = transcriptRef.current.slice(-60);
+    if (transcriptRef.current.length > 200) {
+      transcriptRef.current = transcriptRef.current.slice(-200);
     }
-  }, []);
+    
+    // Persist turn to database in real-time
+    appendTurn({
+      role,
+      text: clean,
+      questionNumber: role === 'assistant' && clean.includes('?') ? questionCountRef.current : null,
+    });
+  }, [appendTurn]);
 
   // Cleanup function for intervals and timeouts
   const cleanup = useCallback(() => {
@@ -352,10 +367,31 @@ export function AudioInterface({
       setConnectionQuality('disconnected');
       cleanup();
       
-      // Only complete the interview if user intentionally ended it
+      // Log disconnect event for diagnostics
+      const disconnectReason = typeof details === 'object' && details !== null
+        ? JSON.stringify(details)
+        : String(details ?? 'unknown');
+      
+      logEvent({
+        eventType: 'elevenlabs_disconnect',
+        message: `Session disconnected after ${Math.round((Date.now() - lastActivityTime) / 1000)}s since last activity`,
+        code: 'disconnect',
+        context: {
+          details: disconnectReason,
+          questionCount: questionCountRef.current,
+          transcriptLength: transcriptRef.current.length,
+          wasUserEnded: userEndedSession.current,
+          isPaused: isPaused,
+        },
+      });
+      
+      // Only complete the interview if user intentionally ended it or paused
       if (userEndedSession.current) {
         userEndedSession.current = false;
         handleGracefulEnd('user_ended');
+      } else if (isPaused) {
+        // User paused - don't show reconnect UI, just stay paused
+        return;
       } else if (interviewStarted.current && !isSessionEnding) {
         // Unexpected disconnect - check if we should auto-reconnect
         if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
@@ -429,10 +465,26 @@ export function AudioInterface({
       console.error('Conversation error:', error);
       setConnectionQuality('poor');
       
-      // Determine error type and show appropriate message
+      // Log error for diagnostics
       const errorMessage = error && typeof error === 'object' && 'message' in (error as object)
         ? String((error as { message: string }).message) 
         : 'Unknown error';
+      const errorCode = error && typeof error === 'object' && 'code' in (error as object)
+        ? String((error as { code: string }).code)
+        : null;
+      
+      logEvent({
+        eventType: 'elevenlabs_error',
+        message: errorMessage,
+        code: errorCode,
+        context: {
+          errorObject: JSON.stringify(error),
+          questionCount: questionCountRef.current,
+          transcriptLength: transcriptRef.current.length,
+          connectionStatus: conversation.status,
+        },
+      });
+      
       let userMessage = 'Failed to connect to voice agent.';
       
       if (errorMessage.includes('microphone') || errorMessage.includes('permission')) {
@@ -573,6 +625,7 @@ export function AudioInterface({
     setIsReconnecting(true);
     setConnectionDropped(false);
     setReconnectAttempts((prev) => prev + 1);
+    isResumingRef.current = true;
 
     try {
       // Re-request microphone permission (try selected device)
@@ -580,6 +633,27 @@ export function AudioInterface({
         audio: selectedInputId ? { deviceId: { exact: selectedInputId } } : true,
       });
       stream.getTracks().forEach((track) => track.stop());
+
+      // Fetch FULL conversation history from database
+      const dbHistory = await getHistory();
+      
+      // If we have DB history, use it as the source of truth
+      if (dbHistory.length > 0) {
+        transcriptRef.current = dbHistory.map(h => ({
+          role: h.role === 'user' ? 'user' as const : 'assistant' as const,
+          text: h.content,
+          ts: new Date(h.created_at).getTime(),
+        }));
+        
+        // Find the last assistant message and update question count
+        const assistantMessages = dbHistory.filter(h => h.role === 'assistant');
+        if (assistantMessages.length > 0) {
+          const lastAssistant = assistantMessages[assistantMessages.length - 1];
+          lastAssistantTurnRef.current = lastAssistant.content;
+          // Count questions by counting assistant messages with "?"
+          questionCountRef.current = assistantMessages.filter(m => m.content.includes('?')).length;
+        }
+      }
 
       const { data, error } = await supabase.functions.invoke('elevenlabs-conversation-token', {
         body: { agentId: ELEVENLABS_AGENT_ID, mode: 'token' },
@@ -592,9 +666,13 @@ export function AudioInterface({
 
       const lastSarahMessage = lastAssistantTurnRef.current;
       const questionsSoFar = questionCountRef.current;
-      const resumeFirstMessage = lastSarahMessage
-        ? `We just reconnected after a brief connection issue. Do NOT restart the interview or re-introduce yourself. Continue from where we left off. You have already asked about ${questionsSoFar} questions. Your last message was: "${lastSarahMessage}". If you were waiting for my answer, ask me to continue from there; otherwise ask the next interview question.`
-        : `We just reconnected after a brief connection issue. Do NOT restart the interview or re-introduce yourself. Continue from where we left off.`;
+      
+      // Build a comprehensive resume message with full context
+      const resumeFirstMessage = `CRITICAL INSTRUCTION: This is a RESUMED interview session, NOT a new one. 
+You must NOT re-introduce yourself. You must NOT start from question 1.
+The candidate has already answered ${questionsSoFar} questions.
+${lastSarahMessage ? `Your last message was: "${lastSarahMessage.substring(0, 200)}${lastSarahMessage.length > 200 ? '...' : ''}"` : ''}
+Say something like "Welcome back! Let's continue where we left off." and then proceed to ask the next question or continue the conversation naturally.`;
 
       await conversation.startSession({
         conversationToken: token,
@@ -607,27 +685,45 @@ export function AudioInterface({
         },
       });
 
-      // Restore context (documents + a rolling transcript so Sarah can resume instead of restarting)
+      // Restore FULL context (documents + COMPLETE transcript history)
       const contextParts: string[] = [];
       if (documents?.resume) contextParts.push(`Candidate Resume:\n${documents.resume}`);
       if (documents?.jobDescription) contextParts.push(`Job Description:\n${documents.jobDescription}`);
       if (documents?.companyUrl) contextParts.push(`Company URL: ${documents.companyUrl}`);
 
-      const recentTurns = transcriptRef.current.slice(-12);
-      const transcriptText = recentTurns
+      // Send the FULL transcript, not just last 12 turns
+      const fullTranscriptText = transcriptRef.current
         .map((t) => `${t.role === 'user' ? 'Candidate' : 'Sarah'}: ${t.text}`)
-        .join('\n');
+        .join('\n\n');
 
-      if (transcriptText) {
-        contextParts.push(`Interview transcript so far (most recent):\n${transcriptText}`);
+      if (fullTranscriptText) {
+        contextParts.push(`=== COMPLETE INTERVIEW TRANSCRIPT (${transcriptRef.current.length} turns, ${questionsSoFar} questions asked) ===\n${fullTranscriptText}`);
       }
 
       if (contextParts.length > 0) {
-        conversation.sendContextualUpdate(contextParts.join('\n\n'));
+        conversation.sendContextualUpdate(contextParts.join('\n\n---\n\n'));
       }
+      
+      // Log successful reconnection
+      logEvent({
+        eventType: 'session_reconnected',
+        message: `Successfully reconnected with ${transcriptRef.current.length} history turns`,
+        context: {
+          questionCount: questionsSoFar,
+          historyLength: transcriptRef.current.length,
+          dbHistoryLength: dbHistory.length,
+        },
+      });
 
     } catch (error) {
       console.error('Reconnection failed:', error);
+      
+      logEvent({
+        eventType: 'reconnect_failed',
+        message: error instanceof Error ? error.message : 'Unknown reconnection error',
+        context: { attemptNumber: reconnectAttempts + 1 },
+      });
+      
       toast({
         variant: 'destructive',
         title: 'Reconnection Failed',
@@ -643,8 +739,10 @@ export function AudioInterface({
         setConnectionDropped(true);
         setIsReconnecting(false);
       }
+    } finally {
+      isResumingRef.current = false;
     }
-  }, [conversation, documents, toast, reconnectAttempts, handleGracefulEnd, selectedInputId]);
+  }, [conversation, documents, toast, reconnectAttempts, handleGracefulEnd, selectedInputId, getHistory, logEvent]);
 
   // Actual mute toggle (controls ElevenLabs SDK mic via `micMuted`)
   const toggleMute = useCallback(() => {
@@ -660,6 +758,131 @@ export function AudioInterface({
       duration: 2000,
     });
   }, [isMuted, toast]);
+
+  // Pause the interview - saves state and disconnects gracefully
+  const pauseInterview = useCallback(async () => {
+    if (!sessionId || !userEmail) {
+      toast({
+        variant: 'destructive',
+        title: 'Cannot Pause',
+        description: 'Session information is missing.',
+      });
+      return;
+    }
+
+    setIsPaused(true);
+    
+    try {
+      // Save pause state to database
+      await supabase.functions.invoke('audio-session', {
+        body: {
+          action: 'pause_session',
+          sessionId,
+          email: userEmail,
+          questionNumber: questionCountRef.current,
+        },
+      });
+      
+      // Gracefully disconnect ElevenLabs
+      await conversation.endSession();
+      
+      toast({
+        title: 'Interview Paused',
+        description: 'Your progress is saved. You can resume within 24 hours.',
+      });
+      
+      logEvent({
+        eventType: 'session_paused',
+        message: `Interview paused at question ${questionCountRef.current}`,
+        context: {
+          questionCount: questionCountRef.current,
+          transcriptLength: transcriptRef.current.length,
+        },
+      });
+    } catch (error) {
+      console.error('Failed to pause interview:', error);
+      setIsPaused(false);
+      toast({
+        variant: 'destructive',
+        title: 'Pause Failed',
+        description: 'Could not pause the interview. Please try again.',
+      });
+    }
+  }, [sessionId, userEmail, conversation, toast, logEvent]);
+
+  // Resume from paused state
+  const resumeInterview = useCallback(async () => {
+    if (!sessionId || !userEmail) {
+      toast({
+        variant: 'destructive',
+        title: 'Cannot Resume',
+        description: 'Session information is missing.',
+      });
+      return;
+    }
+
+    setIsReconnecting(true);
+    isResumingRef.current = true;
+
+    try {
+      // Call resume endpoint to get full history and check expiration
+      const { data, error } = await supabase.functions.invoke('audio-session', {
+        body: {
+          action: 'resume_session',
+          sessionId,
+          email: userEmail,
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to resume session');
+      }
+
+      if (data?.expired) {
+        toast({
+          variant: 'destructive',
+          title: 'Session Expired',
+          description: 'This session was paused more than 24 hours ago and has expired. Please start a new session.',
+        });
+        setIsPaused(false);
+        setIsReconnecting(false);
+        isResumingRef.current = false;
+        return;
+      }
+
+      // Restore transcript from database
+      const messages = data?.messages || [];
+      if (messages.length > 0) {
+        transcriptRef.current = messages.map((m: any) => ({
+          role: m.role === 'user' ? 'user' as const : 'assistant' as const,
+          text: m.content,
+          ts: new Date(m.created_at).getTime(),
+        }));
+        
+        const assistantMessages = messages.filter((m: any) => m.role === 'assistant');
+        if (assistantMessages.length > 0) {
+          lastAssistantTurnRef.current = assistantMessages[assistantMessages.length - 1].content;
+          questionCountRef.current = assistantMessages.filter((m: any) => m.content.includes('?')).length;
+        }
+      }
+
+      // Clear paused state
+      setIsPaused(false);
+      
+      // Use the existing reconnect flow
+      await reconnect();
+      
+    } catch (error) {
+      console.error('Failed to resume interview:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Resume Failed',
+        description: error instanceof Error ? error.message : 'Could not resume the interview.',
+      });
+      setIsReconnecting(false);
+      isResumingRef.current = false;
+    }
+  }, [sessionId, userEmail, toast, reconnect]);
 
   // Signal user activity to prevent interruption
   const signalActivity = useCallback(() => {
@@ -1024,6 +1247,17 @@ export function AudioInterface({
             </Button>
             
             <Button
+              variant="outline"
+              size="lg"
+              onClick={pauseInterview}
+              disabled={isSendingResults}
+              className="rounded-full h-14 w-14"
+              title="Pause Interview"
+            >
+              <Pause className="h-6 w-6" />
+            </Button>
+            
+            <Button
               variant="destructive"
               size="lg"
               onClick={stopConversation}
@@ -1035,6 +1269,27 @@ export function AudioInterface({
               ) : (
                 <PhoneOff className="h-6 w-6" />
               )}
+            </Button>
+          </div>
+        )}
+        
+        {/* Paused state UI */}
+        {isPaused && !isConnected && !isReconnecting && (
+          <div className="flex flex-col items-center gap-4 mb-6">
+            <div className="p-3 bg-accent/10 border border-accent/20 rounded-lg">
+              <p className="text-sm text-foreground flex items-center gap-2">
+                <Pause className="h-4 w-4" />
+                Interview Paused — Your progress is saved
+              </p>
+            </div>
+            <Button
+              variant="audio"
+              size="lg"
+              onClick={resumeInterview}
+              className="gap-2"
+            >
+              <Play className="h-5 w-5" />
+              Resume Interview
             </Button>
           </div>
         )}

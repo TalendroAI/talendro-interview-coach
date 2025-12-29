@@ -57,9 +57,11 @@ export type Database = {
           company_url: string | null
           completed_at: string | null
           created_at: string
+          current_question_number: number | null
           email: string
           id: string
           job_description: string | null
+          paused_at: string | null
           prep_packet: Json | null
           profile_id: string | null
           resume_text: string | null
@@ -73,9 +75,11 @@ export type Database = {
           company_url?: string | null
           completed_at?: string | null
           created_at?: string
+          current_question_number?: number | null
           email: string
           id?: string
           job_description?: string | null
+          paused_at?: string | null
           prep_packet?: Json | null
           profile_id?: string | null
           resume_text?: string | null
@@ -89,9 +93,11 @@ export type Database = {
           company_url?: string | null
           completed_at?: string | null
           created_at?: string
+          current_question_number?: number | null
           email?: string
           id?: string
           job_description?: string | null
+          paused_at?: string | null
           prep_packet?: Json | null
           profile_id?: string | null
           resume_text?: string | null
