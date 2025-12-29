@@ -280,8 +280,8 @@ function generateResultsEmail(sessionLabel: string, results: any, prep_content: 
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f0f4f8;">
     <tr>
       <td align="center" valign="top" style="padding: 24px 12px;">
-        <!-- Main email container - fluid width up to 920px -->
-        <table role="presentation" class="email-container" cellpadding="0" cellspacing="0" border="0" style="width: 100%; max-width: ${EMAIL_MAX_WIDTH_DESKTOP}px; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+        <!-- Main email container - FIXED 920px width for desktop, media queries override for mobile -->
+        <table role="presentation" class="email-container" width="${EMAIL_MAX_WIDTH_DESKTOP}" cellpadding="0" cellspacing="0" border="0" style="width: ${EMAIL_MAX_WIDTH_DESKTOP}px; max-width: 100%; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
           <!-- Header -->
           <tr>
             <td class="header-padding" style="background-color: #2F6DF6; padding: 40px 48px; text-align: center;">
