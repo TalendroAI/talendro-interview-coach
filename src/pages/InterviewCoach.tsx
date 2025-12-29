@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { verifyPayment } from '@/services/api';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
+import { ProInterviewType } from '@/components/ProInterviewTypeSelector';
 
 interface PausedSession {
   id: string;
@@ -69,6 +70,12 @@ export default function InterviewCoach() {
   const [isAbandoning, setIsAbandoning] = useState(false);
   const [pendingSaveAction, setPendingSaveAction] = useState(false);
 
+  // Pro interview type selection state
+  const [selectedProInterviewType, setSelectedProInterviewType] = useState<ProInterviewType | null>(null);
+
+  // Determine the effective session type for Pro subscribers
+  const effectiveSessionType = sessionType === 'pro' ? selectedProInterviewType : sessionType;
+
   // Check if documents are ready
   const isResumeComplete = documents.resume.trim().length > 50;
   const isJobComplete = documents.jobDescription.trim().length > 50;
@@ -120,8 +127,20 @@ export default function InterviewCoach() {
   const proceedWithSaveDocuments = async () => {
     setIsDocumentsSaved(true);
     
+    // For Pro users, wait until they select an interview type
+    if (sessionType === 'pro' && !selectedProInterviewType) {
+      toast({
+        title: 'Documents saved!',
+        description: 'Now select which interview type you\'d like to start.',
+      });
+      return;
+    }
+    
+    // Use effective session type (for Pro, use selected type)
+    const activeSessionType = effectiveSessionType;
+    
     // For quick_prep, generate content immediately
-    if (isPaymentVerified && sessionType === 'quick_prep' && sessionId) {
+    if (isPaymentVerified && activeSessionType === 'quick_prep' && sessionId) {
       setIsGeneratingContent(true);
       setContentError(null);
       setIsSessionStarted(true);
@@ -130,7 +149,7 @@ export default function InterviewCoach() {
         const { data, error } = await supabase.functions.invoke('ai-coach', {
           body: {
             session_id: sessionId,
-            session_type: sessionType,
+            session_type: activeSessionType,
             resume: documents.resume,
             job_description: documents.jobDescription,
             company_url: documents.companyUrl,
@@ -153,12 +172,12 @@ export default function InterviewCoach() {
       } finally {
         setIsGeneratingContent(false);
       }
-    } else if (isPaymentVerified && sessionType) {
+    } else if (isPaymentVerified && activeSessionType) {
       // For other session types, transition to session view
       setIsSessionStarted(true);
       toast({
         title: 'Documents saved!',
-        description: sessionType === 'premium_audio' 
+        description: activeSessionType === 'premium_audio' 
           ? 'Click "Begin Interview" when you\'re ready to start.'
           : 'Your personalized coaching session has begun.',
       });
@@ -509,6 +528,56 @@ export default function InterviewCoach() {
     }
   };
 
+  // Handle Pro interview type selection - triggers session start
+  const handleProInterviewTypeSelect = (type: ProInterviewType) => {
+    setSelectedProInterviewType(type);
+    
+    // If documents are saved and payment verified, start the session
+    if (isDocumentsSaved && isPaymentVerified && sessionId) {
+      // Use a small delay to let state update
+      setTimeout(() => {
+        if (type === 'quick_prep') {
+          // Generate Quick Prep content
+          setIsGeneratingContent(true);
+          setContentError(null);
+          setIsSessionStarted(true);
+          
+          supabase.functions.invoke('ai-coach', {
+            body: {
+              session_id: sessionId,
+              session_type: type,
+              resume: documents.resume,
+              job_description: documents.jobDescription,
+              company_url: documents.companyUrl,
+              is_initial: true
+            }
+          }).then(({ data, error }) => {
+            if (error) {
+              setContentError(error.message || 'Failed to generate content');
+            } else if (data?.message) {
+              setQuickPrepContent(data.message);
+            } else {
+              setContentError('No content received from AI');
+            }
+            setIsGeneratingContent(false);
+          }).catch(err => {
+            setContentError(err instanceof Error ? err.message : 'Failed to generate content');
+            setIsGeneratingContent(false);
+          });
+        } else {
+          // For Mock or Audio, just start the session
+          setIsSessionStarted(true);
+          toast({
+            title: 'Session Started!',
+            description: type === 'premium_audio' 
+              ? 'Click "Begin Interview" when you\'re ready to start.'
+              : 'Your personalized coaching session has begun.',
+          });
+        }
+      }, 100);
+    }
+  };
+
   const renderMainContent = () => {
     if (isVerifying) {
       return (
@@ -538,8 +607,11 @@ export default function InterviewCoach() {
       );
     }
 
+    // Use effectiveSessionType for Pro users
+    const activeType = effectiveSessionType || resumingSessionType;
+
     // For quick_prep, show the generated content
-    if (sessionType === 'quick_prep' || resumingSessionType === 'quick_prep') {
+    if (activeType === 'quick_prep') {
       return (
         <QuickPrepContent 
           content={quickPrepContent}
@@ -553,7 +625,7 @@ export default function InterviewCoach() {
       );
     }
 
-    if (sessionType === 'premium_audio' || resumingSessionType === 'premium_audio') {
+    if (activeType === 'premium_audio') {
       return (
         <AudioInterface 
           isActive={isSessionStarted} 
@@ -569,7 +641,7 @@ export default function InterviewCoach() {
 
     return (
       <ChatInterface 
-        sessionType={sessionType || resumingSessionType as any} 
+        sessionType={(activeType as 'full_mock' | 'quick_prep' | 'premium_audio' | 'pro') || 'full_mock'} 
         isActive={isSessionStarted}
         sessionId={sessionId}
         documents={documents}
@@ -601,11 +673,13 @@ export default function InterviewCoach() {
           onSaveDocuments={handleSaveDocuments}
           isDocumentsSaved={isDocumentsSaved}
           isContentReady={
-            (sessionType === 'quick_prep' && !!quickPrepContent && !isGeneratingContent) ||
-            (sessionType === 'full_mock' && isMockInterviewComplete) ||
-            (sessionType === 'premium_audio' && isAudioInterviewComplete)
+            (effectiveSessionType === 'quick_prep' && !!quickPrepContent && !isGeneratingContent) ||
+            (effectiveSessionType === 'full_mock' && isMockInterviewComplete) ||
+            (effectiveSessionType === 'premium_audio' && isAudioInterviewComplete)
           }
           isSessionCompleted={isSessionCompleted}
+          selectedProInterviewType={selectedProInterviewType}
+          onProInterviewTypeSelect={handleProInterviewTypeSelect}
         />
         
         {/* Main Content */}
