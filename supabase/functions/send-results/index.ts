@@ -73,13 +73,15 @@ serve(async (req) => {
       
       const testPrepContent = "### Company Overview\nAcme Corp is a leading technology company...\n\n### Key Interview Tips\n* Research the team structure\n* Prepare questions about growth opportunities";
       
-      const emailHtml = generateResultsEmail(sessionLabel, testResults, testPrepContent, 5);
+      const emailHtml = generateResultsEmail(sessionLabel, testResults, testPrepContent, 5, {
+        debugLabel: `TEST v2 — container ${EMAIL_MAX_WIDTH_DESKTOP}px desktop / ${EMAIL_MAX_WIDTH_TABLET}px tablet`,
+      });
       
       const emailResult = await resend.emails.send({
         from: "Talendro Interview Coach <noreply@talendro.com>",
         reply_to: "greg@talendro.com",
         to: [email],
-        subject: `[TEST] Your ${sessionLabel} Results - Talendro™`,
+        subject: `[TEST v2 ${EMAIL_MAX_WIDTH_DESKTOP}px] Your ${sessionLabel} Results - Talendro™`,
         html: emailHtml,
       });
       
@@ -203,7 +205,13 @@ serve(async (req) => {
 });
 
 // Generate results email HTML with Talendro brand standards and RESPONSIVE widths
-function generateResultsEmail(sessionLabel: string, results: any, prep_content: string | null, messageCount: number): string {
+function generateResultsEmail(
+  sessionLabel: string,
+  results: any,
+  prep_content: string | null,
+  messageCount: number,
+  opts?: { debugLabel?: string }
+): string {
   const formatMarkdownToHtml = (markdown: string): string => {
     return markdown
       .replace(/^### (.+)$/gm, '<h3 style="color: #2F6DF6; font-size: 16px; margin-top: 20px; margin-bottom: 8px;">$1</h3>')
@@ -217,8 +225,11 @@ function generateResultsEmail(sessionLabel: string, results: any, prep_content: 
       .replace(/\n/g, '<br>');
   };
 
+  const debugBanner = opts?.debugLabel
+    ? `\n              <p style="margin: 14px 0 0 0; font-size: 12px; color: rgba(255,255,255,0.92);">${opts.debugLabel}</p>`
+    : "";
+
   let emailHtml = `
-<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
   <meta charset="utf-8">
@@ -289,7 +300,7 @@ function generateResultsEmail(sessionLabel: string, results: any, prep_content: 
                 Talendro<span style="font-size: 16px; vertical-align: super; color: #00C4CC; font-weight: 600;">™</span>
               </div>
               <h1 class="email-title" style="color: white; margin: 20px 0 0 0; font-size: 28px; font-weight: 700;">Your ${sessionLabel} Results</h1>
-              <p style="color: rgba(255,255,255,0.9); margin: 12px 0 0 0; font-size: 17px;">Your interview coaching session is complete</p>
+              <p style="color: rgba(255,255,255,0.9); margin: 12px 0 0 0; font-size: 17px;">Your interview coaching session is complete</p>${debugBanner}
             </td>
           </tr>
           <!-- Hero Banner -->
