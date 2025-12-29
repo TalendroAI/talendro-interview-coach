@@ -6,7 +6,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-type Action = "append_turn" | "get_history" | "log_event";
+type Action =
+  | "append_turn"
+  | "get_history"
+  | "log_event"
+  | "pause_session"
+  | "resume_session"
+  | "get_paused_sessions";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -31,6 +37,31 @@ serve(async (req) => {
     const sessionId = body?.sessionId as string | undefined;
     const email = body?.email as string | undefined;
 
+    // For get_paused_sessions, only email is required
+    if (action === "get_paused_sessions") {
+      if (!email) {
+        throw new Error("email is required");
+      }
+
+      // Find sessions that are paused (paused_at IS NOT NULL) and not expired (within 24 hours)
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+      const { data, error } = await supabase
+        .from("coaching_sessions")
+        .select("id, session_type, paused_at, current_question_number, created_at")
+        .eq("email", email)
+        .eq("status", "active")
+        .not("paused_at", "is", null)
+        .gte("paused_at", twentyFourHoursAgo)
+        .order("paused_at", { ascending: false });
+
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ sessions: data ?? [] }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (!sessionId || !email) {
       throw new Error("sessionId and email are required");
     }
@@ -38,7 +69,7 @@ serve(async (req) => {
     // Validate the requester matches the session.
     const { data: session, error: sessionError } = await supabase
       .from("coaching_sessions")
-      .select("id,email,session_type")
+      .select("id, email, session_type, paused_at, current_question_number, status")
       .eq("id", sessionId)
       .eq("email", email)
       .single();
@@ -47,21 +78,29 @@ serve(async (req) => {
       throw new Error("Session not found for this email");
     }
 
+    // === GET HISTORY ===
     if (action === "get_history") {
       const { data, error } = await supabase
         .from("chat_messages")
-        .select("id,role,content,created_at,question_number")
+        .select("id, role, content, created_at, question_number")
         .eq("session_id", sessionId)
         .order("created_at", { ascending: true })
         .limit(500);
 
       if (error) throw error;
 
-      return new Response(JSON.stringify({ messages: data ?? [] }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          messages: data ?? [],
+          sessionStatus: session.status,
+          pausedAt: session.paused_at,
+          currentQuestionNumber: session.current_question_number,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
+    // === APPEND TURN ===
     if (action === "append_turn") {
       const role = body?.role as string | undefined;
       const content = body?.content as string | undefined;
@@ -69,6 +108,22 @@ serve(async (req) => {
 
       if (!role || !content) {
         throw new Error("role and content are required");
+      }
+
+      // Deduplicate: check if same content was just inserted
+      const { data: recent } = await supabase
+        .from("chat_messages")
+        .select("id, content")
+        .eq("session_id", sessionId)
+        .eq("role", role)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (recent && recent.length > 0 && recent[0].content === content) {
+        // Already exists, skip insert
+        return new Response(JSON.stringify({ ok: true, duplicate: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
       const { error } = await supabase.from("chat_messages").insert({
@@ -80,11 +135,20 @@ serve(async (req) => {
 
       if (error) throw error;
 
+      // Update current question number if provided
+      if (questionNumber !== null) {
+        await supabase
+          .from("coaching_sessions")
+          .update({ current_question_number: questionNumber })
+          .eq("id", sessionId);
+      }
+
       return new Response(JSON.stringify({ ok: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    // === LOG EVENT ===
     if (action === "log_event") {
       const eventType = (body?.eventType as string | undefined) ?? "audio_event";
       const message = (body?.message as string | undefined) ?? "(no message)";
@@ -105,6 +169,92 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // === PAUSE SESSION ===
+    if (action === "pause_session") {
+      const questionNumber = (body?.questionNumber as number | undefined) ?? session.current_question_number ?? 0;
+
+      const { error } = await supabase
+        .from("coaching_sessions")
+        .update({
+          paused_at: new Date().toISOString(),
+          current_question_number: questionNumber,
+        })
+        .eq("id", sessionId);
+
+      if (error) throw error;
+
+      // Log the pause event
+      await supabase.from("error_logs").insert({
+        error_type: "session_paused",
+        error_message: `Session paused at question ${questionNumber}`,
+        session_id: sessionId,
+        user_email: email,
+        context: { questionNumber },
+      });
+
+      return new Response(JSON.stringify({ ok: true, pausedAt: new Date().toISOString() }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // === RESUME SESSION ===
+    if (action === "resume_session") {
+      // Check if session is expired (paused more than 24 hours ago)
+      if (session.paused_at) {
+        const pausedTime = new Date(session.paused_at).getTime();
+        const now = Date.now();
+        const hoursSincePaused = (now - pausedTime) / (1000 * 60 * 60);
+
+        if (hoursSincePaused > 24) {
+          return new Response(
+            JSON.stringify({
+              ok: false,
+              expired: true,
+              message: "Session expired. Paused sessions are only resumable for 24 hours.",
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+
+      // Clear paused_at to mark as resumed
+      const { error: updateError } = await supabase
+        .from("coaching_sessions")
+        .update({ paused_at: null })
+        .eq("id", sessionId);
+
+      if (updateError) throw updateError;
+
+      // Fetch full conversation history
+      const { data: messages, error: historyError } = await supabase
+        .from("chat_messages")
+        .select("id, role, content, created_at, question_number")
+        .eq("session_id", sessionId)
+        .order("created_at", { ascending: true })
+        .limit(500);
+
+      if (historyError) throw historyError;
+
+      // Log the resume event
+      await supabase.from("error_logs").insert({
+        error_type: "session_resumed",
+        error_message: `Session resumed from question ${session.current_question_number}`,
+        session_id: sessionId,
+        user_email: email,
+        context: { currentQuestionNumber: session.current_question_number },
+      });
+
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          messages: messages ?? [],
+          currentQuestionNumber: session.current_question_number,
+          sessionType: session.session_type,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     throw new Error("Unsupported action");
