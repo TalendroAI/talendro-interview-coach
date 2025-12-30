@@ -87,9 +87,8 @@ serve(async (req) => {
 
     // Check for upgrade credit ("pay the difference")
     // Policy:
-    // - If the customer purchased a LOWER tier within the last 24 hours, they can upgrade by applying that prior purchase amount as a one-time credit.
-    // - To prevent re-using the same lower-tier purchase multiple times, we only apply the credit if there is NO paid purchase of the target tier
-    //   created AFTER the qualifying lower-tier purchase (within the same 24h window).
+    // - If the customer purchased a LOWER tier within the last 24 hours, they can upgrade by applying that prior purchase amount as a credit.
+    // NOTE: The frontend displays upgrade credit based on this rule; to avoid charging the wrong amount, we do not attempt to infer "already used" here.
     let upgradeCredit = 0;
     let upgradedFromSession: any = null;
 
@@ -137,34 +136,13 @@ serve(async (req) => {
       }
 
       if (upgradedFromSession && upgradeCredit > 0) {
-        // Prevent re-using the same lower-tier purchase to get multiple discounted purchases.
-        const upgradedFromCreatedAt = new Date(upgradedFromSession.created_at).getTime();
-
-        const alreadyPurchasedTargetAfter = recentSessions.some((s) => {
-          if (s.session_type !== session_type) return false;
-          const createdAt = new Date(s.created_at).getTime();
-          return createdAt > upgradedFromCreatedAt;
+        logStep("Upgrade credit found!", {
+          from: upgradedFromSession.session_type,
+          to: session_type,
+          creditCents: upgradeCredit,
+          creditDollars: upgradeCredit / 100,
+          sessionId: upgradedFromSession.id,
         });
-
-        if (alreadyPurchasedTargetAfter) {
-          logStep("Upgrade credit NOT applied (already used for a later target-tier purchase)", {
-            upgradedFromSessionId: upgradedFromSession.id,
-            upgradedFromType: upgradedFromSession.session_type,
-            targetTier: session_type,
-            creditCents: upgradeCredit,
-            creditDollars: upgradeCredit / 100,
-          });
-          upgradeCredit = 0;
-          upgradedFromSession = null;
-        } else {
-          logStep("Upgrade credit found!", {
-            from: upgradedFromSession.session_type,
-            to: session_type,
-            creditCents: upgradeCredit,
-            creditDollars: upgradeCredit / 100,
-            sessionId: upgradedFromSession.id,
-          });
-        }
       } else {
         logStep("No upgrade credit (no qualifying lower-tier purchase in last 24h)");
       }
