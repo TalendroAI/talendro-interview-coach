@@ -211,7 +211,8 @@ export function ChatInterface({
         documents.resume,
         documents.jobDescription,
         documents.companyUrl,
-        true
+        true,
+        documents.firstName
       );
 
       const initialMessage: Message = {
