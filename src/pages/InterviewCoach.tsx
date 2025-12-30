@@ -582,18 +582,66 @@ export default function InterviewCoach() {
           contentToSend = '# Mock Interview Transcript\n\n' + transcriptContent;
         }
         
-        // Try to extract score from the final message
+        // Extract structured results from the final summary message
         const lastAssistantMessage = mockInterviewMessages
           .filter(m => m.role === 'assistant')
           .pop();
         
         if (lastAssistantMessage) {
-          const scoreMatch = lastAssistantMessage.content.match(/(\d+)\s*(?:\/\s*100|out of 100)/i);
-          if (scoreMatch) {
-            resultsToSend = {
-              overall_score: parseInt(scoreMatch[1], 10),
-            };
+          const content = lastAssistantMessage.content;
+          
+          // Extract overall score (e.g., "73/100" or "73 out of 100")
+          const scoreMatch = content.match(/(?:Overall\s*(?:Performance\s*)?Score[:\s]*)?(\d+)\s*(?:\/\s*100|out of 100)/i);
+          const overallScore = scoreMatch ? parseInt(scoreMatch[1], 10) : null;
+          
+          // Extract strengths (look for section headers followed by numbered lists)
+          const strengthsMatch = content.match(/(?:Strengths?\s*(?:Demonstrated)?[:\*]*\s*\*?\*?\s*)([\s\S]*?)(?=\*\*(?:Top\s*\d+\s*)?(?:Areas?\s*for\s*)?Improvement|$)/i);
+          const strengths: string[] = [];
+          if (strengthsMatch) {
+            const strengthsBlock = strengthsMatch[1];
+            const lines = strengthsBlock.split('\n');
+            for (const line of lines) {
+              // Match numbered items or bullet points
+              const itemMatch = line.match(/^\s*(?:\d+\.|\*|-)\s*\*?\*?(.+?)\*?\*?\s*(?:-|–|:)?\s*(.*)$/);
+              if (itemMatch) {
+                const title = itemMatch[1].replace(/\*\*/g, '').trim();
+                const desc = itemMatch[2]?.trim() || '';
+                strengths.push(desc ? `${title}: ${desc}` : title);
+              }
+            }
           }
+          
+          // Extract improvements (look for "Areas for Improvement" section)
+          const improvementsMatch = content.match(/(?:Areas?\s*for\s*Improvement[:\*]*\s*\*?\*?\s*)([\s\S]*?)(?=\*\*(?:Specific\s*)?Recommendations?|$)/i);
+          const improvements: string[] = [];
+          if (improvementsMatch) {
+            const improvementsBlock = improvementsMatch[1];
+            const lines = improvementsBlock.split('\n');
+            for (const line of lines) {
+              const itemMatch = line.match(/^\s*(?:\d+\.|\*|-)\s*\*?\*?(.+?)\*?\*?\s*(?:-|–|:)?\s*(.*)$/);
+              if (itemMatch) {
+                const title = itemMatch[1].replace(/\*\*/g, '').trim();
+                const desc = itemMatch[2]?.trim() || '';
+                improvements.push(desc ? `${title}: ${desc}` : title);
+              }
+            }
+          }
+          
+          // Extract recommendations (look for "Recommendations" section)
+          const recommendationsMatch = content.match(/(?:Specific\s*)?Recommendations?[:\*]*\s*\*?\*?\s*([\s\S]*?)(?=INTERVIEW\s*COMPLETE|$)/i);
+          const recommendations = recommendationsMatch 
+            ? recommendationsMatch[1].replace(/\*\*/g, '').trim() 
+            : null;
+          
+          // Build results object only with populated fields
+          resultsToSend = {
+            overall_score: overallScore,
+            strengths: strengths.length > 0 ? strengths : null,
+            improvements: improvements.length > 0 ? improvements : null,
+            recommendations: recommendations || null,
+          };
+          
+          console.log('[handleStartSession] Extracted results:', resultsToSend);
         }
       }
 
