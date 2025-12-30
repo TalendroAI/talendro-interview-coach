@@ -45,6 +45,8 @@ export default function Index() {
         upgradeCredit: 0,
         discountAmount: 0,
         discountPercent: 0,
+        appliedDiscountType: 'none',
+        appliedDiscount: 0,
         finalPrice: config.priceInCents,
       });
     }
@@ -57,6 +59,43 @@ export default function Index() {
     }
   }, [email, selectedSession]);
 
+  // Helper to determine winning discount
+  const calculateWinningDiscount = (
+    upgradeCredit: number,
+    promoDiscount: number,
+    originalPrice: number,
+    discountPercent?: number,
+    discountCode?: string,
+    discountCodeId?: string
+  ): PricingBreakdown => {
+    let appliedDiscountType: 'none' | 'upgrade' | 'promo' = 'none';
+    let appliedDiscount = 0;
+
+    if (upgradeCredit > 0 || promoDiscount > 0) {
+      if (upgradeCredit >= promoDiscount) {
+        appliedDiscountType = 'upgrade';
+        appliedDiscount = upgradeCredit;
+      } else {
+        appliedDiscountType = 'promo';
+        appliedDiscount = promoDiscount;
+      }
+    }
+
+    const finalPrice = Math.max(0, originalPrice - appliedDiscount);
+
+    return {
+      originalPrice,
+      upgradeCredit,
+      discountAmount: promoDiscount,
+      discountPercent: discountPercent || 0,
+      discountCode,
+      discountCodeId,
+      appliedDiscountType,
+      appliedDiscount,
+      finalPrice,
+    };
+  };
+
   const checkForUpgrades = async () => {
     if (!email || !selectedSession) return;
     
@@ -67,23 +106,21 @@ export default function Index() {
       
       setPricing(prev => {
         const upgradeCredit = upgradeResult.upgradeCredit;
-        const discountAmount = prev?.discountAmount || 0;
-        const finalPrice = Math.max(0, config.priceInCents - upgradeCredit - discountAmount);
+        const promoDiscount = prev?.discountAmount || 0;
         
-        return {
-          originalPrice: config.priceInCents,
+        return calculateWinningDiscount(
           upgradeCredit,
-          discountAmount: prev?.discountAmount || 0,
-          discountPercent: prev?.discountPercent || 0,
-          discountCode: prev?.discountCode,
-          discountCodeId: prev?.discountCodeId,
-          finalPrice,
-        };
+          promoDiscount,
+          config.priceInCents,
+          prev?.discountPercent,
+          prev?.discountCode,
+          prev?.discountCodeId
+        );
       });
 
       if (upgradeResult.hasUpgradeCredit) {
         toast({
-          title: 'Upgrade credit applied!',
+          title: 'Upgrade credit available!',
           description: `$${(upgradeResult.upgradeCredit / 100).toFixed(2)} credit from your recent ${upgradeResult.upgradedFromType?.replace('_', ' ')} purchase.`,
         });
       }
@@ -113,21 +150,19 @@ export default function Index() {
 
       const config = SESSION_CONFIGS[selectedSession];
       const discountPercent = result.discount_percent || 0;
-      const discountAmount = Math.floor(config.priceInCents * (discountPercent / 100));
+      const promoDiscount = Math.floor(config.priceInCents * (discountPercent / 100));
 
       setPricing(prev => {
         const upgradeCredit = prev?.upgradeCredit || 0;
-        const finalPrice = Math.max(0, config.priceInCents - upgradeCredit - discountAmount);
         
-        return {
-          originalPrice: config.priceInCents,
+        return calculateWinningDiscount(
           upgradeCredit,
-          discountAmount,
+          promoDiscount,
+          config.priceInCents,
           discountPercent,
-          discountCode: promoCode.toUpperCase(),
-          discountCodeId: result.code_id,
-          finalPrice,
-        };
+          promoCode.toUpperCase(),
+          result.code_id
+        );
       });
 
       toast({
@@ -150,13 +185,14 @@ export default function Index() {
       const config = SESSION_CONFIGS[selectedSession];
       setPricing(prev => {
         const upgradeCredit = prev?.upgradeCredit || 0;
-        return {
-          originalPrice: config.priceInCents,
+        return calculateWinningDiscount(
           upgradeCredit,
-          discountAmount: 0,
-          discountPercent: 0,
-          finalPrice: Math.max(0, config.priceInCents - upgradeCredit),
-        };
+          0, // promo removed
+          config.priceInCents,
+          0,
+          undefined,
+          undefined
+        );
       });
     }
   };
