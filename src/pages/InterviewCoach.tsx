@@ -8,6 +8,7 @@ import { AudioInterface } from '@/components/AudioInterface';
 import { QuickPrepContent } from '@/components/QuickPrepContent';
 import { SessionCompletedDialog } from '@/components/SessionCompletedDialog';
 import { PausedSessionBanner } from '@/components/PausedSessionBanner';
+import { PausedSessionNotification } from '@/components/PausedSessionNotification';
 import { PausedSessionConflictDialog } from '@/components/PausedSessionConflictDialog';
 import { useSessionParams } from '@/hooks/useSessionParams';
 import { DocumentInputs } from '@/types/session';
@@ -823,7 +824,7 @@ export default function InterviewCoach() {
         
         {/* Main Content */}
         <main className="flex-1 flex flex-col bg-gradient-subtle">
-          {/* Paused Session Banner - hide when showing completed state OR when this is a fresh checkout redirect */}
+          {/* Paused Session Banner - show full banner when NOT a fresh checkout redirect */}
           {userEmail && !isSessionStarted && !isVerifying && !showCompletedDialog && !isFreshCheckoutRedirect && (
             <div className="p-4 pb-0">
               <PausedSessionBanner
@@ -831,6 +832,13 @@ export default function InterviewCoach() {
                 onResume={handleResumePausedSession}
                 onAbandon={handleAbandonSession}
               />
+            </div>
+          )}
+          
+          {/* Non-blocking notification for paused sessions when this IS a fresh checkout redirect */}
+          {userEmail && !isSessionStarted && !isVerifying && !showCompletedDialog && isFreshCheckoutRedirect && (
+            <div className="p-4 pb-0">
+              <PausedSessionNotification userEmail={userEmail} />
             </div>
           )}
           
