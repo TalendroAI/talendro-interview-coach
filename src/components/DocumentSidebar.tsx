@@ -1,4 +1,4 @@
-import { Save, Send, Check } from 'lucide-react';
+import { Save, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { DocumentInputs, SessionType, SESSION_CONFIGS } from '@/types/session';
 import { cn } from '@/lib/utils';
 import { ProInterviewTypeSelector, ProInterviewType } from './ProInterviewTypeSelector';
+import { CompleteSessionButton } from './CompleteSessionButton';
 
 interface DocumentSidebarProps {
   documents: DocumentInputs;
@@ -298,36 +299,13 @@ export function DocumentSidebar({
           )}>
             {isSessionCompleted ? <Check className="h-3.5 w-3.5" /> : isContentReady ? <Check className="h-3.5 w-3.5" /> : (isPro ? "7" : (requiresFirstName ? "6" : "5"))}
           </span>
-          <Button
-            size="default"
-            className={cn(
-              "flex-1 px-3 font-semibold shadow-sm transition-all",
-              isSessionCompleted
-                ? "bg-secondary hover:bg-secondary/90 text-secondary-foreground cursor-default"
-                : canCompleteSession
-                  ? "bg-primary hover:bg-primary/90 text-primary-foreground hover:shadow-md"
-                  : "bg-muted text-muted-foreground cursor-not-allowed"
-            )}
+          <CompleteSessionButton
             onClick={onStartSession}
-            disabled={!canCompleteSession || isLoading || isSessionCompleted}
-          >
-            {isLoading ? (
-              <>
-                <span className="animate-spin mr-2">⏳</span>
-                Sending Results...
-              </>
-            ) : isSessionCompleted ? (
-              <>
-                <Check className="h-4 w-4 mr-2" />
-                Results Sent!
-              </>
-            ) : (
-              <>
-                <Send className="h-4 w-4 mr-2" />
-                Complete Session & Get Results
-              </>
-            )}
-          </Button>
+            isLoading={isLoading}
+            isDisabled={!canCompleteSession}
+            isCompleted={isSessionCompleted}
+            className="flex-1"
+          />
         </div>
 
         {!isPaymentVerified && !isSessionStarted && (
