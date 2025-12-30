@@ -163,21 +163,150 @@ function buildAnalysisMarkdown(report: ReportResult): string {
   return lines.join("\n").trim();
 }
 
+// Robust JSON extraction - handles malformed output from LLMs
+function extractAndParseJSON(text: string): ReportResult {
+  // Remove markdown code fences if present
+  let cleaned = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "");
+  
+  // Try direct parse first
+  try {
+    return JSON.parse(cleaned) as ReportResult;
+  } catch (e) {
+    logStep("Direct JSON parse failed, attempting extraction", { error: String(e) });
+  }
+  
+  // Find the outermost JSON object by tracking brace depth
+  let start = -1;
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  
+  for (let i = 0; i < cleaned.length; i++) {
+    const char = cleaned[i];
+    
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    
+    if (char === '\\' && inString) {
+      escape = true;
+      continue;
+    }
+    
+    if (char === '"' && !escape) {
+      inString = !inString;
+      continue;
+    }
+    
+    if (inString) continue;
+    
+    if (char === '{') {
+      if (depth === 0) start = i;
+      depth++;
+    } else if (char === '}') {
+      depth--;
+      if (depth === 0 && start !== -1) {
+        const jsonStr = cleaned.slice(start, i + 1);
+        try {
+          return JSON.parse(jsonStr) as ReportResult;
+        } catch (e) {
+          // Try sanitizing common issues
+          const sanitized = jsonStr
+            .replace(/,\s*}/g, '}')  // Remove trailing commas before }
+            .replace(/,\s*]/g, ']')  // Remove trailing commas before ]
+            .replace(/[\x00-\x1F\x7F]/g, ' '); // Remove control characters
+          try {
+            return JSON.parse(sanitized) as ReportResult;
+          } catch {
+            logStep("JSON extraction attempt failed", { start, end: i });
+          }
+        }
+        start = -1;
+      }
+    }
+  }
+  
+  // Last resort: regex extraction with sanitization
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  if (match) {
+    const sanitized = match[0]
+      .replace(/,\s*}/g, '}')
+      .replace(/,\s*]/g, ']')
+      .replace(/[\x00-\x1F\x7F]/g, ' ');
+    return JSON.parse(sanitized) as ReportResult;
+  }
+  
+  throw new Error("Failed to extract valid JSON from model output");
+}
+
 async function generateReportWithClaude(opts: {
   prepPacket: string | null;
   transcript: string;
   sessionType: string;
-}) {
+}): Promise<ReportResult> {
   const key = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
   if (!key) throw new Error("ANTHROPIC_API_KEY is not configured");
 
-  const transcript = opts.transcript.length > 120_000
-    ? opts.transcript.slice(0, 120_000) + "\n\n[TRUNCATED: transcript exceeded 120k characters]"
+  // Truncate transcript if too long, but keep more context
+  const transcript = opts.transcript.length > 100_000
+    ? opts.transcript.slice(0, 100_000) + "\n\n[TRUNCATED: transcript exceeded 100k characters]"
     : opts.transcript;
 
-  const system = `You are an expert interview coach and scoring analyst.\n\nYou will be given:\n- a prep packet (may be empty)\n- a full text transcript of a 10-question mock interview including the interviewer's feedback and any 1-10 scores\n\nReturn STRICT JSON ONLY with this schema:\n{\n  \"overall_score\": number|null,\n  \"score_breakdown\": {\n    \"communication\": number,\n    \"content\": number,\n    \"structure\": number\n  },\n  \"strengths\": [\n    {\"title\": string, \"evidence_quote\": string, \"why_it_matters\": string}\n  ],\n  \"improvements\": [\n    {\"title\": string, \"evidence_quote\": string, \"fix\": string, \"stronger_example\": string}\n  ],\n  \"per_question\": [\n    {\n      \"question_number\": number,\n      \"question\": string,\n      \"answer_summary\": string,\n      \"score\": number|null,\n      \"what_was_strong\": string,\n      \"what_to_improve\": string,\n      \"stronger_example\": string,\n      \"evidence_quote\": string\n    }\n  ],\n  \"action_items\": [string]\n}\n\nRules:\n- Use EXACT quotes from the candidate's answers for evidence_quote fields (short snippets).\n- Provide exactly 10 per_question items whenever possible.\n- Make fixes highly specific to this candidate, this role, and this company. Avoid generic advice.`;
+  const system = `You are an expert interview coach and scoring analyst.
 
-  const user = `SESSION TYPE: ${opts.sessionType}\n\nPREP PACKET (if present):\n${opts.prepPacket ?? "(none)"}\n\nTRANSCRIPT:\n${transcript}`;
+You will be given:
+- a prep packet (may be empty)
+- a full text transcript of a 10-question mock interview including the interviewer's feedback and any 1-10 scores
+
+Return ONLY valid JSON with NO additional text, explanation, or markdown. The JSON must match this exact schema:
+{
+  "overall_score": number|null,
+  "score_breakdown": {
+    "communication": number,
+    "content": number,
+    "structure": number
+  },
+  "strengths": [
+    {"title": "string", "evidence_quote": "string", "why_it_matters": "string"}
+  ],
+  "improvements": [
+    {"title": "string", "evidence_quote": "string", "fix": "string", "stronger_example": "string"}
+  ],
+  "per_question": [
+    {
+      "question_number": 1,
+      "question": "string",
+      "answer_summary": "string",
+      "score": number|null,
+      "what_was_strong": "string",
+      "what_to_improve": "string",
+      "stronger_example": "string",
+      "evidence_quote": "string"
+    }
+  ],
+  "action_items": ["string"]
+}
+
+CRITICAL RULES:
+- Output ONLY the JSON object. No markdown, no explanation, no code fences.
+- Use EXACT short quotes from the candidate's answers for evidence_quote fields.
+- Provide exactly 10 per_question items.
+- Keep evidence_quote short (under 100 chars each).
+- Make fixes specific to this candidate, role, and company. No generic advice.
+- Ensure all strings are properly escaped for JSON.`;
+
+  const user = `SESSION TYPE: ${opts.sessionType}
+
+PREP PACKET (if present):
+${opts.prepPacket ?? "(none)"}
+
+TRANSCRIPT:
+${transcript}
+
+Remember: Output ONLY the JSON object with no additional text.`;
+
+  logStep("Calling Claude for report", { transcriptLength: transcript.length });
 
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -188,7 +317,7 @@ async function generateReportWithClaude(opts: {
     },
     body: JSON.stringify({
       model: "claude-sonnet-4-5",
-      max_tokens: 4096,
+      max_tokens: 8192, // Increased to handle full 10-question analysis
       system,
       messages: [{ role: "user", content: user }],
     }),
@@ -196,22 +325,20 @@ async function generateReportWithClaude(opts: {
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`Anthropic API error: ${response.status} ${text}`);
+    logStep("Anthropic API error", { status: response.status, body: text.slice(0, 500) });
+    throw new Error(`Anthropic API error: ${response.status} ${text.slice(0, 200)}`);
   }
 
   const data = await response.json();
   const text = data?.content?.[0]?.text ?? "";
+  
+  logStep("Claude response received", { responseLength: text.length });
 
-  try {
-    return JSON.parse(text) as ReportResult;
-  } catch {
-    // Fallback: try to salvage JSON from a fenced block
-    const match = text.match(/\{[\s\S]*\}/);
-    if (match) {
-      return JSON.parse(match[0]) as ReportResult;
-    }
-    throw new Error("Failed to parse report JSON from model output");
+  if (!text) {
+    throw new Error("Empty response from Claude");
   }
+
+  return extractAndParseJSON(text);
 }
 
 function generateResultsEmailHtml(opts: {
