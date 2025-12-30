@@ -9,6 +9,7 @@ const corsHeaders = {
 type Action =
   | "append_turn"
   | "get_history"
+  | "get_session"
   | "log_event"
   | "pause_session"
   | "resume_session"
@@ -70,13 +71,37 @@ serve(async (req) => {
     // Validate the requester matches the session.
     const { data: session, error: sessionError } = await supabase
       .from("coaching_sessions")
-      .select("id, email, session_type, paused_at, current_question_number, status")
+      .select(
+        "id, email, session_type, paused_at, current_question_number, status, resume_text, job_description, company_url"
+      )
       .eq("id", sessionId)
       .eq("email", email)
       .single();
 
     if (sessionError || !session) {
       throw new Error("Session not found for this email");
+    }
+
+    // === GET SESSION (docs + metadata for deep links) ===
+    if (action === "get_session") {
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          session: {
+            id: session.id,
+            sessionType: session.session_type,
+            status: session.status,
+            pausedAt: session.paused_at,
+            currentQuestionNumber: session.current_question_number,
+            documents: {
+              resume: session.resume_text ?? "",
+              jobDescription: session.job_description ?? "",
+              companyUrl: session.company_url ?? "",
+            },
+          },
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // === GET HISTORY ===
