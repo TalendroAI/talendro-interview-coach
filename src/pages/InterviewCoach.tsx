@@ -40,6 +40,7 @@ export default function InterviewCoach() {
   const resolvedSessionType = sessionTypeOverride ?? sessionType;
   
   const [documents, setDocuments] = useState<DocumentInputs>({
+    firstName: '',
     resume: '',
     jobDescription: '',
     companyUrl: '',
@@ -361,6 +362,7 @@ export default function InterviewCoach() {
 
         const docs = s.documents ?? {};
         setDocuments({
+          firstName: (docs as any).firstName || '',
           resume: docs.resume || '',
           jobDescription: docs.jobDescription || '',
           companyUrl: docs.companyUrl || '',
@@ -682,6 +684,7 @@ export default function InterviewCoach() {
         };
 
         setDocuments({
+          firstName: (docs as any).firstName || '',
           resume: docs.resume || '',
           jobDescription: docs.jobDescription || '',
           companyUrl: docs.companyUrl || '',

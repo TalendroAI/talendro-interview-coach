@@ -75,6 +75,7 @@ export const SESSION_CONFIGS: Record<SessionType, SessionConfig> = {
 };
 
 export interface DocumentInputs {
+  firstName: string;
   resume: string;
   jobDescription: string;
   companyUrl: string;
