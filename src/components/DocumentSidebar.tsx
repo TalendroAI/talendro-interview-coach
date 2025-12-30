@@ -44,19 +44,23 @@ export function DocumentSidebar({
 }: DocumentSidebarProps) {
   const config = sessionType ? SESSION_CONFIGS[sessionType] : null;
   const isPro = sessionType === 'pro';
-  const totalSteps = isPro ? 6 : 5;
+  const isAudio = sessionType === 'premium_audio';
+  const totalSteps = isPro ? 7 : (isAudio ? 6 : 5);
 
+  const isFirstNameComplete = documents.firstName.trim().length >= 1;
   const isResumeComplete = documents.resume.trim().length > 50;
   const isJobComplete = documents.jobDescription.trim().length > 50;
   const isCompanyComplete = documents.companyUrl.trim().length > 5;
-  const allFieldsComplete = isResumeComplete && isJobComplete && isCompanyComplete;
+  // For audio sessions, firstName is required
+  const allFieldsComplete = isResumeComplete && isJobComplete && isCompanyComplete && (isAudio ? isFirstNameComplete : true);
   const isProTypeSelected = isPro ? !!selectedProInterviewType : true;
 
   const canSaveDocuments = allFieldsComplete && !isDocumentsSaved;
   const canCompleteSession = isContentReady && sessionType && isProTypeSelected;
 
-  // Calculate progress percentage (5 or 6 steps depending on Pro)
+  // Calculate progress percentage
   const completedSteps = [
+    ...(isAudio ? [isFirstNameComplete] : []),
     isResumeComplete,
     isJobComplete,
     isCompanyComplete,
@@ -130,7 +134,44 @@ export function DocumentSidebar({
       </div>
 
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
-        {/* 1. Resume Section */}
+        {/* First Name Section - Only for Audio Mock */}
+        {isAudio && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className={cn(
+                "flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold transition-all duration-300",
+                isFirstNameComplete 
+                  ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
+                  : "bg-primary text-primary-foreground"
+              )}>
+                {isFirstNameComplete ? <Check className="h-3.5 w-3.5" /> : "1"}
+              </span>
+              <Label htmlFor="firstName" className="font-semibold text-foreground">
+                First/Preferred Name <span className="text-destructive">*</span>
+              </Label>
+            </div>
+            <Input
+              id="firstName"
+              type="text"
+              placeholder="What should Sarah call you?"
+              value={documents.firstName}
+              onChange={(e) => onDocumentsChange({ ...documents, firstName: e.target.value })}
+              className="border-border bg-background text-foreground placeholder:text-muted-foreground focus:border-primary"
+              disabled={isSessionStarted}
+            />
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className={cn(
+                "h-2 w-2 rounded-full",
+                isFirstNameComplete ? "bg-secondary" : "bg-background/30"
+              )} />
+              <span className="text-muted-foreground">
+                {isFirstNameComplete ? 'Provided' : 'Required for personalized greeting'}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Resume Section */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <span className={cn(
@@ -139,7 +180,7 @@ export function DocumentSidebar({
                 ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
                 : "bg-primary text-primary-foreground"
             )}>
-              {isResumeComplete ? <Check className="h-3.5 w-3.5" /> : "1"}
+              {isResumeComplete ? <Check className="h-3.5 w-3.5" /> : (isAudio ? "2" : "1")}
             </span>
             <Label htmlFor="resume" className="font-semibold text-foreground">
               Résumé
@@ -164,7 +205,7 @@ export function DocumentSidebar({
           </div>
         </div>
 
-        {/* 2. Job Description Section */}
+        {/* Job Description Section */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <span className={cn(
@@ -173,7 +214,7 @@ export function DocumentSidebar({
                 ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
                 : "bg-primary text-primary-foreground"
             )}>
-              {isJobComplete ? <Check className="h-3.5 w-3.5" /> : "2"}
+              {isJobComplete ? <Check className="h-3.5 w-3.5" /> : (isAudio ? "3" : "2")}
             </span>
             <Label htmlFor="jobDescription" className="font-semibold text-foreground">
               Job Description
@@ -198,7 +239,7 @@ export function DocumentSidebar({
           </div>
         </div>
 
-        {/* 3. Company URL Section */}
+        {/* Company URL Section */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <span className={cn(
@@ -207,7 +248,7 @@ export function DocumentSidebar({
                 ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
                 : "bg-primary text-primary-foreground"
             )}>
-              {isCompanyComplete ? <Check className="h-3.5 w-3.5" /> : "3"}
+              {isCompanyComplete ? <Check className="h-3.5 w-3.5" /> : (isAudio ? "4" : "3")}
             </span>
             <Label htmlFor="companyUrl" className="font-semibold text-foreground">
               Company Website URL
@@ -233,7 +274,7 @@ export function DocumentSidebar({
           </div>
         </div>
 
-        {/* 4. Save Documents Button */}
+        {/* Save Documents Button */}
         <div className="flex items-start gap-2">
           <span className={cn(
             "flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold mt-1 transition-all duration-300",
@@ -241,7 +282,7 @@ export function DocumentSidebar({
               ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
               : "bg-primary text-primary-foreground"
           )}>
-            {isDocumentsSaved ? <Check className="h-3.5 w-3.5" /> : "4"}
+            {isDocumentsSaved ? <Check className="h-3.5 w-3.5" /> : (isAudio ? "5" : "4")}
           </span>
           <Button
             size="default"
@@ -254,7 +295,7 @@ export function DocumentSidebar({
           </Button>
         </div>
 
-        {/* 5. Pro Interview Type Selector (Pro only) */}
+        {/* Pro Interview Type Selector (Pro only) */}
         {isPro && isDocumentsSaved && (
           <div className="space-y-2">
             <div className="flex items-center gap-2">
@@ -264,7 +305,7 @@ export function DocumentSidebar({
                   ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
                   : "bg-primary text-primary-foreground"
               )}>
-                {selectedProInterviewType ? <Check className="h-3.5 w-3.5" /> : "5"}
+                {selectedProInterviewType ? <Check className="h-3.5 w-3.5" /> : "6"}
               </span>
               <Label className="font-semibold text-foreground">
                 Select Interview Type
@@ -291,7 +332,7 @@ export function DocumentSidebar({
                 ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
                 : "bg-muted text-muted-foreground"
           )}>
-            {isSessionCompleted ? <Check className="h-3.5 w-3.5" /> : isContentReady ? <Check className="h-3.5 w-3.5" /> : isPro ? "6" : "5"}
+            {isSessionCompleted ? <Check className="h-3.5 w-3.5" /> : isContentReady ? <Check className="h-3.5 w-3.5" /> : (isPro ? "7" : (isAudio ? "6" : "5"))}
           </span>
           <Button
             size="default"

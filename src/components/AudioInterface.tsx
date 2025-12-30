@@ -14,6 +14,7 @@ interface AudioInterfaceProps {
   isActive: boolean;
   sessionId?: string;
   documents?: {
+    firstName: string;
     resume: string;
     jobDescription: string;
     companyUrl: string;
@@ -575,9 +576,11 @@ export function AudioInterface({
         try {
           if (conversation.status === 'connected' && !conversation.isSpeaking) {
             console.log('No greeting detected; nudging Sarah to greet.');
-            conversation.sendUserMessage(
-              'Start the interview now. Greet the candidate warmly by saying: "Hello, I\'m Sarah. Thank you for your interest in the opportunity. I\'ll be conducting your interview today." Then ask your first question.'
-            );
+            const firstName = documents?.firstName?.trim();
+            const greeting = firstName
+              ? `Start the interview now. Greet the candidate warmly by saying: "Hi ${firstName}, I'm Sarah. Thank you for your interest in the opportunity. I'll be conducting your interview today." Then ask your first question.`
+              : 'Start the interview now. Greet the candidate warmly by saying: "Hello, I\'m Sarah. Thank you for your interest in the opportunity. I\'ll be conducting your interview today." Then ask your first question.';
+            conversation.sendUserMessage(greeting);
           }
         } catch (e) {
           console.error('Failed to send greeting nudge:', e);
