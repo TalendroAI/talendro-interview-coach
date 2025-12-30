@@ -7,6 +7,7 @@ import { ChatInterface } from '@/components/ChatInterface';
 import { AudioInterface } from '@/components/AudioInterface';
 import { QuickPrepContent } from '@/components/QuickPrepContent';
 import { SessionCompletedDialog } from '@/components/SessionCompletedDialog';
+import { SessionResultsView } from '@/components/results/SessionResultsView';
 import { PausedSessionNotification } from '@/components/PausedSessionNotification';
 import { PausedSessionConflictDialog } from '@/components/PausedSessionConflictDialog';
 import { useSessionParams } from '@/hooks/useSessionParams';
@@ -66,6 +67,7 @@ export default function InterviewCoach() {
   // Completed session dialog state
   const [showCompletedDialog, setShowCompletedDialog] = useState(false);
   const [completedSessionResults, setCompletedSessionResults] = useState<any>(null);
+  const [resultsReport, setResultsReport] = useState<any>(null);
   const [isSessionCompleted, setIsSessionCompleted] = useState(false);
   
   // Resume from pause state
@@ -527,7 +529,11 @@ export default function InterviewCoach() {
   };
 
   const handleStartSession = async () => {
-    if (!resolvedSessionType) {
+    const completionType =
+      effectiveSessionType ??
+      ((resumingSessionType as SessionType | null) ?? resolvedSessionType);
+
+    if (!completionType) {
       toast({
         title: 'Session type required',
         description: 'Please access this page with a valid session type parameter.',
@@ -537,7 +543,7 @@ export default function InterviewCoach() {
     }
 
     // For quick_prep, we need the content ready
-    if (resolvedSessionType === 'quick_prep' && !quickPrepContent) {
+    if (completionType === 'quick_prep' && !quickPrepContent) {
       toast({
         title: 'Content not ready',
         description: 'Please wait for your prep materials to finish generating.',
@@ -547,7 +553,7 @@ export default function InterviewCoach() {
     }
 
     // For full_mock, we need the interview to be complete
-    if (resolvedSessionType === 'full_mock' && !isMockInterviewComplete) {
+    if (completionType === 'full_mock' && !isMockInterviewComplete) {
       toast({
         title: 'Interview not complete',
         description: 'Please complete all interview questions before getting your results.',
@@ -556,121 +562,88 @@ export default function InterviewCoach() {
       return;
     }
 
+    // For premium_audio, we need the interview to be complete
+    if (completionType === 'premium_audio' && !isAudioInterviewComplete) {
+      toast({
+        title: 'Interview not complete',
+        description: 'Please finish the audio interview before getting your results.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsLoading(true);
-    
+
     try {
       // Prepare the content to send based on session type
       let contentToSend = '';
-      let resultsToSend = null;
+      let resultsToSend: any = null;
 
-      if (sessionType === 'quick_prep') {
+      if (completionType === 'quick_prep') {
         contentToSend = quickPrepContent || '';
-      } else if (sessionType === 'full_mock') {
-        // FIXED: Fetch the baseline prep packet and combine with transcript
+      } else if (completionType === 'full_mock') {
+        // Fetch the baseline prep packet and combine with transcript
         const prepPacket = await fetchPrepPacket();
-        
-        // Build transcript from messages
+
         const transcriptContent = mockInterviewMessages
-          .map(m => `**${m.role === 'user' ? 'Your Answer' : 'Coach'}:**\n${m.content}`)
+          .map(m => `**${m.role === 'user' ? 'Your Answer' : 'Sarah (Coach)'}:**\n${m.content}`)
           .join('\n\n---\n\n');
-        
-        // Combine prep packet + transcript
+
         if (prepPacket) {
           contentToSend = prepPacket + '\n\n---\n\n# Mock Interview Transcript\n\n' + transcriptContent;
         } else {
-          // Fallback if no prep packet (shouldn't happen after fix)
           contentToSend = '# Mock Interview Transcript\n\n' + transcriptContent;
         }
-        
-        // Extract structured results from the final summary message
+
+        // Keep lightweight extraction for backwards compatibility; send-results now generates the full report.
         const lastAssistantMessage = mockInterviewMessages
           .filter(m => m.role === 'assistant')
           .pop();
-        
+
         if (lastAssistantMessage) {
           const content = lastAssistantMessage.content;
-          
-          // Extract overall score (e.g., "73/100" or "73 out of 100")
           const scoreMatch = content.match(/(?:Overall\s*(?:Performance\s*)?Score[:\s]*)?(\d+)\s*(?:\/\s*100|out of 100)/i);
           const overallScore = scoreMatch ? parseInt(scoreMatch[1], 10) : null;
-          
-          // Extract strengths (look for section headers followed by numbered lists)
-          const strengthsMatch = content.match(/(?:Strengths?\s*(?:Demonstrated)?[:\*]*\s*\*?\*?\s*)([\s\S]*?)(?=\*\*(?:Top\s*\d+\s*)?(?:Areas?\s*for\s*)?Improvement|$)/i);
-          const strengths: string[] = [];
-          if (strengthsMatch) {
-            const strengthsBlock = strengthsMatch[1];
-            const lines = strengthsBlock.split('\n');
-            for (const line of lines) {
-              // Match numbered items or bullet points
-              const itemMatch = line.match(/^\s*(?:\d+\.|\*|-)\s*\*?\*?(.+?)\*?\*?\s*(?:-|–|:)?\s*(.*)$/);
-              if (itemMatch) {
-                const title = itemMatch[1].replace(/\*\*/g, '').trim();
-                const desc = itemMatch[2]?.trim() || '';
-                strengths.push(desc ? `${title}: ${desc}` : title);
-              }
-            }
-          }
-          
-          // Extract improvements (look for "Areas for Improvement" section)
-          const improvementsMatch = content.match(/(?:Areas?\s*for\s*Improvement[:\*]*\s*\*?\*?\s*)([\s\S]*?)(?=\*\*(?:Specific\s*)?Recommendations?|$)/i);
-          const improvements: string[] = [];
-          if (improvementsMatch) {
-            const improvementsBlock = improvementsMatch[1];
-            const lines = improvementsBlock.split('\n');
-            for (const line of lines) {
-              const itemMatch = line.match(/^\s*(?:\d+\.|\*|-)\s*\*?\*?(.+?)\*?\*?\s*(?:-|–|:)?\s*(.*)$/);
-              if (itemMatch) {
-                const title = itemMatch[1].replace(/\*\*/g, '').trim();
-                const desc = itemMatch[2]?.trim() || '';
-                improvements.push(desc ? `${title}: ${desc}` : title);
-              }
-            }
-          }
-          
-          // Extract recommendations (look for "Recommendations" section)
-          const recommendationsMatch = content.match(/(?:Specific\s*)?Recommendations?[:\*]*\s*\*?\*?\s*([\s\S]*?)(?=INTERVIEW\s*COMPLETE|$)/i);
-          const recommendations = recommendationsMatch 
-            ? recommendationsMatch[1].replace(/\*\*/g, '').trim() 
-            : null;
-          
-          // Build results object only with populated fields
-          resultsToSend = {
-            overall_score: overallScore,
-            strengths: strengths.length > 0 ? strengths : null,
-            improvements: improvements.length > 0 ? improvements : null,
-            recommendations: recommendations || null,
-          };
-          
-          console.log('[handleStartSession] Extracted results:', resultsToSend);
+          resultsToSend = overallScore ? { overall_score: overallScore } : null;
         }
+      } else if (completionType === 'premium_audio') {
+        // Audio flow typically sends results automatically from AudioInterface; keep a fallback.
+        const prepPacket = await fetchPrepPacket();
+        contentToSend = prepPacket || '';
       }
 
-      // Send the materials via email
       const { data, error } = await supabase.functions.invoke('send-results', {
         body: {
           session_id: sessionId,
           email: userEmail,
-          session_type: resolvedSessionType,
+          session_type: completionType,
           prep_content: contentToSend,
           results: resultsToSend,
-        }
+        },
       });
 
       if (error) {
         throw new Error(error.message || 'Failed to send results');
       }
 
+      // Show the SAME deliverable on-screen that we email
+      if (data?.report) {
+        setResultsReport(data.report);
+      }
+      if (data?.session_results) {
+        setCompletedSessionResults(data.session_results);
+      }
+
       toast({
         title: 'Results sent!',
-        description: 'Your interview results have been emailed to you.',
+        description: 'Your full report is shown here and has been emailed to you.',
       });
-      
-      // Mark session as completed
+
       setIsSessionCompleted(true);
     } catch (err) {
       console.error('Error sending results:', err);
       toast({
-        title: 'Error sending email',
+        title: 'Error sending results',
         description: err instanceof Error ? err.message : 'Failed to send your results. Please try again.',
         variant: 'destructive',
       });
@@ -865,6 +838,26 @@ export default function InterviewCoach() {
     // Use effectiveSessionType for Pro users
     const activeType = effectiveSessionType || resumingSessionType;
 
+    if (isSessionCompleted && resultsReport) {
+      const sessionName = {
+        quick_prep: 'Quick Prep',
+        full_mock: 'Full Mock Interview',
+        premium_audio: 'Premium Audio Mock',
+        pro: 'Pro Session',
+      }[(activeType as string) || ''] || 'coaching session';
+
+      return (
+        <SessionResultsView
+          sessionLabel={sessionName}
+          email={userEmail || ''}
+          prepPacket={resultsReport?.prepPacket || null}
+          transcript={resultsReport?.transcript || null}
+          analysisMarkdown={resultsReport?.analysisMarkdown || null}
+          onStartOver={() => navigate('/')}
+        />
+      );
+    }
+
     // For quick_prep, show the generated content
     if (activeType === 'quick_prep') {
       return (
@@ -927,7 +920,7 @@ export default function InterviewCoach() {
       
       <div className="flex-1 flex flex-col lg:flex-row">
         {/* Sidebar - hide when showing completed state */}
-        {!showCompletedDialog && (
+        {!showCompletedDialog && !isSessionCompleted && (
           <DocumentSidebar
             documents={documents}
             onDocumentsChange={setDocuments}
