@@ -214,7 +214,8 @@ export async function sendAIMessage(
   resume?: string,
   jobDescription?: string,
   companyUrl?: string,
-  isInitial?: boolean
+  isInitial?: boolean,
+  firstName?: string
 ): Promise<string> {
   const { data, error } = await supabase.functions.invoke("ai-coach", {
     body: {
@@ -225,6 +226,7 @@ export async function sendAIMessage(
       job_description: jobDescription,
       company_url: companyUrl,
       is_initial: isInitial,
+      first_name: firstName,
     },
   });
 
