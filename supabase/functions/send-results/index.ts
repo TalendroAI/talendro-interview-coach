@@ -50,28 +50,153 @@ const escapeHtml = (input: string) =>
     .replace(/'/g, "&#039;");
 
 const formatMarkdownToHtml = (markdown: string): string => {
-  // Very small markdown subset for emails.
-  // Note: We escape HTML first to prevent injection.
-  const safe = escapeHtml(markdown);
-
-  return safe
-    .replace(/^### (.+)$/gm, '<h3 style="color:#2F6DF6;font-size:16px;margin:20px 0 8px 0;">$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2 style="color:#2F6DF6;font-size:18px;margin:24px 0 10px 0;">$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1 style="color:#2F6DF6;font-size:20px;margin:28px 0 12px 0;">$1</h1>')
-    .replace(/^\* (.+)$/gm, '<li style="margin:6px 0;color:#2C2F38;">$1</li>')
-    .replace(/^- (.+)$/gm, '<li style="margin:6px 0;color:#2C2F38;">$1</li>')
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\n\n/g, '</p><p style="margin:12px 0;color:#2C2F38;">')
-    .replace(/\n/g, "<br>");
+  const lines = markdown.split('\n');
+  const result: string[] = [];
+  let inList = false;
+  let listType: 'ul' | 'ol' | null = null;
+  
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i];
+    
+    if (!line.trim()) {
+      if (inList) {
+        result.push(listType === 'ul' ? '</ul>' : '</ol>');
+        inList = false;
+        listType = null;
+      }
+      result.push('<br>');
+      continue;
+    }
+    
+    if (/^---+$/.test(line.trim())) {
+      if (inList) {
+        result.push(listType === 'ul' ? '</ul>' : '</ol>');
+        inList = false;
+        listType = null;
+      }
+      result.push('<hr style="border:none;border-top:2px solid #E5E7EB;margin:24px 0;">');
+      continue;
+    }
+    
+    const h1Match = line.match(/^#\s+(.+)$/);
+    const h2Match = line.match(/^##\s+(.+)$/);
+    const h3Match = line.match(/^###\s+(.+)$/);
+    
+    if (h3Match) {
+      if (inList) { result.push(listType === 'ul' ? '</ul>' : '</ol>'); inList = false; }
+      const content = escapeHtml(h3Match[1]).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      result.push(`<h3 style="color:#2F6DF6;font-size:16px;font-weight:600;margin:20px 0 10px 0;padding-bottom:6px;border-bottom:1px solid #E5E7EB;">${content}</h3>`);
+      continue;
+    }
+    if (h2Match) {
+      if (inList) { result.push(listType === 'ul' ? '</ul>' : '</ol>'); inList = false; }
+      const content = escapeHtml(h2Match[1]).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      result.push(`<h2 style="color:#2F6DF6;font-size:18px;font-weight:700;margin:28px 0 12px 0;padding-bottom:8px;border-bottom:2px solid #00C4CC;">${content}</h2>`);
+      continue;
+    }
+    if (h1Match) {
+      if (inList) { result.push(listType === 'ul' ? '</ul>' : '</ol>'); inList = false; }
+      const content = escapeHtml(h1Match[1]).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      result.push(`<h1 style="color:#2F6DF6;font-size:22px;font-weight:800;margin:32px 0 16px 0;padding-bottom:10px;border-bottom:3px solid #2F6DF6;">${content}</h1>`);
+      continue;
+    }
+    
+    const bulletMatch = line.match(/^[-*]\s+(.+)$/);
+    if (bulletMatch) {
+      if (!inList || listType !== 'ul') {
+        if (inList) result.push(listType === 'ul' ? '</ul>' : '</ol>');
+        result.push('<ul style="margin:12px 0;padding-left:24px;list-style-type:disc;">');
+        inList = true;
+        listType = 'ul';
+      }
+      let content = escapeHtml(bulletMatch[1]);
+      content = content.replace(/\*\*(.+?)\*\*/g, '<strong style="color:#2C2F38;">$1</strong>');
+      result.push(`<li style="margin:8px 0;color:#4B5563;line-height:1.6;">${content}</li>`);
+      continue;
+    }
+    
+    const numMatch = line.match(/^(\d+)\.\s+(.+)$/);
+    if (numMatch) {
+      if (!inList || listType !== 'ol') {
+        if (inList) result.push(listType === 'ul' ? '</ul>' : '</ol>');
+        result.push('<ol style="margin:12px 0;padding-left:24px;list-style-type:decimal;">');
+        inList = true;
+        listType = 'ol';
+      }
+      let content = escapeHtml(numMatch[2]);
+      content = content.replace(/\*\*(.+?)\*\*/g, '<strong style="color:#2C2F38;">$1</strong>');
+      result.push(`<li style="margin:8px 0;color:#4B5563;line-height:1.6;">${content}</li>`);
+      continue;
+    }
+    
+    if (inList) {
+      result.push(listType === 'ul' ? '</ul>' : '</ol>');
+      inList = false;
+      listType = null;
+    }
+    
+    let content = escapeHtml(line);
+    content = content.replace(/\*\*(.+?)\*\*/g, '<strong style="color:#2C2F38;">$1</strong>');
+    content = content.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    result.push(`<p style="margin:10px 0;color:#4B5563;line-height:1.7;font-size:15px;">${content}</p>`);
+  }
+  
+  if (inList) {
+    result.push(listType === 'ul' ? '</ul>' : '</ol>');
+  }
+  
+  return result.join('\n');
 };
 
-const formatPreToHtml = (text: string) => {
-  const safe = escapeHtml(text);
-  return `
-    <div style="background:#0B1220;color:#E5E7EB;border-radius:12px;padding:16px;white-space:pre-wrap;word-break:break-word;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;font-size:13px;line-height:1.6;">
-      ${safe}
-    </div>
-  `;
+const formatTranscriptToHtml = (transcript: string): string => {
+  const parts = transcript.split(/\n---\n/).filter(p => p.trim());
+  const result: string[] = [];
+  
+  result.push('<div style="margin:0;">');
+  
+  for (const part of parts) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    
+    const isCoach = trimmed.startsWith('Sarah (Coach):');
+    const isUser = trimmed.startsWith('You:');
+    
+    let content = trimmed;
+    let speaker = '';
+    let bgColor = '';
+    let borderColor = '';
+    
+    if (isCoach) {
+      content = trimmed.replace('Sarah (Coach):', '').trim();
+      speaker = '🎯 Sarah (Coach)';
+      bgColor = '#EFF6FF';
+      borderColor = '#2F6DF6';
+    } else if (isUser) {
+      content = trimmed.replace('You:', '').trim();
+      speaker = '👤 You';
+      bgColor = '#F3F4F6';
+      borderColor = '#9CA3AF';
+    } else {
+      content = trimmed;
+      speaker = '';
+      bgColor = '#F9FAFB';
+      borderColor = '#E5E7EB';
+    }
+    
+    content = escapeHtml(content);
+    content = content.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    content = content.replace(/\n/g, '<br>');
+    
+    result.push(`
+      <div style="background:${bgColor};border-left:4px solid ${borderColor};border-radius:0 8px 8px 0;padding:16px;margin:12px 0;">
+        ${speaker ? `<div style="font-size:13px;font-weight:600;color:${isCoach ? '#2F6DF6' : '#6B7280'};margin-bottom:8px;">${speaker}</div>` : ''}
+        <div style="color:#374151;line-height:1.6;font-size:14px;white-space:pre-wrap;">${content}</div>
+      </div>
+    `);
+  }
+  
+  result.push('</div>');
+  return result.join('');
 };
 
 function buildTranscriptMarkdown(messages: ChatMessageRow[]): string {
@@ -92,255 +217,6 @@ function buildTranscriptMarkdown(messages: ChatMessageRow[]): string {
   return lines.join("\n").replace(/\n---\n\n$/g, "").trim();
 }
 
-function buildAnalysisMarkdown(report: ReportResult): string {
-  const score = report.overall_score ?? null;
-  const breakdown = report.score_breakdown ?? null;
-  const strengths = report.strengths ?? [];
-  const improvements = report.improvements ?? [];
-  const perQ = report.per_question ?? [];
-  const actionItems = report.action_items ?? [];
-
-  const lines: string[] = [];
-
-  lines.push("# Final Summary");
-  lines.push("");
-  lines.push(`Overall Score: ${score ?? "--"}/100`);
-
-  if (breakdown && Object.keys(breakdown).length) {
-    lines.push("");
-    lines.push("## Score Breakdown");
-    for (const [k, v] of Object.entries(breakdown)) {
-      lines.push(`- ${k}: ${v}/100`);
-    }
-  }
-
-  if (strengths.length) {
-    lines.push("");
-    lines.push("## Top Strengths (with evidence)\n");
-    strengths.slice(0, 3).forEach((s, idx) => {
-      lines.push(`${idx + 1}. ${s.title}`);
-      if (s.evidence_quote) lines.push(`   - Evidence: "${s.evidence_quote}"`);
-      if (s.why_it_matters) lines.push(`   - Why it matters: ${s.why_it_matters}`);
-    });
-  }
-
-  if (improvements.length) {
-    lines.push("");
-    lines.push("## Top Improvements (specific + fix)\n");
-    improvements.slice(0, 3).forEach((i, idx) => {
-      lines.push(`${idx + 1}. ${i.title}`);
-      if (i.evidence_quote) lines.push(`   - Where this showed up: "${i.evidence_quote}"`);
-      if (i.fix) lines.push(`   - Fix: ${i.fix}`);
-      if (i.stronger_example) lines.push(`   - Stronger example: ${i.stronger_example}`);
-    });
-  }
-
-  if (actionItems.length) {
-    lines.push("");
-    lines.push("## Personalized Action Items\n");
-    actionItems.slice(0, 8).forEach((a) => lines.push(`- ${a}`));
-  }
-
-  if (perQ.length) {
-    lines.push("");
-    lines.push("# Interview Transcript Review (10 Questions)\n");
-    perQ
-      .slice(0, 10)
-      .sort((a, b) => a.question_number - b.question_number)
-      .forEach((q) => {
-        lines.push(`## Question ${q.question_number}`);
-        lines.push(`Question: ${q.question}`);
-        lines.push(`Score: ${q.score ?? "--"}/10`);
-        lines.push(`Your answer (summary): ${q.answer_summary}`);
-        if (q.evidence_quote) lines.push(`Evidence quote: "${q.evidence_quote}"`);
-        lines.push(`What was strong: ${q.what_was_strong}`);
-        lines.push(`What to improve: ${q.what_to_improve}`);
-        lines.push(`Example of a stronger answer: ${q.stronger_example}`);
-        lines.push("");
-      });
-  }
-
-  return lines.join("\n").trim();
-}
-
-// Robust JSON extraction - handles malformed output from LLMs
-function extractAndParseJSON(text: string): ReportResult {
-  // Remove markdown code fences if present
-  let cleaned = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "");
-  
-  // Try direct parse first
-  try {
-    return JSON.parse(cleaned) as ReportResult;
-  } catch (e) {
-    logStep("Direct JSON parse failed, attempting extraction", { error: String(e) });
-  }
-  
-  // Find the outermost JSON object by tracking brace depth
-  let start = -1;
-  let depth = 0;
-  let inString = false;
-  let escape = false;
-  
-  for (let i = 0; i < cleaned.length; i++) {
-    const char = cleaned[i];
-    
-    if (escape) {
-      escape = false;
-      continue;
-    }
-    
-    if (char === '\\' && inString) {
-      escape = true;
-      continue;
-    }
-    
-    if (char === '"' && !escape) {
-      inString = !inString;
-      continue;
-    }
-    
-    if (inString) continue;
-    
-    if (char === '{') {
-      if (depth === 0) start = i;
-      depth++;
-    } else if (char === '}') {
-      depth--;
-      if (depth === 0 && start !== -1) {
-        const jsonStr = cleaned.slice(start, i + 1);
-        try {
-          return JSON.parse(jsonStr) as ReportResult;
-        } catch (e) {
-          // Try sanitizing common issues
-          const sanitized = jsonStr
-            .replace(/,\s*}/g, '}')  // Remove trailing commas before }
-            .replace(/,\s*]/g, ']')  // Remove trailing commas before ]
-            .replace(/[\x00-\x1F\x7F]/g, ' '); // Remove control characters
-          try {
-            return JSON.parse(sanitized) as ReportResult;
-          } catch {
-            logStep("JSON extraction attempt failed", { start, end: i });
-          }
-        }
-        start = -1;
-      }
-    }
-  }
-  
-  // Last resort: regex extraction with sanitization
-  const match = cleaned.match(/\{[\s\S]*\}/);
-  if (match) {
-    const sanitized = match[0]
-      .replace(/,\s*}/g, '}')
-      .replace(/,\s*]/g, ']')
-      .replace(/[\x00-\x1F\x7F]/g, ' ');
-    return JSON.parse(sanitized) as ReportResult;
-  }
-  
-  throw new Error("Failed to extract valid JSON from model output");
-}
-
-async function generateReportWithClaude(opts: {
-  prepPacket: string | null;
-  transcript: string;
-  sessionType: string;
-}): Promise<ReportResult> {
-  const key = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
-  if (!key) throw new Error("ANTHROPIC_API_KEY is not configured");
-
-  // Truncate transcript if too long, but keep more context
-  const transcript = opts.transcript.length > 100_000
-    ? opts.transcript.slice(0, 100_000) + "\n\n[TRUNCATED: transcript exceeded 100k characters]"
-    : opts.transcript;
-
-  const system = `You are an expert interview coach and scoring analyst.
-
-You will be given:
-- a prep packet (may be empty)
-- a full text transcript of a 10-question mock interview including the interviewer's feedback and any 1-10 scores
-
-Return ONLY valid JSON with NO additional text, explanation, or markdown. The JSON must match this exact schema:
-{
-  "overall_score": number|null,
-  "score_breakdown": {
-    "communication": number,
-    "content": number,
-    "structure": number
-  },
-  "strengths": [
-    {"title": "string", "evidence_quote": "string", "why_it_matters": "string"}
-  ],
-  "improvements": [
-    {"title": "string", "evidence_quote": "string", "fix": "string", "stronger_example": "string"}
-  ],
-  "per_question": [
-    {
-      "question_number": 1,
-      "question": "string",
-      "answer_summary": "string",
-      "score": number|null,
-      "what_was_strong": "string",
-      "what_to_improve": "string",
-      "stronger_example": "string",
-      "evidence_quote": "string"
-    }
-  ],
-  "action_items": ["string"]
-}
-
-CRITICAL RULES:
-- Output ONLY the JSON object. No markdown, no explanation, no code fences.
-- Use EXACT short quotes from the candidate's answers for evidence_quote fields.
-- Provide exactly 10 per_question items.
-- Keep evidence_quote short (under 100 chars each).
-- Make fixes specific to this candidate, role, and company. No generic advice.
-- Ensure all strings are properly escaped for JSON.`;
-
-  const user = `SESSION TYPE: ${opts.sessionType}
-
-PREP PACKET (if present):
-${opts.prepPacket ?? "(none)"}
-
-TRANSCRIPT:
-${transcript}
-
-Remember: Output ONLY the JSON object with no additional text.`;
-
-  logStep("Calling Claude for report", { transcriptLength: transcript.length });
-
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": key,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-5",
-      max_tokens: 8192, // Increased to handle full 10-question analysis
-      system,
-      messages: [{ role: "user", content: user }],
-    }),
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    logStep("Anthropic API error", { status: response.status, body: text.slice(0, 500) });
-    throw new Error(`Anthropic API error: ${response.status} ${text.slice(0, 200)}`);
-  }
-
-  const data = await response.json();
-  const text = data?.content?.[0]?.text ?? "";
-  
-  logStep("Claude response received", { responseLength: text.length });
-
-  if (!text) {
-    throw new Error("Empty response from Claude");
-  }
-
-  return extractAndParseJSON(text);
-}
-
 function generateResultsEmailHtml(opts: {
   sessionLabel: string;
   email: string;
@@ -352,85 +228,66 @@ function generateResultsEmailHtml(opts: {
   const prepHtml = opts.prepPacket ? formatMarkdownToHtml(opts.prepPacket) : null;
 
   return `
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <style type="text/css">
     body, table, td, div, p, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
     table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: collapse !important; }
-    img { -ms-interpolation-mode: bicubic; border: 0; line-height: 100%; outline: none; text-decoration: none; }
     body { margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: #f0f4f8; }
-    .ExternalClass { width: 100%; }
-    .ExternalClass, .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td, .ExternalClass div { line-height: 100%; }
-    a[x-apple-data-detectors] { color: inherit !important; text-decoration: none !important; }
-    u + #body a { color: inherit; text-decoration: none; }
-    #MessageViewBody a { color: inherit; text-decoration: none; }
-
     @media only screen and (max-width: 599px) {
       .email-container { width: 100% !important; max-width: 100% !important; }
       .content-padding { padding: 24px 16px !important; }
-      .header-padding { padding: 24px 16px !important; }
-      .hero-padding { padding: 24px 16px !important; }
-      .footer-padding { padding: 24px 16px !important; }
-      h1.email-title { font-size: 22px !important; }
-    }
-    @media only screen and (min-width: 600px) and (max-width: 899px) {
-      .email-container { width: 94% !important; max-width: ${EMAIL_MAX_WIDTH_TABLET}px !important; }
-    }
-    @media only screen and (min-width: 900px) {
-      .email-container { width: 100% !important; max-width: ${EMAIL_MAX_WIDTH_DESKTOP}px !important; }
     }
   </style>
 </head>
-<body id="body" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.6;color:#2C2F38;margin:0;padding:0;background-color:#f0f4f8;width:100%!important;-webkit-font-smoothing:antialiased;">
-
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.6;color:#2C2F38;margin:0;padding:0;background-color:#f0f4f8;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f0f4f8;">
     <tr>
       <td align="center" valign="top" style="padding:24px 12px;">
         <table role="presentation" class="email-container" width="${EMAIL_MAX_WIDTH_DESKTOP}" cellpadding="0" cellspacing="0" border="0" style="width:${EMAIL_MAX_WIDTH_DESKTOP}px;max-width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);">
           <tr>
-            <td class="header-padding" style="background-color:#2F6DF6;padding:40px 48px;text-align:center;">
+            <td style="background:linear-gradient(135deg,#2F6DF6 0%,#1E40AF 100%);padding:40px 48px;text-align:center;">
               <div style="font-size:36px;font-weight:800;color:#ffffff;letter-spacing:-1px;">Talendro<span style="font-size:16px;vertical-align:super;color:#00C4CC;font-weight:600;">™</span></div>
-              <h1 class="email-title" style="color:white;margin:20px 0 0 0;font-size:28px;font-weight:700;">Your ${escapeHtml(opts.sessionLabel)} Results</h1>
+              <h1 style="color:white;margin:20px 0 0 0;font-size:28px;font-weight:700;">Your ${escapeHtml(opts.sessionLabel)} Results</h1>
               <p style="color:rgba(255,255,255,0.9);margin:12px 0 0 0;font-size:17px;">Session complete — full deliverable below</p>
             </td>
           </tr>
 
           <tr>
-            <td class="hero-padding" style="background-color:#E8F4FE;padding:28px 48px;text-align:left;border-bottom:1px solid #e5e7eb;">
-              <p style="margin:0;color:#6B7280;font-size:14px;">Sent to: <strong style="color:#2C2F38;">${escapeHtml(opts.email)}</strong></p>
-              <p style="margin:10px 0 0 0;color:#6B7280;font-size:14px;">Session messages captured: <strong style="color:#2C2F38;">${opts.messageCount}</strong></p>
+            <td style="background-color:#E8F4FE;padding:28px 48px;border-bottom:1px solid #e5e7eb;">
+              <p style="margin:0;color:#6B7280;font-size:14px;">📧 Sent to: <strong style="color:#2C2F38;">${escapeHtml(opts.email)}</strong></p>
+              <p style="margin:10px 0 0 0;color:#6B7280;font-size:14px;">💬 Messages captured: <strong style="color:#2C2F38;">${opts.messageCount}</strong></p>
             </td>
           </tr>
 
           <tr>
             <td class="content-padding" style="padding:48px;">
-              <h2 style="color:#2F6DF6;font-size:20px;margin:0 0 12px 0;">SECTION 1 — Prep Packet</h2>
-              ${prepHtml ? `<div style="margin:14px 0 28px 0;">${prepHtml}</div>` : `<p style="margin:0 0 28px 0;color:#6B7280;">No prep packet was saved for this session.</p>`}
+              <h2 style="color:#2F6DF6;font-size:20px;margin:0 0 16px 0;padding-bottom:10px;border-bottom:2px solid #00C4CC;">📋 SECTION 1 — Prep Packet</h2>
+              ${prepHtml ? `<div style="margin:14px 0 36px 0;padding:20px;background:#F8FAFC;border-radius:12px;border:1px solid #E5E7EB;">${prepHtml}</div>` : `<p style="margin:0 0 36px 0;color:#6B7280;font-style:italic;">No prep packet was saved for this session.</p>`}
 
-              <h2 style="color:#2F6DF6;font-size:20px;margin:0 0 12px 0;">SECTION 2 — Interview Transcript</h2>
-              <div style="margin:14px 0 28px 0;">${formatPreToHtml(opts.transcript)}</div>
+              <h2 style="color:#2F6DF6;font-size:20px;margin:0 0 16px 0;padding-bottom:10px;border-bottom:2px solid #00C4CC;">💬 SECTION 2 — Interview Transcript</h2>
+              <div style="margin:14px 0 36px 0;">${formatTranscriptToHtml(opts.transcript)}</div>
 
-              <h2 style="color:#2F6DF6;font-size:20px;margin:0 0 12px 0;">SECTION 3 — Results  26 Recommendations</h2>
-              <div style="margin:14px 0 28px 0;">${formatMarkdownToHtml(opts.analysisMarkdown)}</div>
+              <h2 style="color:#2F6DF6;font-size:20px;margin:0 0 16px 0;padding-bottom:10px;border-bottom:2px solid #00C4CC;">📊 SECTION 3 — Analysis & Recommendations</h2>
+              <div style="margin:14px 0 36px 0;padding:20px;background:#F0FDF4;border-radius:12px;border:1px solid #BBF7D0;">${formatMarkdownToHtml(opts.analysisMarkdown)}</div>
 
               <table width="100%" cellpadding="0" cellspacing="0" style="margin:40px 0;">
                 <tr>
                   <td align="center">
-                    <a href="https://coach.talendro.com/#products" style="display:inline-block;background-color:#2F6DF6;color:#ffffff;padding:16px 44px;text-decoration:none;border-radius:10px;font-weight:700;font-size:16px;">Practice Again F501</a>
+                    <a href="https://coach.talendro.com/#products" style="display:inline-block;background:linear-gradient(135deg,#2F6DF6 0%,#00C4CC 100%);color:#ffffff;padding:16px 44px;text-decoration:none;border-radius:10px;font-weight:700;font-size:16px;">🚀 Practice Again</a>
                   </td>
                 </tr>
               </table>
 
-              <p style="margin:28px 0 0 0;font-size:15px;color:#2C2F38;line-height:1.6;">Questions? Reply to this email — well help.</p>
+              <p style="margin:28px 0 0 0;font-size:15px;color:#2C2F38;line-height:1.6;">Questions? Reply to this email — we'll help.</p>
 
               <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:36px;padding-top:28px;border-top:1px solid #e5e7eb;">
                 <tr>
                   <td>
-                    <p style="margin:10px 0;color:#2C2F38;font-size:16px;"><strong>F947 Go crush that interview!</strong></p>
-                    <p style="margin:10px 0;color:#2C2F38;font-size:16px;"><strong>- Greg Jackson</strong><br>Founder, Talendro™</p>
+                    <p style="margin:10px 0;color:#2C2F38;font-size:16px;"><strong>🎯 Go crush that interview!</strong></p>
+                    <p style="margin:10px 0;color:#2C2F38;font-size:16px;"><strong>— Greg Jackson</strong><br>Founder, Talendro™</p>
                   </td>
                 </tr>
               </table>
@@ -438,10 +295,10 @@ function generateResultsEmailHtml(opts: {
           </tr>
 
           <tr>
-            <td class="footer-padding" style="background-color:#0F172A;padding:44px 48px;text-align:center;">
+            <td style="background-color:#0F172A;padding:44px 48px;text-align:center;">
               <div style="font-size:28px;font-weight:800;color:white;margin-bottom:12px;">Talendro<span style="font-size:14px;vertical-align:super;color:#00C4CC;">™</span></div>
               <p style="color:#00C4CC;font-style:italic;font-size:16px;margin:14px 0 24px 0;">"Your partner in interview success"</p>
-              <p style="margin:24px 0;font-size:14px;color:#9FA6B2;">🇺🇸 American-Built  b7 🎖️ Veteran-Led  b7 ✅ Recruiter-Tested</p>
+              <p style="margin:24px 0;font-size:14px;color:#9FA6B2;">🇺🇸 American-Built · 🎖️ Veteran-Led · ✅ Recruiter-Tested</p>
               <p style="color:#6B7280;font-size:13px;margin-top:24px;">© ${new Date().getFullYear()} Talendro. All rights reserved.</p>
             </td>
           </tr>
@@ -463,39 +320,17 @@ serve(async (req) => {
     logStep("Function started");
 
     const resendKeyRaw = Deno.env.get("RESEND_API_KEY") ?? "";
-    const resendKey = resendKeyRaw
-      .replace(/[\u200B-\u200D\uFEFF]/g, "")
-      .replace(/\s+/g, "")
-      .trim();
+    const resendKey = resendKeyRaw.replace(/[\u200B-\u200D\uFEFF]/g, "").replace(/\s+/g, "").trim();
 
     if (!resendKey) throw new Error("Email service is not configured");
-    if (resendKey.includes("*")) throw new Error("Email service is misconfigured (API key appears masked)");
+    if (resendKey.includes("*")) throw new Error("Email service is misconfigured");
 
     const resend = new Resend(resendKey);
 
     const body = await req.json();
-    const {
-      session_id,
-      email,
-      session_type,
-      test_email,
-      results,
-    }: {
-      session_id?: string;
-      email?: string;
-      session_type?: string;
-      test_email?: boolean;
-      results?: {
-        overall_score?: number | null;
-        strengths?: string[] | null;
-        improvements?: string[] | null;
-        recommendations?: string | null;
-      } | null;
-    } = body ?? {};
+    const { session_id, email, session_type, test_email, results } = body ?? {};
 
-    const sanitizeEmailHtml = (html: string) =>
-      // Keep tab/newline/carriage return; strip other control chars that can cause provider rejection
-      html.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+    const sanitizeEmailHtml = (html: string) => html.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
 
     const extractFinalSummaryMarkdown = (messages: ChatMessageRow[]): string | null => {
       const sorted = [...messages].sort((a, b) => {
@@ -518,23 +353,21 @@ serve(async (req) => {
       return null;
     };
 
-    // Lightweight test mode
     if (test_email && email) {
       const htmlRaw = generateResultsEmailHtml({
         sessionLabel: session_type || "Interview Coaching",
         email,
         messageCount: 35,
-        prepPacket: "## Company Overview\nAcme Corp...",
+        prepPacket: "## Company Overview\nAcme Corp is a leading technology company.",
         transcript: "Sarah (Coach):\nQuestion 1 of 10...\n\n---\n\nYou:\nMy answer...",
-        analysisMarkdown:
-          "# Final Summary\n\nOverall Score: 85/100\n\n## Score Breakdown\n- communication: 82/100\n- content: 88/100\n- structure: 84/100\n",
+        analysisMarkdown: "# Final Summary\n\nOverall Score: 85/100\n\n## Score Breakdown\n- Communication: 82/100\n- Content: 88/100",
       });
 
       const html = sanitizeEmailHtml(htmlRaw);
 
       const emailResult = await resend.emails.send({
-        from: "Talendro Interview Coach <onboarding@resend.dev>",
-        reply_to: "Talendro Support <onboarding@resend.dev>",
+        from: "Talendro Interview Coach <results@talendro.com>",
+        reply_to: "Talendro Support <support@talendro.com>",
         to: [email],
         subject: `[TEST] Your ${session_type || "Interview Coaching"} Results - Talendro™`,
         html,
@@ -567,13 +400,10 @@ serve(async (req) => {
     }
 
     if ((session.email ?? "").toLowerCase() !== email.toLowerCase()) {
-      logStep("Email mismatch", { sessionEmail: "***", providedEmail: "***" });
       throw new Error("Email does not match session");
     }
 
-    // Allow send for active or completed (re-sends)
     if (session.status !== "active" && session.status !== "completed") {
-      logStep("Session not eligible", { status: session.status });
       throw new Error("Session is not eligible for results");
     }
 
@@ -598,34 +428,17 @@ serve(async (req) => {
 
     const chatMessages = (session.chat_messages as ChatMessageRow[]) ?? [];
     const messageCount = chatMessages.length;
-
     const transcript = buildTranscriptMarkdown(chatMessages);
 
-    // IMPORTANT: Do not make an additional long AI call here.
-    // The transcript already contains Sarah's per-question feedback + final summary.
     const analysisMarkdown =
       effectiveSessionType === "quick_prep"
         ? prepPacket ?? "No prep packet was saved for this session."
-        : extractFinalSummaryMarkdown(chatMessages) ??
-          "# Final Summary\n\nYour full transcript (including Sarah's feedback) is included above.";
+        : extractFinalSummaryMarkdown(chatMessages) ?? "# Final Summary\n\nYour full transcript is included above.";
 
-    logStep("Building email", {
-      sessionType: effectiveSessionType,
-      hasPrepPacket: Boolean(prepPacket),
-      transcriptChars: transcript.length,
-      messageCount,
-      noAdditionalAiCall: true,
-    });
+    logStep("Building email", { sessionType: effectiveSessionType, hasPrepPacket: Boolean(prepPacket), messageCount });
 
     const emailHtml = sanitizeEmailHtml(
-      generateResultsEmailHtml({
-        sessionLabel,
-        email,
-        messageCount,
-        prepPacket,
-        transcript,
-        analysisMarkdown,
-      }),
+      generateResultsEmailHtml({ sessionLabel, email, messageCount, prepPacket, transcript, analysisMarkdown }),
     );
 
     const emailResponse = await resend.emails.send({
@@ -639,18 +452,13 @@ serve(async (req) => {
     logStep("Email sent", { hasError: Boolean((emailResponse as any)?.error) });
 
     if ((emailResponse as any)?.error) {
-      throw new Error(
-        `Email sending failed: ${(emailResponse as any).error?.message || "Unknown error"}`,
-      );
+      throw new Error(`Email sending failed: ${(emailResponse as any).error?.message || "Unknown error"}`);
     }
 
-    // Store a compact summary (idempotent-ish: update latest row if it exists).
-    const overallScore =
-      (results && typeof results === "object" ? results.overall_score : null) ??
-      (() => {
-        const m = analysisMarkdown.match(/Overall\s*(?:Performance\s*)?Score\s*[:\s]*(\d+)\s*(?:\/\s*100|out of 100)?/i);
-        return m ? Number(m[1]) : null;
-      })();
+    const overallScore = (() => {
+      const m = analysisMarkdown.match(/Overall\s*(?:Performance\s*)?Score\s*[:\s]*(\d+)/i);
+      return m ? Number(m[1]) : null;
+    })();
 
     const sessionResultsToStore = {
       overall_score: typeof overallScore === "number" ? overallScore : null,
@@ -669,37 +477,25 @@ serve(async (req) => {
     const existingId = Array.isArray(existingResults) ? existingResults[0]?.id : null;
 
     if (existingId) {
-      await supabaseClient
-        .from("session_results")
-        .update({
-          overall_score: sessionResultsToStore.overall_score,
-          strengths: sessionResultsToStore.strengths,
-          improvements: sessionResultsToStore.improvements,
-          recommendations: sessionResultsToStore.recommendations,
-          email_sent: true,
-          email_sent_at: new Date().toISOString(),
-        })
-        .eq("id", existingId);
+      await supabaseClient.from("session_results").update({
+        ...sessionResultsToStore,
+        email_sent: true,
+        email_sent_at: new Date().toISOString(),
+      }).eq("id", existingId);
     } else {
       await supabaseClient.from("session_results").insert({
         session_id,
-        overall_score: sessionResultsToStore.overall_score,
-        strengths: sessionResultsToStore.strengths,
-        improvements: sessionResultsToStore.improvements,
-        recommendations: sessionResultsToStore.recommendations,
+        ...sessionResultsToStore,
         email_sent: true,
         email_sent_at: new Date().toISOString(),
       });
     }
 
     if (session.status !== "completed") {
-      await supabaseClient
-        .from("coaching_sessions")
-        .update({
-          status: "completed",
-          completed_at: new Date().toISOString(),
-        })
-        .eq("id", session_id);
+      await supabaseClient.from("coaching_sessions").update({
+        status: "completed",
+        completed_at: new Date().toISOString(),
+      }).eq("id", session_id);
     }
 
     return new Response(
@@ -707,16 +503,9 @@ serve(async (req) => {
         success: true,
         message: "Results email sent successfully",
         session_results: sessionResultsToStore,
-        report: {
-          prepPacket,
-          transcript,
-          analysisMarkdown,
-        },
+        report: { prepPacket, transcript, analysisMarkdown },
       }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      },
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
     );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
