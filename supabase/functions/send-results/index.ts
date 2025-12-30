@@ -629,8 +629,8 @@ serve(async (req) => {
     );
 
     const emailResponse = await resend.emails.send({
-      from: "Talendro Interview Coach <onboarding@resend.dev>",
-      reply_to: "Talendro Support <onboarding@resend.dev>",
+      from: "Talendro Interview Coach <results@talendro.com>",
+      reply_to: "Talendro Support <support@talendro.com>",
       to: [email],
       subject: `Your ${sessionLabel} Results - Talendro™`,
       html: emailHtml,
