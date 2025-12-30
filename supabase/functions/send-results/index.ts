@@ -41,8 +41,17 @@ type ReportResult = {
   action_items?: string[];
 };
 
-const escapeHtml = (input: string) =>
+const stripProblemChars = (input: string) =>
   input
+    // ASCII control chars except \t (9) and \n (10)
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
+    // zero-width + BOM
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    // bidi / direction isolates
+    .replace(/[\u202A-\u202E\u2066-\u2069]/g, "");
+
+const escapeHtml = (input: string) =>
+  stripProblemChars(input)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -56,7 +65,7 @@ const formatMarkdownToHtml = (markdown: string): string => {
   let listType: 'ul' | 'ol' | null = null;
   
   for (let i = 0; i < lines.length; i++) {
-    let line = lines[i];
+    let line = lines[i].replace(/\r/g, "");
     
     if (!line.trim()) {
       if (inList) {
@@ -85,19 +94,19 @@ const formatMarkdownToHtml = (markdown: string): string => {
     if (h3Match) {
       if (inList) { result.push(listType === 'ul' ? '</ul>' : '</ol>'); inList = false; }
       const content = escapeHtml(h3Match[1]).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-      result.push(`<h3 style="color:#2F6DF6;font-size:16px;font-weight:600;margin:20px 0 10px 0;padding-bottom:6px;border-bottom:1px solid #E5E7EB;">${content}</h3>`);
+      result.push(`<div style="color:#2F6DF6;font-size:16px;font-weight:600;margin:20px 0 10px 0;padding-bottom:6px;border-bottom:1px solid #E5E7EB;line-height:1.25;mso-line-height-rule:exactly;">${content}</div>`);
       continue;
     }
     if (h2Match) {
       if (inList) { result.push(listType === 'ul' ? '</ul>' : '</ol>'); inList = false; }
       const content = escapeHtml(h2Match[1]).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-      result.push(`<h2 style="color:#2F6DF6;font-size:18px;font-weight:700;margin:28px 0 12px 0;padding-bottom:8px;border-bottom:2px solid #00C4CC;">${content}</h2>`);
+      result.push(`<div style="color:#2F6DF6;font-size:18px;font-weight:700;margin:28px 0 12px 0;padding-bottom:8px;border-bottom:2px solid #00C4CC;line-height:1.25;mso-line-height-rule:exactly;">${content}</div>`);
       continue;
     }
     if (h1Match) {
       if (inList) { result.push(listType === 'ul' ? '</ul>' : '</ol>'); inList = false; }
       const content = escapeHtml(h1Match[1]).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-      result.push(`<h1 style="color:#2F6DF6;font-size:22px;font-weight:800;margin:32px 0 16px 0;padding-bottom:10px;border-bottom:3px solid #2F6DF6;">${content}</h1>`);
+      result.push(`<div style="color:#2F6DF6;font-size:22px;font-weight:800;margin:32px 0 16px 0;padding-bottom:10px;border-bottom:3px solid #2F6DF6;line-height:1.2;mso-line-height-rule:exactly;">${content}</div>`);
       continue;
     }
     
@@ -248,10 +257,10 @@ function generateResultsEmailHtml(opts: {
       <td align="center" valign="top" style="padding:24px 12px;">
         <table role="presentation" class="email-container" width="${EMAIL_MAX_WIDTH_DESKTOP}" cellpadding="0" cellspacing="0" border="0" style="width:${EMAIL_MAX_WIDTH_DESKTOP}px;max-width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);">
           <tr>
-            <td style="background:linear-gradient(135deg,#2F6DF6 0%,#1E40AF 100%);padding:40px 48px;text-align:center;">
-              <div style="font-size:36px;font-weight:800;color:#ffffff;letter-spacing:-1px;">Talendro<span style="font-size:16px;vertical-align:super;color:#00C4CC;font-weight:600;">™</span></div>
-              <h1 style="color:white;margin:20px 0 0 0;font-size:28px;font-weight:700;">Your ${escapeHtml(opts.sessionLabel)} Results</h1>
-              <p style="color:rgba(255,255,255,0.9);margin:12px 0 0 0;font-size:17px;">Session complete — full deliverable below</p>
+            <td bgcolor="#2F6DF6" style="background-color:#2F6DF6;background-image:linear-gradient(135deg,#2F6DF6 0%,#1E40AF 100%);padding:40px 48px;text-align:center;">
+              <div style="font-size:36px;font-weight:800;color:#ffffff;letter-spacing:-1px;line-height:1.1;mso-line-height-rule:exactly;">Talendro<span style="font-size:16px;vertical-align:super;color:#00C4CC;font-weight:600;">™</span></div>
+              <div style="color:#ffffff;margin:20px 0 0 0;font-size:28px;font-weight:700;line-height:1.2;mso-line-height-rule:exactly;">Your ${escapeHtml(opts.sessionLabel)} Results</div>
+              <div style="color:rgba(255,255,255,0.92);margin:12px 0 0 0;font-size:17px;line-height:1.4;mso-line-height-rule:exactly;">Session complete — full deliverable below</div>
             </td>
           </tr>
 
@@ -330,7 +339,8 @@ serve(async (req) => {
     const body = await req.json();
     const { session_id, email, session_type, test_email, results } = body ?? {};
 
-    const sanitizeEmailHtml = (html: string) => html.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+     const sanitizeEmailHtml = (html: string) =>
+       stripProblemChars(html).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
 
     const extractFinalSummaryMarkdown = (messages: ChatMessageRow[]): string | null => {
       const sorted = [...messages].sort((a, b) => {
@@ -422,7 +432,18 @@ serve(async (req) => {
       const raw = session.prep_packet as any;
       if (!raw) return null;
       if (typeof raw === "string") return raw;
-      if (typeof raw === "object" && typeof raw.content === "string") return raw.content;
+      if (typeof raw === "object") {
+        const candidate =
+          raw.content ??
+          raw.markdown ??
+          raw.text ??
+          raw.prep_packet ??
+          raw.prepPacket;
+        if (typeof candidate === "string") return candidate;
+      }
+      // last resort: allow caller to pass it
+      if (typeof results?.prep_packet === "string") return results.prep_packet;
+      if (typeof results?.prepPacket === "string") return results.prepPacket;
       return null;
     })();
 
@@ -435,11 +456,29 @@ serve(async (req) => {
         ? prepPacket ?? "No prep packet was saved for this session."
         : extractFinalSummaryMarkdown(chatMessages) ?? "# Final Summary\n\nYour full transcript is included above.";
 
-    logStep("Building email", { sessionType: effectiveSessionType, hasPrepPacket: Boolean(prepPacket), messageCount });
+    logStep("Building email", {
+      sessionType: effectiveSessionType,
+      hasPrepPacket: Boolean(prepPacket),
+      prepPacketChars: prepPacket ? prepPacket.length : 0,
+      messageCount,
+    });
 
     const emailHtml = sanitizeEmailHtml(
       generateResultsEmailHtml({ sessionLabel, email, messageCount, prepPacket, transcript, analysisMarkdown }),
     );
+
+    // Optional: server-side preview for debugging (does not send or write to DB)
+    if (body?.dry_run === true || body?.return_html === true) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          preview: true,
+          html: body?.return_html === true ? emailHtml : undefined,
+          report: { prepPacket, transcript, analysisMarkdown },
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
+      );
+    }
 
     const emailResponse = await resend.emails.send({
       from: "Talendro Interview Coach <results@talendro.com>",
