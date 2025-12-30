@@ -444,27 +444,9 @@ export function ChatInterface({
       )}>
         {!isInitialized && isLoading && !isResuming && (
           <div className="flex items-center justify-center py-12">
-            <div className="w-full max-w-md bg-card border border-border rounded-xl p-6 shadow-lg">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center animate-pulse">
-                  <span className="text-xl">🎯</span>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-foreground">Preparing Your Session</h3>
-                  <p className="text-sm text-muted-foreground">Analyzing your documents...</p>
-                </div>
-              </div>
-              <Progress value={30} className="h-2 mb-3" />
-              <div className="flex items-center gap-3 text-sm">
-                <div className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-500" />
-                  <span className="text-muted-foreground">Documents loaded</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                  <span className="text-foreground">Building prep packet...</span>
-                </div>
-              </div>
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <span className="text-muted-foreground">Starting session...</span>
             </div>
           </div>
         )}
