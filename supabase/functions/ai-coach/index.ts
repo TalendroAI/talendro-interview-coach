@@ -324,58 +324,73 @@ serve(async (req) => {
         throw new Error("Rate limit exceeded. Please wait a moment before sending more messages.");
       }
 
-      // FOR FULL_MOCK AND PREMIUM_AUDIO: Generate prep packet on initial call if not already present
+      // FOR FULL_MOCK AND PREMIUM_AUDIO:
+      // Prep packet generation is slow and must not block the first question.
       if (is_initial && (session_type === "full_mock" || session_type === "premium_audio") && !session.prep_packet) {
-        logStep("Generating baseline prep packet for " + session_type);
-        
-        // Build context for prep packet generation
-        let prepDocumentContext = "";
-        if (resume) {
-          prepDocumentContext += `\n\n## CANDIDATE'S RESUME:\n${resume}`;
-        }
-        if (job_description) {
-          prepDocumentContext += `\n\n## TARGET JOB DESCRIPTION:\n${job_description}`;
-        }
-        if (normalizedCompanyUrl) {
-          prepDocumentContext += `\n\n## TARGET COMPANY URL:\n${normalizedCompanyUrl}`;
-        }
+        logStep("Scheduling baseline prep packet generation for " + session_type);
 
-        const prepSystemPrompt = PREP_PACKET_PROMPT + prepDocumentContext;
+        const prepTask = (async () => {
+          try {
+            // Build context for prep packet generation
+            let prepDocumentContext = "";
+            if (resume) {
+              prepDocumentContext += `\n\n## CANDIDATE'S RESUME:\n${resume}`;
+            }
+            if (job_description) {
+              prepDocumentContext += `\n\n## TARGET JOB DESCRIPTION:\n${job_description}`;
+            }
+            if (normalizedCompanyUrl) {
+              prepDocumentContext += `\n\n## TARGET COMPANY URL:\n${normalizedCompanyUrl}`;
+            }
 
-        // Call Anthropic to generate prep packet
-        const prepResponse = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": ANTHROPIC_API_KEY,
-            "anthropic-version": "2023-06-01"
-          },
-          body: JSON.stringify({
-            model: "claude-sonnet-4-20250514",
-            max_tokens: 4096,
-            system: prepSystemPrompt,
-            messages: [{
-              role: "user",
-              content: "Please generate my comprehensive interview preparation packet based on my documents."
-            }]
-          })
-        });
+            const prepSystemPrompt = PREP_PACKET_PROMPT + prepDocumentContext;
 
-        if (prepResponse.ok) {
-          const prepData = await prepResponse.json();
-          const prepPacketContent = prepData.content[0]?.text || "";
-          
-          if (prepPacketContent) {
-            // Save prep packet to session
-            await supabaseClient
-              .from("coaching_sessions")
-              .update({ prep_packet: { content: prepPacketContent } })
-              .eq("id", session_id);
-            
-            logStep("Prep packet generated and saved for " + session_type, { length: prepPacketContent.length });
+            const prepResponse = await fetch("https://api.anthropic.com/v1/messages", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-api-key": ANTHROPIC_API_KEY,
+                "anthropic-version": "2023-06-01",
+              },
+              body: JSON.stringify({
+                model: "claude-sonnet-4-20250514",
+                max_tokens: 4096,
+                system: prepSystemPrompt,
+                messages: [
+                  {
+                    role: "user",
+                    content: "Please generate my comprehensive interview preparation packet based on my documents.",
+                  },
+                ],
+              }),
+            });
+
+            if (prepResponse.ok) {
+              const prepData = await prepResponse.json();
+              const prepPacketContent = prepData.content[0]?.text || "";
+
+              if (prepPacketContent) {
+                await supabaseClient
+                  .from("coaching_sessions")
+                  .update({ prep_packet: { content: prepPacketContent } })
+                  .eq("id", session_id);
+
+                logStep("Prep packet generated and saved for " + session_type, { length: prepPacketContent.length });
+              }
+            } else {
+              logStep("Failed to generate prep packet (non-blocking)", { status: prepResponse.status });
+            }
+          } catch (e) {
+            logStep("Prep packet background task failed", { message: e instanceof Error ? e.message : String(e) });
           }
+        })();
+
+        const waitUntil = (globalThis as any)?.EdgeRuntime?.waitUntil;
+        if (typeof waitUntil === "function") {
+          waitUntil(prepTask);
         } else {
-          logStep("Failed to generate prep packet, continuing without it", { status: prepResponse.status });
+          // Fallback for environments without EdgeRuntime
+          prepTask.catch(() => void 0);
         }
       }
     } else if (!is_initial) {
@@ -399,8 +414,8 @@ serve(async (req) => {
     const fullSystemPrompt = systemPrompt + documentContext;
 
     // Get conversation history if session exists
-    let messages: Array<{role: string, content: string}> = [];
-    
+    let messages: Array<{ role: string; content: string }> = [];
+
     if (session_id && !is_initial) {
       const { data: chatHistory } = await supabaseClient
         .from("chat_messages")
@@ -409,9 +424,9 @@ serve(async (req) => {
         .order("created_at", { ascending: true });
 
       if (chatHistory) {
-        messages = chatHistory.map(m => ({
+        messages = chatHistory.map((m) => ({
           role: m.role === "assistant" ? "assistant" : "user",
-          content: m.content
+          content: m.content,
         }));
       }
     }
@@ -419,23 +434,47 @@ serve(async (req) => {
     // Add current message
     if (message) {
       messages.push({ role: "user", content: message });
-      
+
       // Save user message to database
       if (session_id) {
-        await supabaseClient
-          .from("chat_messages")
-          .insert({
-            session_id,
-            role: "user",
-            content: message
-          });
+        await supabaseClient.from("chat_messages").insert({
+          session_id,
+          role: "user",
+          content: message,
+        });
       }
     } else if (is_initial) {
       // For initial message, prompt the AI to start
-      messages.push({ 
-        role: "user", 
-        content: "Please begin the interview coaching session based on my documents." 
+      messages.push({
+        role: "user",
+        content: "Please begin the interview coaching session based on my documents.",
       });
+    }
+
+    // FAST START (Bug #10): return Question 1 immediately for mock/audio sessions.
+    if (is_initial && (session_type === "full_mock" || session_type === "premium_audio")) {
+      const assistantMessage =
+        "Hi — I’m Sarah Chen. I’ve reviewed your materials and we’ll run a realistic 10-question interview.\n\n" +
+        "**Question 1 of 10:** Tell me about yourself, and what specifically attracted you to this role?";
+
+      if (session_id) {
+        await supabaseClient.from("chat_messages").insert({
+          session_id,
+          role: "assistant",
+          content: assistantMessage,
+        });
+      }
+
+      return new Response(
+        JSON.stringify({
+          message: assistantMessage,
+          session_type,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        },
+      );
     }
 
     logStep("Calling Anthropic API", { messageCount: messages.length, sessionType: session_type, hasSession: !!session_id });

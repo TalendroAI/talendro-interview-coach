@@ -479,16 +479,48 @@ serve(async (req) => {
       email,
       session_type,
       test_email,
+      results,
     }: {
       session_id?: string;
       email?: string;
       session_type?: string;
       test_email?: boolean;
+      results?: {
+        overall_score?: number | null;
+        strengths?: string[] | null;
+        improvements?: string[] | null;
+        recommendations?: string | null;
+      } | null;
     } = body ?? {};
 
-    // Lightweight test mode (does not hit DB)
+    const sanitizeEmailHtml = (html: string) =>
+      // Keep tab/newline/carriage return; strip other control chars that can cause provider rejection
+      html.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+
+    const extractFinalSummaryMarkdown = (messages: ChatMessageRow[]): string | null => {
+      const sorted = [...messages].sort((a, b) => {
+        const ta = a.created_at ? Date.parse(a.created_at) : 0;
+        const tb = b.created_at ? Date.parse(b.created_at) : 0;
+        return ta - tb;
+      });
+
+      const assistantMessages = sorted.filter(
+        (m) => (m.role || "").toLowerCase() === "assistant" && typeof m.content === "string"
+      );
+
+      for (let i = assistantMessages.length - 1; i >= 0; i--) {
+        const c = assistantMessages[i].content.trim();
+        if (!c) continue;
+        if (/INTERVIEW COMPLETE/i.test(c) || /Overall Performance Score/i.test(c) || /Final Summary/i.test(c)) {
+          return c;
+        }
+      }
+      return null;
+    };
+
+    // Lightweight test mode
     if (test_email && email) {
-      const html = generateResultsEmailHtml({
+      const htmlRaw = generateResultsEmailHtml({
         sessionLabel: session_type || "Interview Coaching",
         email,
         messageCount: 35,
@@ -498,9 +530,11 @@ serve(async (req) => {
           "# Final Summary\n\nOverall Score: 85/100\n\n## Score Breakdown\n- communication: 82/100\n- content: 88/100\n- structure: 84/100\n",
       });
 
+      const html = sanitizeEmailHtml(htmlRaw);
+
       const emailResult = await resend.emails.send({
-        from: "Talendro Interview Coach <noreply@talendro.com>",
-        reply_to: "greg@talendro.com",
+        from: "Talendro Interview Coach <onboarding@resend.dev>",
+        reply_to: "Talendro Support <onboarding@resend.dev>",
         to: [email],
         subject: `[TEST] Your ${session_type || "Interview Coaching"} Results - Talendro™`,
         html,
@@ -567,33 +601,36 @@ serve(async (req) => {
 
     const transcript = buildTranscriptMarkdown(chatMessages);
 
-    logStep("Generating report", {
+    // IMPORTANT: Do not make an additional long AI call here.
+    // The transcript already contains Sarah's per-question feedback + final summary.
+    const analysisMarkdown =
+      effectiveSessionType === "quick_prep"
+        ? prepPacket ?? "No prep packet was saved for this session."
+        : extractFinalSummaryMarkdown(chatMessages) ??
+          "# Final Summary\n\nYour full transcript (including Sarah's feedback) is included above.";
+
+    logStep("Building email", {
       sessionType: effectiveSessionType,
       hasPrepPacket: Boolean(prepPacket),
       transcriptChars: transcript.length,
       messageCount,
+      noAdditionalAiCall: true,
     });
 
-    const report = await generateReportWithClaude({
-      prepPacket,
-      transcript,
-      sessionType: effectiveSessionType,
-    });
-
-    const analysisMarkdown = buildAnalysisMarkdown(report);
-
-    const emailHtml = generateResultsEmailHtml({
-      sessionLabel,
-      email,
-      messageCount,
-      prepPacket,
-      transcript,
-      analysisMarkdown,
-    });
+    const emailHtml = sanitizeEmailHtml(
+      generateResultsEmailHtml({
+        sessionLabel,
+        email,
+        messageCount,
+        prepPacket,
+        transcript,
+        analysisMarkdown,
+      }),
+    );
 
     const emailResponse = await resend.emails.send({
-      from: "Talendro Interview Coach <noreply@talendro.com>",
-      reply_to: "greg@talendro.com",
+      from: "Talendro Interview Coach <onboarding@resend.dev>",
+      reply_to: "Talendro Support <onboarding@resend.dev>",
       to: [email],
       subject: `Your ${sessionLabel} Results - Talendro™`,
       html: emailHtml,
@@ -602,36 +639,58 @@ serve(async (req) => {
     logStep("Email sent", { hasError: Boolean((emailResponse as any)?.error) });
 
     if ((emailResponse as any)?.error) {
-      throw new Error(`Email sending failed: ${(emailResponse as any).error?.message || "Unknown error"}`);
+      throw new Error(
+        `Email sending failed: ${(emailResponse as any).error?.message || "Unknown error"}`,
+      );
     }
 
-    // Save a compact summary to session_results (no schema changes)
-    const strengthsStrings = (report.strengths || []).slice(0, 3).map((s) =>
-      s.evidence_quote ? `${s.title} — “${s.evidence_quote}”` : s.title
-    );
-
-    const improvementsStrings = (report.improvements || []).slice(0, 3).map((i) =>
-      i.evidence_quote ? `${i.title} — “${i.evidence_quote}”` : i.title
-    );
-
-    const compactRecommendations = (report.action_items || []).slice(0, 6).join("\n");
+    // Store a compact summary (idempotent-ish: update latest row if it exists).
+    const overallScore =
+      (results && typeof results === "object" ? results.overall_score : null) ??
+      (() => {
+        const m = analysisMarkdown.match(/Overall\s*(?:Performance\s*)?Score\s*[:\s]*(\d+)\s*(?:\/\s*100|out of 100)?/i);
+        return m ? Number(m[1]) : null;
+      })();
 
     const sessionResultsToStore = {
-      overall_score: report.overall_score ?? null,
-      strengths: strengthsStrings.length ? strengthsStrings : null,
-      improvements: improvementsStrings.length ? improvementsStrings : null,
-      recommendations: compactRecommendations || null,
+      overall_score: typeof overallScore === "number" ? overallScore : null,
+      strengths: results?.strengths ?? null,
+      improvements: results?.improvements ?? null,
+      recommendations: results?.recommendations ?? null,
     };
 
-    await supabaseClient.from("session_results").insert({
-      session_id,
-      overall_score: sessionResultsToStore.overall_score,
-      strengths: sessionResultsToStore.strengths,
-      improvements: sessionResultsToStore.improvements,
-      recommendations: sessionResultsToStore.recommendations,
-      email_sent: true,
-      email_sent_at: new Date().toISOString(),
-    });
+    const { data: existingResults } = await supabaseClient
+      .from("session_results")
+      .select("id")
+      .eq("session_id", session_id)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    const existingId = Array.isArray(existingResults) ? existingResults[0]?.id : null;
+
+    if (existingId) {
+      await supabaseClient
+        .from("session_results")
+        .update({
+          overall_score: sessionResultsToStore.overall_score,
+          strengths: sessionResultsToStore.strengths,
+          improvements: sessionResultsToStore.improvements,
+          recommendations: sessionResultsToStore.recommendations,
+          email_sent: true,
+          email_sent_at: new Date().toISOString(),
+        })
+        .eq("id", existingId);
+    } else {
+      await supabaseClient.from("session_results").insert({
+        session_id,
+        overall_score: sessionResultsToStore.overall_score,
+        strengths: sessionResultsToStore.strengths,
+        improvements: sessionResultsToStore.improvements,
+        recommendations: sessionResultsToStore.recommendations,
+        email_sent: true,
+        email_sent_at: new Date().toISOString(),
+      });
+    }
 
     if (session.status !== "completed") {
       await supabaseClient
