@@ -31,6 +31,10 @@ export default function InterviewCoach() {
   const navigate = useNavigate();
   const { toast } = useToast();
   
+  // Track if this is a fresh checkout redirect (has checkout_session_id in URL)
+  const checkoutSessionId = searchParams.get('checkout_session_id');
+  const isFreshCheckoutRedirect = !!checkoutSessionId;
+  
   const [documents, setDocuments] = useState<DocumentInputs>({
     resume: '',
     jobDescription: '',
@@ -375,8 +379,6 @@ export default function InterviewCoach() {
       if (resumeSessionId) {
         return; // Handled by the other useEffect
       }
-      
-      const checkoutSessionId = searchParams.get('checkout_session_id');
       
       if (!sessionType || !userEmail) {
         setIsVerifying(false);
@@ -821,8 +823,8 @@ export default function InterviewCoach() {
         
         {/* Main Content */}
         <main className="flex-1 flex flex-col bg-gradient-subtle">
-          {/* Paused Session Banner - hide when showing completed state */}
-          {userEmail && !isSessionStarted && !isVerifying && !showCompletedDialog && (
+          {/* Paused Session Banner - hide when showing completed state OR when this is a fresh checkout redirect */}
+          {userEmail && !isSessionStarted && !isVerifying && !showCompletedDialog && !isFreshCheckoutRedirect && (
             <div className="p-4 pb-0">
               <PausedSessionBanner
                 userEmail={userEmail}
