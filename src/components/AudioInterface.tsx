@@ -990,24 +990,41 @@ Say something like "Welcome back! Let's continue where we left off." and then pr
   // Session ending screen
   if (isSessionEnding) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-tal-soft">
-        <div className="max-w-md w-full text-center animate-slide-up">
-          <div className="relative mb-8">
-            <div className="h-40 w-40 mx-auto rounded-full flex items-center justify-center bg-primary/10 border-4 border-primary/30">
-              <Loader2 className="h-16 w-16 text-primary animate-spin" />
+      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gradient-to-b from-background to-muted/30">
+        <div className="max-w-lg w-full animate-slide-up">
+          <div className="bg-card border border-border rounded-2xl shadow-xl overflow-hidden">
+            {/* Header */}
+            <div className="bg-primary/5 border-b border-border px-8 py-6">
+              <div className="flex items-center gap-4">
+                <div className="h-14 w-14 rounded-xl bg-primary flex items-center justify-center animate-pulse">
+                  <span className="text-2xl">📊</span>
+                </div>
+                <div>
+                  <h2 className="font-heading text-xl font-bold text-foreground">
+                    Wrapping Up Your Interview
+                  </h2>
+                  <p className="text-muted-foreground mt-1">
+                    Preparing your results...
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <h2 className="font-heading text-2xl font-bold text-foreground mb-2">
-            Wrapping Up Your Interview
-          </h2>
-          <p className="text-muted-foreground mb-4">
-            Please wait while we prepare and send your results...
-          </p>
-          
-          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
-            <span>Transcript captured</span>
+            {/* Progress */}
+            <div className="px-8 py-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <span className="text-foreground">Interview transcript captured</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <span className="text-foreground">Performance analysis complete</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                <span className="text-foreground font-medium">Sending results to your email...</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
