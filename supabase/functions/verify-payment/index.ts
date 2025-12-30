@@ -106,10 +106,33 @@ const getResponsiveEmailFooter = () => `
 </html>
 `;
 
+// Build a deep link that always points to the exact purchased session
+const buildSessionUrl = (opts: {
+  email: string;
+  sessionType?: string;
+  sessionId?: string;
+  checkoutSessionId?: string;
+}) => {
+  const baseUrl = "https://coach.talendro.com/interview-coach";
+  const params = new URLSearchParams();
+
+  if (opts.sessionId) params.set("session_id", opts.sessionId);
+  if (opts.checkoutSessionId) params.set("checkout_session_id", opts.checkoutSessionId);
+  if (opts.sessionType) params.set("session_type", opts.sessionType);
+  params.set("email", opts.email);
+
+  return `${baseUrl}?${params.toString()}`;
+};
+
 // Generate email HTML for new/standard purchase (Template A)
-const generateNewPurchaseEmail = (sessionType: string, email: string, customerName?: string) => {
+const generateNewPurchaseEmail = (
+  sessionType: string,
+  email: string,
+  customerName?: string,
+  sessionUrlOverride?: string
+) => {
   const productName = PRICE_CONFIG[sessionType as keyof typeof PRICE_CONFIG]?.name || "Interview Coaching Session";
-  const sessionUrl = `https://coach.talendro.com/interview-coach?session_type=${sessionType}&email=${encodeURIComponent(email)}`;
+  const sessionUrl = sessionUrlOverride ?? buildSessionUrl({ email, sessionType });
   const firstName = customerName ? customerName.split(' ')[0].charAt(0).toUpperCase() + customerName.split(' ')[0].slice(1).toLowerCase() : null;
   const greeting = firstName ? `Hello ${firstName}!` : 'Hello there!';
   
@@ -191,10 +214,17 @@ const generateNewPurchaseEmail = (sessionType: string, email: string, customerNa
 
 
 // Generate email HTML for upgrade purchase (Template B)
-const generateUpgradeEmail = (sessionType: string, email: string, upgradeCredit: number, previousPurchase: string, customerName?: string) => {
+const generateUpgradeEmail = (
+  sessionType: string,
+  email: string,
+  upgradeCredit: number,
+  previousPurchase: string,
+  customerName?: string,
+  sessionUrlOverride?: string
+) => {
   const productName = PRICE_CONFIG[sessionType as keyof typeof PRICE_CONFIG]?.name || "Interview Coaching Session";
   const previousProductName = PRICE_CONFIG[previousPurchase as keyof typeof PRICE_CONFIG]?.name || previousPurchase;
-  const sessionUrl = `https://coach.talendro.com/interview-coach?session_type=${sessionType}&email=${encodeURIComponent(email)}`;
+  const sessionUrl = sessionUrlOverride ?? buildSessionUrl({ email, sessionType });
   const firstName = customerName ? customerName.split(' ')[0].charAt(0).toUpperCase() + customerName.split(' ')[0].slice(1).toLowerCase() : null;
   const greeting = firstName ? `Hello ${firstName}!` : 'Hello there!';
   
@@ -293,7 +323,8 @@ const sendPurchaseEmail = async (
   isUpgrade: boolean,
   upgradeCredit: number,
   previousPurchase: string,
-  customerName?: string
+  customerName?: string,
+  sessionUrl?: string
 ) => {
   const productName = PRICE_CONFIG[sessionType as keyof typeof PRICE_CONFIG]?.name || "Interview Coaching Session";
   const firstName = customerName ? customerName.split(' ')[0] : null;
@@ -305,8 +336,8 @@ const sendPurchaseEmail = async (
       : `Welcome to Talendro™ - ${productName}`;
   
   const html = isUpgrade 
-    ? generateUpgradeEmail(sessionType, email, upgradeCredit, previousPurchase, customerName)
-    : generateNewPurchaseEmail(sessionType, email, customerName);
+    ? generateUpgradeEmail(sessionType, email, upgradeCredit, previousPurchase, customerName, sessionUrl)
+    : generateNewPurchaseEmail(sessionType, email, customerName, sessionUrl);
   
   try {
     const result = await resend.emails.send({
@@ -362,11 +393,17 @@ serve(async (req) => {
       
       const resend = new Resend(resendKey);
       const testSessionType = session_type || "premium_audio";
+      const testUrl = buildSessionUrl({
+        email,
+        sessionType: testSessionType,
+        sessionId: "TEST_SESSION_ID",
+        checkoutSessionId: "TEST_CHECKOUT_SESSION_ID",
+      });
       
       // Choose template based on test_upgrade flag
       const emailHtml = test_upgrade 
-        ? generateUpgradeEmail(testSessionType, email, 2900, "full_mock", "Test User")
-        : generateNewPurchaseEmail(testSessionType, email, "Test User");
+        ? generateUpgradeEmail(testSessionType, email, 2900, "full_mock", "Test User", testUrl)
+        : generateNewPurchaseEmail(testSessionType, email, "Test User", testUrl);
       
       const subject = test_upgrade
         ? "🚀 [TEST] Your Talendro Upgrade Is Complete!"
@@ -513,6 +550,13 @@ serve(async (req) => {
 
         // Send purchase confirmation email
         if (resend && customerEmail && sessionTypeFromMetadata) {
+          const sessionUrl = buildSessionUrl({
+            email: customerEmail,
+            sessionType: sessionTypeFromMetadata,
+            sessionId: updatedSession?.id,
+            checkoutSessionId: checkout_session_id,
+          });
+
           try {
             await sendPurchaseEmail(
               resend,
@@ -521,7 +565,8 @@ serve(async (req) => {
               isUpgrade,
               upgradeCredit,
               previousPurchase,
-              customerName
+              customerName,
+              sessionUrl
             );
           } catch (emailError) {
             // Don't fail the whole request if email fails

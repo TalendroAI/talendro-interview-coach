@@ -11,7 +11,7 @@ import { PausedSessionBanner } from '@/components/PausedSessionBanner';
 import { PausedSessionNotification } from '@/components/PausedSessionNotification';
 import { PausedSessionConflictDialog } from '@/components/PausedSessionConflictDialog';
 import { useSessionParams } from '@/hooks/useSessionParams';
-import { DocumentInputs } from '@/types/session';
+import { DocumentInputs, SessionType } from '@/types/session';
 import { useToast } from '@/hooks/use-toast';
 import { verifyPayment } from '@/services/api';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,7 +34,13 @@ export default function InterviewCoach() {
   
   // Track if this is a fresh checkout redirect (has checkout_session_id in URL)
   const checkoutSessionId = searchParams.get('checkout_session_id');
+  const sessionIdParam = searchParams.get('session_id');
   const isFreshCheckoutRedirect = !!checkoutSessionId;
+  const isTargetedLink = !!checkoutSessionId || !!sessionIdParam;
+
+  // Allow session links that only contain session_id (no session_type)
+  const [sessionTypeOverride, setSessionTypeOverride] = useState<SessionType | null>(null);
+  const resolvedSessionType = sessionTypeOverride ?? sessionType;
   
   const [documents, setDocuments] = useState<DocumentInputs>({
     resume: '',
@@ -92,7 +98,7 @@ export default function InterviewCoach() {
   const [selectedProInterviewType, setSelectedProInterviewType] = useState<ProInterviewType | null>(null);
 
   // Determine the effective session type for Pro subscribers
-  const effectiveSessionType = sessionType === 'pro' ? selectedProInterviewType : sessionType;
+  const effectiveSessionType = resolvedSessionType === 'pro' ? selectedProInterviewType : resolvedSessionType;
 
   // Check if documents are ready
   const isResumeComplete = documents.resume.trim().length > 50;
@@ -105,7 +111,7 @@ export default function InterviewCoach() {
     if (!userEmail) return null;
     
     // Determine what session type we're trying to start
-    const targetSessionType = effectiveSessionType || sessionType;
+    const targetSessionType = effectiveSessionType || resolvedSessionType;
     if (!targetSessionType) return null;
     
     try {
@@ -154,7 +160,7 @@ export default function InterviewCoach() {
     setIsDocumentsSaved(true);
     
     // For Pro users, wait until they select an interview type
-    if (sessionType === 'pro' && !selectedProInterviewType) {
+    if (resolvedSessionType === 'pro' && !selectedProInterviewType) {
       toast({
         title: 'Documents saved!',
         description: 'Now select which interview type you\'d like to start.',
@@ -319,6 +325,72 @@ export default function InterviewCoach() {
     }
   };
 
+  // Direct session link from purchase emails (?session_id=...)
+  useEffect(() => {
+    if (!sessionIdParam || !userEmail) return;
+
+    // If resuming from pause link, let the resume flow handle it
+    const resumeSessionId = searchParams.get('resume_session');
+    if (resumeSessionId) return;
+
+    const loadSessionFromLink = async () => {
+      setIsVerifying(true);
+
+      try {
+        const { data, error } = await supabase.functions.invoke('audio-session', {
+          body: {
+            action: 'get_session',
+            sessionId: sessionIdParam,
+            email: userEmail,
+          },
+        });
+
+        if (error) throw error;
+        if (!data?.ok || !data?.session) {
+          throw new Error(data?.error || 'Session not found');
+        }
+
+        const s = data.session as {
+          id: string;
+          sessionType: SessionType;
+          status: string;
+          documents?: { resume?: string; jobDescription?: string; companyUrl?: string };
+        };
+
+        setSessionId(s.id);
+        setSessionTypeOverride(s.sessionType);
+
+        const docs = s.documents ?? {};
+        setDocuments({
+          resume: docs.resume || '',
+          jobDescription: docs.jobDescription || '',
+          companyUrl: docs.companyUrl || '',
+        });
+
+        // If there are already docs saved on this session, don't force the user to re-save them
+        const hasAnyDocs = Boolean(
+          (docs.resume && docs.resume.trim().length > 0) ||
+            (docs.jobDescription && docs.jobDescription.trim().length > 0) ||
+            (docs.companyUrl && docs.companyUrl.trim().length > 0)
+        );
+        setIsDocumentsSaved(hasAnyDocs);
+
+        setIsPaymentVerified(s.status === 'active' || s.status === 'pending');
+      } catch (err) {
+        console.error('Error loading session from link:', err);
+        toast({
+          variant: 'destructive',
+          title: 'Session link invalid',
+          description: 'We couldn’t load that session. Please use your latest purchase email link.',
+        });
+      } finally {
+        setIsVerifying(false);
+      }
+    };
+
+    loadSessionFromLink();
+  }, [sessionIdParam, userEmail]);
+
   // Check for resume link from email (resume_session param)
   useEffect(() => {
     const resumeSessionId = searchParams.get('resume_session');
@@ -375,13 +447,13 @@ export default function InterviewCoach() {
   // Verify payment on page load
   useEffect(() => {
     const checkPayment = async () => {
-      // Skip if resuming from email link
+      // Skip if resuming from email link or using a direct session_id link
       const resumeSessionId = searchParams.get('resume_session');
-      if (resumeSessionId) {
-        return; // Handled by the other useEffect
+      if (resumeSessionId || sessionIdParam) {
+        return; // Handled by the other useEffects
       }
       
-      if (!sessionType || !userEmail) {
+      if (!resolvedSessionType || !userEmail) {
         setIsVerifying(false);
         return;
       }
@@ -390,7 +462,7 @@ export default function InterviewCoach() {
         const result = await verifyPayment(
           checkoutSessionId || undefined,
           userEmail,
-          sessionType
+          resolvedSessionType
         );
 
         if (result.verified && result.session) {
@@ -424,7 +496,7 @@ export default function InterviewCoach() {
     };
 
     checkPayment();
-  }, [sessionType, userEmail, searchParams]);
+  }, [resolvedSessionType, userEmail, searchParams]);
 
   // Callback when mock interview is complete
   const handleMockInterviewComplete = (messages: any[]) => {
@@ -458,7 +530,7 @@ export default function InterviewCoach() {
   };
 
   const handleStartSession = async () => {
-    if (!sessionType) {
+    if (!resolvedSessionType) {
       toast({
         title: 'Session type required',
         description: 'Please access this page with a valid session type parameter.',
@@ -468,7 +540,7 @@ export default function InterviewCoach() {
     }
 
     // For quick_prep, we need the content ready
-    if (sessionType === 'quick_prep' && !quickPrepContent) {
+    if (resolvedSessionType === 'quick_prep' && !quickPrepContent) {
       toast({
         title: 'Content not ready',
         description: 'Please wait for your prep materials to finish generating.',
@@ -478,7 +550,7 @@ export default function InterviewCoach() {
     }
 
     // For full_mock, we need the interview to be complete
-    if (sessionType === 'full_mock' && !isMockInterviewComplete) {
+    if (resolvedSessionType === 'full_mock' && !isMockInterviewComplete) {
       toast({
         title: 'Interview not complete',
         description: 'Please complete all interview questions before getting your results.',
@@ -533,7 +605,7 @@ export default function InterviewCoach() {
         body: {
           session_id: sessionId,
           email: userEmail,
-          session_type: sessionType,
+          session_type: resolvedSessionType,
           prep_content: contentToSend,
           results: resultsToSend,
         }
@@ -572,19 +644,27 @@ export default function InterviewCoach() {
     setIsSessionStarted(true);
     setIsDocumentsSaved(true); // Assume docs were saved before pause
     
-    // Fetch documents from the paused session
+    // Fetch documents from the paused session (use backend function to bypass RLS)
     try {
-      const { data: sessionData } = await supabase
-        .from('coaching_sessions')
-        .select('resume_text, job_description, company_url')
-        .eq('id', pausedSessionId)
-        .single();
-      
-      if (sessionData) {
+      const { data, error } = await supabase.functions.invoke('audio-session', {
+        body: {
+          action: 'get_session',
+          sessionId: pausedSessionId,
+          email: userEmail,
+        },
+      });
+
+      if (!error && data?.ok && data?.session?.documents) {
+        const docs = data.session.documents as {
+          resume?: string;
+          jobDescription?: string;
+          companyUrl?: string;
+        };
+
         setDocuments({
-          resume: sessionData.resume_text || '',
-          jobDescription: sessionData.job_description || '',
-          companyUrl: sessionData.company_url || '',
+          resume: docs.resume || '',
+          jobDescription: docs.jobDescription || '',
+          companyUrl: docs.companyUrl || '',
         });
       }
     } catch (err) {
@@ -680,7 +760,7 @@ export default function InterviewCoach() {
         full_mock: 'Full Mock Interview',
         premium_audio: 'Premium Audio Mock',
         pro: 'Pro Session',
-      }[sessionType || ''] || 'coaching session';
+      }[resolvedSessionType || ''] || 'coaching session';
       
       return (
         <div className="flex-1 flex items-center justify-center p-8">
@@ -726,7 +806,7 @@ export default function InterviewCoach() {
     if (!isSessionStarted) {
       return (
         <WelcomeMessage 
-          sessionType={sessionType} 
+          sessionType={resolvedSessionType} 
           userEmail={userEmail}
           isPaymentVerified={isPaymentVerified}
           isReady={isDocumentsReady}
@@ -789,7 +869,7 @@ export default function InterviewCoach() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header 
-        sessionType={sessionType}
+        sessionType={resolvedSessionType}
         showPauseButton={headerPauseState.showButton}
         isPaused={headerPauseState.isPaused}
         isPausing={headerPauseState.isPausing}
@@ -806,7 +886,7 @@ export default function InterviewCoach() {
             onDocumentsChange={setDocuments}
             onStartSession={handleStartSession}
             isLoading={isLoading || isGeneratingContent}
-            sessionType={sessionType}
+            sessionType={resolvedSessionType}
             isSessionStarted={isSessionStarted}
             isPaymentVerified={isPaymentVerified}
             onSaveDocuments={handleSaveDocuments}
@@ -824,8 +904,8 @@ export default function InterviewCoach() {
         
         {/* Main Content */}
         <main className="flex-1 flex flex-col bg-gradient-subtle">
-          {/* Paused Session Banner - show full banner when NOT a fresh checkout redirect */}
-          {userEmail && !isSessionStarted && !isVerifying && !showCompletedDialog && !isFreshCheckoutRedirect && (
+          {/* Paused Session Banner - show full banner when NOT a targeted session link */}
+          {userEmail && !isSessionStarted && !isVerifying && !showCompletedDialog && !isTargetedLink && (
             <div className="p-4 pb-0">
               <PausedSessionBanner
                 userEmail={userEmail}
@@ -835,8 +915,8 @@ export default function InterviewCoach() {
             </div>
           )}
           
-          {/* Non-blocking notification for paused sessions when this IS a fresh checkout redirect */}
-          {userEmail && !isSessionStarted && !isVerifying && !showCompletedDialog && isFreshCheckoutRedirect && (
+          {/* Non-blocking notification for paused sessions when this IS a targeted session link */}
+          {userEmail && !isSessionStarted && !isVerifying && !showCompletedDialog && isTargetedLink && (
             <div className="p-4 pb-0">
               <PausedSessionNotification userEmail={userEmail} />
             </div>
