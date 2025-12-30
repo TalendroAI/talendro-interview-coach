@@ -236,7 +236,8 @@ serve(async (req) => {
       resume, 
       job_description, 
       company_url,
-      is_initial 
+      is_initial,
+      first_name
     } = await req.json();
 
     if (!session_type) {
@@ -452,10 +453,47 @@ serve(async (req) => {
     }
 
     // FAST START (Bug #10): return Question 1 immediately for mock/audio sessions.
+    // Now includes personalized greeting with firstName, company_name, role_title
     if (is_initial && (session_type === "full_mock" || session_type === "premium_audio")) {
+      // Extract company name from URL
+      const extractCompanyName = (url: string): string => {
+        if (!url) return 'the company';
+        try {
+          const domain = url.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+          const name = domain.split('.')[0];
+          return name.charAt(0).toUpperCase() + name.slice(1);
+        } catch {
+          return 'the company';
+        }
+      };
+
+      // Extract role title from job description (first line or first sentence usually contains it)
+      const extractRoleTitle = (jd: string): string => {
+        if (!jd) return 'this position';
+        const firstLine = jd.trim().split('\n')[0].trim();
+        // Check if first line looks like a title (short, no punctuation at end except colon)
+        if (firstLine.length < 100 && !firstLine.endsWith('.')) {
+          // Clean up common prefixes
+          const cleaned = firstLine
+            .replace(/^(job title|position|role|title)[:\s]*/i, '')
+            .replace(/[:\u2014\u2013-]\s*$/, '')
+            .trim();
+          if (cleaned.length > 3 && cleaned.length < 80) {
+            return cleaned;
+          }
+        }
+        return 'this position';
+      };
+
+      const candidateName = first_name?.trim() || 'there';
+      const companyName = extractCompanyName(normalizedCompanyUrl || '');
+      const roleTitle = extractRoleTitle(job_description || '');
+
       const assistantMessage =
-        "Hi — I’m Sarah Chen. I’ve reviewed your materials and we’ll run a realistic 10-question interview.\n\n" +
-        "**Question 1 of 10:** Tell me about yourself, and what specifically attracted you to this role?";
+        `Hello ${candidateName}, I'm Sarah from the hiring team at ${companyName}. Thank you for your interest in the ${roleTitle} position — we're excited to learn more about you.\n\n` +
+        `Here's how this will work: We'll have a focused 30-minute interview with 10 questions covering your background, relevant experience, and fit for this role. I'll provide feedback after each response to help you improve.\n\n` +
+        `Ready? Let's begin.\n\n` +
+        `**Question 1 of 10:** Tell me about yourself and what specifically attracted you to this opportunity at ${companyName}.`;
 
       if (session_id) {
         await supabaseClient.from("chat_messages").insert({
