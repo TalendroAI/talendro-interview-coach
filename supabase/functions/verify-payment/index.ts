@@ -594,32 +594,81 @@ serve(async (req) => {
       }
     }
 
-    // If no checkout session ID, check for active session by email first
-    const { data: activeSession, error: activeError } = await supabaseClient
+    // If no checkout session ID, resolve the MOST RECENT session for this email + type.
+    // This makes purchase email links that only include (email + session_type) still land on the newest paid session,
+    // even if there's an older paused session.
+    const { data: latestSession, error: latestError } = await supabaseClient
       .from("coaching_sessions")
       .select("*")
       .eq("email", email)
       .eq("session_type", session_type)
-      .eq("status", "active")
+      .in("status", ["active", "pending"])
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    if (activeError) {
-      logStep("Error fetching active session", { error: activeError });
+    if (latestError) {
+      logStep("Error fetching latest session", { error: latestError });
     }
 
-    if (activeSession) {
-      logStep("Active session found", { sessionId: activeSession.id });
-      return new Response(JSON.stringify({ 
-        verified: true, 
-        session: activeSession,
-        session_status: "active",
-        message: "Active session found"
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      });
+    if (latestSession) {
+      if (latestSession.status === "active") {
+        logStep("Latest session is active", { sessionId: latestSession.id });
+        return new Response(
+          JSON.stringify({
+            verified: true,
+            session: latestSession,
+            session_status: "active",
+            message: "Active session found",
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        );
+      }
+
+      // If the newest session is pending, try to verify it by looking up its stored checkout session.
+      // This avoids requiring checkout_session_id in the URL.
+      if (latestSession.status === "pending" && latestSession.stripe_checkout_session_id) {
+        try {
+          const pendingCheckout = await stripe.checkout.sessions.retrieve(
+            latestSession.stripe_checkout_session_id
+          );
+
+          if (pendingCheckout.payment_status === "paid") {
+            const { data: activatedSession, error: activateError } = await supabaseClient
+              .from("coaching_sessions")
+              .update({
+                status: "active",
+                stripe_payment_intent_id: pendingCheckout.payment_intent as string,
+              })
+              .eq("id", latestSession.id)
+              .select()
+              .single();
+
+            if (activateError) {
+              logStep("Error activating pending session", { error: activateError });
+            } else {
+              logStep("Pending session activated via fallback", { sessionId: activatedSession?.id });
+              return new Response(
+                JSON.stringify({
+                  verified: true,
+                  session: activatedSession,
+                  session_status: "active",
+                  message: "Pending session verified and activated",
+                }),
+                {
+                  headers: { ...corsHeaders, "Content-Type": "application/json" },
+                  status: 200,
+                }
+              );
+            }
+          }
+        } catch (e) {
+          logStep("Error verifying pending session via Stripe", { message: String(e) });
+        }
+      }
     }
 
     // Check for completed session by email

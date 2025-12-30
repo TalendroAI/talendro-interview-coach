@@ -7,7 +7,6 @@ import { ChatInterface } from '@/components/ChatInterface';
 import { AudioInterface } from '@/components/AudioInterface';
 import { QuickPrepContent } from '@/components/QuickPrepContent';
 import { SessionCompletedDialog } from '@/components/SessionCompletedDialog';
-import { PausedSessionBanner } from '@/components/PausedSessionBanner';
 import { PausedSessionNotification } from '@/components/PausedSessionNotification';
 import { PausedSessionConflictDialog } from '@/components/PausedSessionConflictDialog';
 import { useSessionParams } from '@/hooks/useSessionParams';
@@ -32,11 +31,8 @@ export default function InterviewCoach() {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Track if this is a fresh checkout redirect (has checkout_session_id in URL)
   const checkoutSessionId = searchParams.get('checkout_session_id');
   const sessionIdParam = searchParams.get('session_id');
-  const isFreshCheckoutRedirect = !!checkoutSessionId;
-  const isTargetedLink = !!checkoutSessionId || !!sessionIdParam;
 
   // Allow session links that only contain session_id (no session_type)
   const [sessionTypeOverride, setSessionTypeOverride] = useState<SessionType | null>(null);
@@ -140,18 +136,19 @@ export default function InterviewCoach() {
 
   const handleSaveDocuments = async () => {
     if (isResumeComplete && isJobComplete) {
-      // First check if user has any paused sessions of the SAME type
-      const pausedSession = await checkForPausedSessions();
-      
-      if (pausedSession) {
-        // Show conflict dialog only for same session type
-        setConflictPausedSession(pausedSession);
-        setShowConflictDialog(true);
-        setPendingSaveAction(true);
-        return; // Don't proceed until user makes a choice
+      // Paused sessions should be non-blocking once a purchased session exists.
+      // Only check for conflicts when we don't yet have a session to work with.
+      if (!sessionId) {
+        const pausedSession = await checkForPausedSessions();
+
+        if (pausedSession) {
+          setConflictPausedSession(pausedSession);
+          setShowConflictDialog(true);
+          setPendingSaveAction(true);
+          return;
+        }
       }
-      
-      // No conflict (different type or no paused sessions), proceed with saving
+
       proceedWithSaveDocuments();
     }
   };
@@ -904,19 +901,8 @@ export default function InterviewCoach() {
         
         {/* Main Content */}
         <main className="flex-1 flex flex-col bg-gradient-subtle">
-          {/* Paused Session Banner - show full banner when NOT a targeted session link */}
-          {userEmail && !isSessionStarted && !isVerifying && !showCompletedDialog && !isTargetedLink && (
-            <div className="p-4 pb-0">
-              <PausedSessionBanner
-                userEmail={userEmail}
-                onResume={handleResumePausedSession}
-                onAbandon={handleAbandonSession}
-              />
-            </div>
-          )}
-          
-          {/* Non-blocking notification for paused sessions when this IS a targeted session link */}
-          {userEmail && !isSessionStarted && !isVerifying && !showCompletedDialog && isTargetedLink && (
+          {/* Paused Sessions - always show as a small, non-blocking notification */}
+          {userEmail && !isSessionStarted && !isVerifying && !showCompletedDialog && (
             <div className="p-4 pb-0">
               <PausedSessionNotification userEmail={userEmail} />
             </div>
