@@ -49,8 +49,11 @@ export function CheckoutDialog({
     return `$${(cents / 100).toFixed(2)}`;
   };
 
-  const hasDiscount = pricing && (pricing.upgradeCredit > 0 || pricing.discountAmount > 0);
+  const hasDiscount = pricing && pricing.appliedDiscount > 0;
   const hasAppliedPromo = pricing?.discountCode && pricing.discountAmount > 0;
+  
+  // Show which discount won when both are available
+  const showDiscountExplanation = pricing && pricing.upgradeCredit > 0 && pricing.discountAmount > 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -157,19 +160,30 @@ export function CheckoutDialog({
               </span>
             </div>
 
-            {/* Upgrade Credit Line */}
-            {pricing && pricing.upgradeCredit > 0 && (
+            {/* Applied Discount Line (only show the winning one) */}
+            {pricing && pricing.appliedDiscount > 0 && (
               <div className="flex justify-between items-center text-sm text-green-600 dark:text-green-400">
-                <span>Upgrade credit</span>
-                <span>-{formatPrice(pricing.upgradeCredit)}</span>
+                <span>
+                  {pricing.appliedDiscountType === 'upgrade' 
+                    ? 'Upgrade credit' 
+                    : `Promo (${pricing.discountPercent}% off)`}
+                </span>
+                <span>-{formatPrice(pricing.appliedDiscount)}</span>
               </div>
             )}
 
-            {/* Promo Discount Line */}
-            {pricing && pricing.discountAmount > 0 && (
-              <div className="flex justify-between items-center text-sm text-green-600 dark:text-green-400">
-                <span>Promo ({pricing.discountPercent}% off)</span>
-                <span>-{formatPrice(pricing.discountAmount)}</span>
+            {/* Explanation when both discounts available but only one applied */}
+            {showDiscountExplanation && (
+              <div className="text-xs text-muted-foreground bg-muted/50 rounded p-2 mt-1">
+                {pricing.appliedDiscountType === 'upgrade' ? (
+                  <>
+                    ✓ Upgrade credit applied ({formatPrice(pricing.upgradeCredit)}) — better than your promo code ({formatPrice(pricing.discountAmount)})
+                  </>
+                ) : (
+                  <>
+                    ✓ Promo code applied ({formatPrice(pricing.discountAmount)}) — better than upgrade credit ({formatPrice(pricing.upgradeCredit)})
+                  </>
+                )}
               </div>
             )}
 
@@ -186,7 +200,7 @@ export function CheckoutDialog({
                   </div>
                 </div>
                 <div className="text-xs text-muted-foreground text-center">
-                  You save {formatPrice(pricing.upgradeCredit + pricing.discountAmount)}!
+                  You save {formatPrice(pricing.appliedDiscount)}!
                 </div>
               </>
             )}

@@ -98,10 +98,16 @@ export interface DiscountValidation {
 
 export interface PricingBreakdown {
   originalPrice: number;
+  /** Raw upgrade credit amount in cents (before winner selection) */
   upgradeCredit: number;
+  /** Raw promo discount amount in cents (before winner selection) */
   discountAmount: number;
   discountPercent: number;
   discountCode?: string;
   discountCodeId?: string;
+  /** Which discount type was applied: 'none' | 'upgrade' | 'promo' */
+  appliedDiscountType: 'none' | 'upgrade' | 'promo';
+  /** The actual discount applied (the winning one) */
+  appliedDiscount: number;
   finalPrice: number;
 }
