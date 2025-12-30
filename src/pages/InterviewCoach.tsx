@@ -637,6 +637,8 @@ export default function InterviewCoach() {
     setSessionId(pausedSessionId);
     setResumeFromPause(true);
     setResumingSessionType(pausedSessionType);
+    // CRITICAL: Set sessionTypeOverride so resolvedSessionType is available for handleStartSession
+    setSessionTypeOverride(pausedSessionType as SessionType);
     setIsPaymentVerified(true);
     setIsSessionStarted(true);
     setIsDocumentsSaved(true); // Assume docs were saved before pause
