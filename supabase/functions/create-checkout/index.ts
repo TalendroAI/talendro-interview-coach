@@ -305,6 +305,54 @@ serve(async (req) => {
     });
 
     const checkoutSession = await stripe.checkout.sessions.create(checkoutOptions);
+
+    // Fail-safe: verify Stripe actually applied the expected discount.
+    // If Stripe doesn't reflect the correct total, we EXPIRE the session and hard-fail so customers cannot be charged the wrong amount.
+    let stripeAmountTotal: number | null = null;
+    let stripeAmountDiscount: number | null = null;
+    if (appliedDiscount > 0 && !isSubscription) {
+      try {
+        const verified = await stripe.checkout.sessions.retrieve(checkoutSession.id, {
+          expand: ["total_details"],
+        });
+
+        stripeAmountTotal = (verified as any).amount_total ?? null;
+        stripeAmountDiscount = (verified as any).total_details?.amount_discount ?? null;
+
+        const expectedTotal = finalPrice;
+        const expectedDiscount = appliedDiscount;
+
+        if (stripeAmountTotal !== expectedTotal || stripeAmountDiscount !== expectedDiscount) {
+          logStep("DISCOUNT VERIFICATION FAILED — expiring checkout session", {
+            checkoutSessionId: checkoutSession.id,
+            expectedTotalCents: expectedTotal,
+            stripeAmountTotalCents: stripeAmountTotal,
+            expectedDiscountCents: expectedDiscount,
+            stripeAmountDiscountCents: stripeAmountDiscount,
+            discountType,
+          });
+
+          await stripe.checkout.sessions.expire(checkoutSession.id);
+          throw new Error(
+            `Checkout discount mismatch (blocked): expected total $${(expectedTotal / 100).toFixed(2)} with $${(
+              expectedDiscount / 100
+            ).toFixed(2)} discount.`
+          );
+        }
+
+        logStep("Discount verified", {
+          checkoutSessionId: checkoutSession.id,
+          amountTotal: stripeAmountTotal,
+          amountDiscount: stripeAmountDiscount,
+        });
+      } catch (e) {
+        // If anything about verification fails, fail closed.
+        const msg = e instanceof Error ? e.message : String(e);
+        logStep("Discount verification error (failing closed)", { message: msg });
+        throw new Error(msg);
+      }
+    }
+
     // Update session with checkout session ID
     await supabaseClient
       .from("coaching_sessions")
@@ -329,15 +377,20 @@ serve(async (req) => {
         typeof checkoutSession.url === "string" ? checkoutSession.url.includes("/test_") : null,
       discountType,
       discountApplied: appliedDiscount > 0 ? appliedDiscount / 100 : 0,
+      stripeAmountTotal,
+      stripeAmountDiscount,
     });
 
     return new Response(
       JSON.stringify({
         url: checkoutSession.url,
+        checkout_session_id: checkoutSession.id,
         debug: {
           stripe_key_type: keyType,
           stripe_account_livemode: stripeAccountLivemode,
           checkout_url_host: checkoutUrlHost,
+          stripe_amount_total: stripeAmountTotal !== null ? stripeAmountTotal / 100 : null,
+          stripe_amount_discount: stripeAmountDiscount !== null ? stripeAmountDiscount / 100 : null,
         },
         discount_type: discountType,
         discount_applied: appliedDiscount > 0 ? appliedDiscount / 100 : 0,
