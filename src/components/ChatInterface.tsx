@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, User, Bot, Loader2, Pause, Play, Mic } from 'lucide-react';
+import { Send, User, Bot, Loader2, Pause, Play, Mic, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Progress } from '@/components/ui/progress';
 import { SessionType, SESSION_CONFIGS, DocumentInputs } from '@/types/session';
 import { sendAIMessage } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
@@ -420,9 +421,17 @@ export function ChatInterface({
       {/* Resuming State */}
       {isResuming && !isInitialized && (
         <div className="flex-1 flex items-center justify-center py-8">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
-            <p className="text-muted-foreground">Resuming your interview session...</p>
+          <div className="w-full max-w-md bg-card border border-border rounded-xl p-6 shadow-lg mx-4">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center animate-pulse">
+                <Play className="h-6 w-6 text-primary-foreground" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground">Resuming Session</h3>
+                <p className="text-sm text-muted-foreground">Loading your previous progress...</p>
+              </div>
+            </div>
+            <Progress value={50} className="h-2" />
           </div>
         </div>
       )}
@@ -433,10 +442,28 @@ export function ChatInterface({
         isPaused && "opacity-75"
       )}>
         {!isInitialized && isLoading && !isResuming && (
-          <div className="flex items-center justify-center py-8">
-            <div className="text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
-              <p className="text-muted-foreground">Preparing your personalized coaching session...</p>
+          <div className="flex items-center justify-center py-12">
+            <div className="w-full max-w-md bg-card border border-border rounded-xl p-6 shadow-lg">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center animate-pulse">
+                  <span className="text-xl">🎯</span>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-foreground">Preparing Your Session</h3>
+                  <p className="text-sm text-muted-foreground">Analyzing your documents...</p>
+                </div>
+              </div>
+              <Progress value={30} className="h-2 mb-3" />
+              <div className="flex items-center gap-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-500" />
+                  <span className="text-muted-foreground">Documents loaded</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <span className="text-foreground">Building prep packet...</span>
+                </div>
+              </div>
             </div>
           </div>
         )}

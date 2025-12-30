@@ -1,6 +1,6 @@
-import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CompleteSessionButton } from './CompleteSessionButton';
+import { GenerationProgress } from './GenerationProgress';
 
 interface QuickPrepContentProps {
   content: string | null;
@@ -10,25 +10,27 @@ interface QuickPrepContentProps {
   isCompletingSession: boolean;
   isSessionCompleted: boolean;
   isContentReady: boolean;
+  companyUrl?: string;
 }
 
-export function QuickPrepContent({ content, isLoading, error, onCompleteSession, isCompletingSession, isSessionCompleted, isContentReady }: QuickPrepContentProps) {
+export function QuickPrepContent({ 
+  content, 
+  isLoading, 
+  error, 
+  onCompleteSession, 
+  isCompletingSession, 
+  isSessionCompleted, 
+  isContentReady,
+  companyUrl 
+}: QuickPrepContentProps) {
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8 bg-hero">
-        <div className="text-center max-w-md">
-          <Loader2 className="h-16 w-16 animate-spin text-primary mx-auto mb-6" />
-          <h2 className="font-heading text-2xl font-bold text-foreground mb-3">
-            Generating Your Prep Materials...
-          </h2>
-          <p className="text-muted-foreground text-lg">
-            Our AI is analyzing your resume, the job description, and company to create personalized interview preparation materials.
-          </p>
-          <p className="text-muted-foreground mt-4 text-sm">
-            This usually takes 30-60 seconds.
-          </p>
-        </div>
-      </div>
+      <GenerationProgress 
+        isActive={isLoading}
+        companyUrl={companyUrl}
+        sessionType="quick_prep"
+        estimatedDuration={75}
+      />
     );
   }
 

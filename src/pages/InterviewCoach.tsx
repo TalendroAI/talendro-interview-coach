@@ -872,6 +872,7 @@ export default function InterviewCoach() {
           isCompletingSession={isLoading}
           isSessionCompleted={isSessionCompleted}
           isContentReady={!!quickPrepContent && !isGeneratingContent}
+          companyUrl={documents.companyUrl}
         />
       );
     }
