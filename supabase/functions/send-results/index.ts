@@ -228,6 +228,7 @@ function buildTranscriptMarkdown(messages: ChatMessageRow[]): string {
 
 function generateResultsEmailHtml(opts: {
   sessionLabel: string;
+  sessionType: string;
   email: string;
   messageCount: number;
   prepPacket: string | null;
@@ -235,6 +236,24 @@ function generateResultsEmailHtml(opts: {
   analysisMarkdown: string;
 }): string {
   const prepHtml = opts.prepPacket ? formatMarkdownToHtml(opts.prepPacket) : null;
+  const isQuickPrep = opts.sessionType === "quick_prep";
+  const hasTranscript = !isQuickPrep && opts.transcript && opts.transcript.trim().length > 0;
+
+  // Build sections based on session type
+  const section1Html = `
+    <h2 style="color:#2F6DF6;font-size:20px;margin:0 0 16px 0;padding-bottom:10px;border-bottom:2px solid #00C4CC;">📋 SECTION 1 — Prep Packet</h2>
+    ${prepHtml ? `<div style="margin:14px 0 36px 0;padding:20px;background:#F8FAFC;border-radius:12px;border:1px solid #E5E7EB;">${prepHtml}</div>` : `<p style="margin:0 0 36px 0;color:#6B7280;font-style:italic;">No prep packet was saved for this session.</p>`}
+  `;
+
+  const section2Html = hasTranscript ? `
+    <h2 style="color:#2F6DF6;font-size:20px;margin:0 0 16px 0;padding-bottom:10px;border-bottom:2px solid #00C4CC;">💬 SECTION 2 — Interview Transcript</h2>
+    <div style="margin:14px 0 36px 0;">${formatTranscriptToHtml(opts.transcript)}</div>
+  ` : "";
+
+  const section3Html = !isQuickPrep ? `
+    <h2 style="color:#2F6DF6;font-size:20px;margin:0 0 16px 0;padding-bottom:10px;border-bottom:2px solid #00C4CC;">📊 SECTION 3 — Final Summary</h2>
+    <div style="margin:14px 0 36px 0;padding:20px;background:#F0FDF4;border-radius:12px;border:1px solid #BBF7D0;">${formatMarkdownToHtml(opts.analysisMarkdown)}</div>
+  ` : "";
 
   return `
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -267,20 +286,15 @@ function generateResultsEmailHtml(opts: {
           <tr>
             <td style="background-color:#E8F4FE;padding:28px 48px;border-bottom:1px solid #e5e7eb;">
               <p style="margin:0;color:#6B7280;font-size:14px;">📧 Sent to: <strong style="color:#2C2F38;">${escapeHtml(opts.email)}</strong></p>
-              <p style="margin:10px 0 0 0;color:#6B7280;font-size:14px;">💬 Messages captured: <strong style="color:#2C2F38;">${opts.messageCount}</strong></p>
+              ${!isQuickPrep ? `<p style="margin:10px 0 0 0;color:#6B7280;font-size:14px;">💬 Messages captured: <strong style="color:#2C2F38;">${opts.messageCount}</strong></p>` : ''}
             </td>
           </tr>
 
           <tr>
             <td class="content-padding" style="padding:48px;">
-              <h2 style="color:#2F6DF6;font-size:20px;margin:0 0 16px 0;padding-bottom:10px;border-bottom:2px solid #00C4CC;">📋 SECTION 1 — Prep Packet</h2>
-              ${prepHtml ? `<div style="margin:14px 0 36px 0;padding:20px;background:#F8FAFC;border-radius:12px;border:1px solid #E5E7EB;">${prepHtml}</div>` : `<p style="margin:0 0 36px 0;color:#6B7280;font-style:italic;">No prep packet was saved for this session.</p>`}
-
-              <h2 style="color:#2F6DF6;font-size:20px;margin:0 0 16px 0;padding-bottom:10px;border-bottom:2px solid #00C4CC;">💬 SECTION 2 — Interview Transcript</h2>
-              <div style="margin:14px 0 36px 0;">${formatTranscriptToHtml(opts.transcript)}</div>
-
-              <h2 style="color:#2F6DF6;font-size:20px;margin:0 0 16px 0;padding-bottom:10px;border-bottom:2px solid #00C4CC;">📊 SECTION 3 — Analysis & Recommendations</h2>
-              <div style="margin:14px 0 36px 0;padding:20px;background:#F0FDF4;border-radius:12px;border:1px solid #BBF7D0;">${formatMarkdownToHtml(opts.analysisMarkdown)}</div>
+              ${section1Html}
+              ${section2Html}
+              ${section3Html}
 
               <table width="100%" cellpadding="0" cellspacing="0" style="margin:40px 0;">
                 <tr>
@@ -364,13 +378,17 @@ serve(async (req) => {
     };
 
     if (test_email && email) {
+      const testSessionType = session_type || "full_mock";
+      const testLabel = testSessionType === "quick_prep" ? "Quick Prep Packet" : 
+                        testSessionType === "premium_audio" ? "Premium Audio Interview" : "Full Mock Interview";
       const htmlRaw = generateResultsEmailHtml({
-        sessionLabel: session_type || "Interview Coaching",
+        sessionLabel: testLabel,
+        sessionType: testSessionType,
         email,
         messageCount: 35,
-        prepPacket: "## Company Overview\nAcme Corp is a leading technology company.",
-        transcript: "Sarah (Coach):\nQuestion 1 of 10...\n\n---\n\nYou:\nMy answer...",
-        analysisMarkdown: "# Final Summary\n\nOverall Score: 85/100\n\n## Score Breakdown\n- Communication: 82/100\n- Content: 88/100",
+        prepPacket: "## Company Overview\nAcme Corp is a leading technology company.\n\n### Key Products\n- Product A\n- Product B\n\n### Interview Tips\n**Be specific** about your experience.",
+        transcript: "Sarah (Coach):\nLet's start with your first question. Tell me about a time you led a challenging project.\n\n---\n\nYou:\nAt my previous company, I led a team of 5 engineers to rebuild our payment system. We faced tight deadlines and legacy code challenges.\n\n---\n\nSarah (Coach):\n**Great structure!** You clearly identified the situation and challenge. Next question: How did you handle a conflict with a team member?",
+        analysisMarkdown: "# 🎯 INTERVIEW COMPLETE\n\n## Overall Performance Score: 85/100\n\n### Score Breakdown\n- Communication: 82/100\n- Technical Depth: 88/100\n- Problem Solving: 85/100\n\n---\n\n## ✅ Top 3 Strengths\n\n**1. Clear Communication**\nYou articulated complex ideas simply and effectively.\n\n**2. Strong Examples**\nYour STAR responses were well-structured with specific metrics.\n\n**3. Technical Knowledge**\nDemonstrated deep understanding of system architecture.\n\n---\n\n## 📈 Top 3 Areas for Improvement\n\n**1. Time Management**\nSome answers ran long. Practice 2-minute responses.\n\n**2. Quantify Results**\nAdd more specific numbers and percentages.\n\n**3. Ask Clarifying Questions**\nDon't assume - ask before answering.\n\n---\n\n## 🎯 Personalized Action Items\n\n1. Practice STAR responses with a timer\n2. Prepare 5 quantified achievements\n3. Record yourself and review",
       });
 
       const html = sanitizeEmailHtml(htmlRaw);
@@ -379,7 +397,7 @@ serve(async (req) => {
         from: "Talendro Interview Coach <results@talendro.com>",
         reply_to: "Talendro Support <support@talendro.com>",
         to: [email],
-        subject: `[TEST] Your ${session_type || "Interview Coaching"} Results - Talendro™`,
+        subject: `[TEST] Your ${testLabel} Results - Talendro™`,
         html,
       });
 
@@ -464,7 +482,7 @@ serve(async (req) => {
     });
 
     const emailHtml = sanitizeEmailHtml(
-      generateResultsEmailHtml({ sessionLabel, email, messageCount, prepPacket, transcript, analysisMarkdown }),
+      generateResultsEmailHtml({ sessionLabel, sessionType: effectiveSessionType, email, messageCount, prepPacket, transcript, analysisMarkdown }),
     );
 
     // Optional: server-side preview for debugging (does not send or write to DB)
