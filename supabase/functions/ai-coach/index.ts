@@ -457,11 +457,24 @@ serve(async (req) => {
     if (is_initial && (session_type === "full_mock" || session_type === "premium_audio")) {
       const candidateName = first_name?.trim() || 'there';
 
-      const assistantMessage =
-        `Hello ${candidateName}, I'm Sarah, and I'll be conducting your interview today. Thank you for taking the time to prepare — I've reviewed your materials and I'm excited to learn more about you.\n\n` +
-        `Here's how this will work: We'll have a focused 30-minute interview with 10 questions covering your background, relevant experience, and fit for this role. I'll provide feedback after each response to help you strengthen your answers.\n\n` +
-        `Ready? Let's begin.\n\n` +
-        `**Question 1 of 10:** Tell me about yourself and what attracted you to this opportunity.`;
+      let assistantMessage: string;
+      
+      if (session_type === "full_mock") {
+        // Mock Interview opening - conversational and relaxed
+        assistantMessage =
+          `Hi ${candidateName}, I'm Sarah, I'll be conducting your interview today. I've reviewed your background and I'm looking forward to our conversation.\n\n` +
+          `We'll spend about 30 minutes together and cover 10 questions focused on your experience, how you approach your work, and how you might fit this role. After each response, I'll share brief, practical feedback to help you strengthen your answers as we go.\n\n` +
+          `There's nothing tricky here — just answer as you normally would in a real interview.\n\n` +
+          `When you're ready, let's begin.\n\n` +
+          `**Question 1 of 10:** Tell me about yourself and what attracted you to this opportunity.`;
+      } else {
+        // Audio Mock opening - slightly different tone for voice
+        assistantMessage =
+          `Hello ${candidateName}, I'm Sarah, and I'll be conducting your interview today. Thank you for taking the time to prepare — I've reviewed your materials and I'm excited to learn more about you.\n\n` +
+          `Here's how this will work: We'll have a focused 30-minute interview with 10 questions covering your background, relevant experience, and fit for this role. I'll provide feedback after each response to help you strengthen your answers.\n\n` +
+          `Ready? Let's begin.\n\n` +
+          `**Question 1 of 10:** Tell me about yourself and what attracted you to this opportunity.`;
+      }
 
       if (session_id) {
         await supabaseClient.from("chat_messages").insert({
