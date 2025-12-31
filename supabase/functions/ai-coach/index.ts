@@ -526,7 +526,38 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       logStep("Anthropic API error", { status: response.status, error: errorText });
-      throw new Error(`Anthropic API error: ${response.status}`);
+
+      let requestId: string | undefined;
+      let providerMessage: string | undefined;
+      try {
+        const parsed = JSON.parse(errorText);
+        requestId = parsed?.request_id;
+        providerMessage = parsed?.error?.message;
+      } catch {
+        // ignore parse failures
+      }
+
+      const isInsufficientCredits = (providerMessage || errorText)
+        .toLowerCase()
+        .includes("credit balance is too low");
+
+      const publicError = providerMessage
+        ? `Anthropic error: ${providerMessage}`
+        : `Anthropic API error (${response.status})`;
+
+      return new Response(
+        JSON.stringify({
+          error: publicError,
+          provider: "anthropic",
+          code: isInsufficientCredits ? "anthropic_insufficient_credits" : "anthropic_api_error",
+          request_id: requestId,
+          upstream_status: response.status,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: isInsufficientCredits ? 402 : 502,
+        },
+      );
     }
 
     const data = await response.json();

@@ -231,19 +231,56 @@ export async function sendAIMessage(
   });
 
   if (error) {
+    // Try to extract the backend JSON error body from the Response stored in error.context
+    let detailedMessage: string | undefined;
+    try {
+      const ctx = (error as any)?.context;
+      if (ctx && typeof ctx.clone === "function") {
+        try {
+          const body = await ctx.clone().json();
+          if (body?.error) {
+            detailedMessage = String(body.error);
+            if (body?.request_id) {
+              detailedMessage += ` (request_id: ${String(body.request_id)})`;
+            }
+          }
+        } catch {
+          // ignore JSON parse errors
+        }
+
+        if (!detailedMessage) {
+          try {
+            const text = await ctx.clone().text();
+            if (text) detailedMessage = text;
+          } catch {
+            // ignore
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    const messageToUse = detailedMessage || (error as any)?.message || "Failed to get AI response";
+
     console.error("AI coach error:", error);
-    // Report session/AI errors to resolution system
     await reportSessionError(
-      error.message || "Failed to get AI response",
+      messageToUse,
       "ai_connection_failed",
       undefined, // We don't always have email in this context
       sessionId,
       { action: "send_ai_message", sessionType, additionalInfo: { isInitial } }
     );
-    throw new Error(error.message || "Failed to get AI response");
+
+    throw new Error(messageToUse);
   }
 
-  return data.message;
+  const assistantMessage = (data as any)?.message as string | undefined;
+  if (!assistantMessage) {
+    throw new Error("No message returned from AI");
+  }
+
+  return assistantMessage;
 }
 
 export async function sendSessionResults(
