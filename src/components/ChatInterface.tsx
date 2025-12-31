@@ -228,9 +228,10 @@ export function ChatInterface({
       await appendMessage(initialMessage);
     } catch (error) {
       console.error('Error initializing session:', error);
+      const msg = error instanceof Error ? error.message : 'Failed to start the coaching session. Please try again.';
       toast({
-        title: 'Error',
-        description: 'Failed to start the coaching session. Please try again.',
+        title: 'AI Error',
+        description: msg,
         variant: 'destructive',
       });
     } finally {
@@ -362,9 +363,10 @@ export function ChatInterface({
       }
     } catch (error) {
       console.error('Error sending message:', error);
+      const msg = error instanceof Error ? error.message : 'Failed to get a response. Please try again.';
       toast({
-        title: 'Error',
-        description: 'Failed to get a response. Please try again.',
+        title: 'AI Error',
+        description: msg,
         variant: 'destructive',
       });
     } finally {
