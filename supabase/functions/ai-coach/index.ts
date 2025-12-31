@@ -287,6 +287,12 @@ serve(async (req) => {
     if (!ANTHROPIC_API_KEY) {
       throw new Error("ANTHROPIC_API_KEY is not configured");
     }
+    
+    // Log masked API key for debugging - shows first 8 and last 4 chars
+    const maskedKey = ANTHROPIC_API_KEY.length > 12 
+      ? `${ANTHROPIC_API_KEY.substring(0, 8)}...${ANTHROPIC_API_KEY.substring(ANTHROPIC_API_KEY.length - 4)}`
+      : "KEY_TOO_SHORT";
+    logStep("Using Anthropic API key", { maskedKey, keyLength: ANTHROPIC_API_KEY.length });
 
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
