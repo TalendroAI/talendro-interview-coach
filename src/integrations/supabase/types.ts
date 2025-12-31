@@ -366,6 +366,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_secret_from_vault: { Args: { secret_name: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
