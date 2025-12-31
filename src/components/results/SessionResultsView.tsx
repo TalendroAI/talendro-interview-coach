@@ -1,11 +1,9 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Mail, RotateCcw, FileText, MessageSquare, BarChart3 } from "lucide-react";
+import { Mail, RotateCcw, Download } from "lucide-react";
 import { MarkdownRenderer } from "./MarkdownRenderer";
-import { TranscriptView } from "./TranscriptView";
 
 export interface SessionResultsViewProps {
   sessionLabel: string;
@@ -16,6 +14,34 @@ export interface SessionResultsViewProps {
   onStartOver?: () => void;
 }
 
+// Parse transcript into Q&A pairs for clean display
+function parseTranscriptToQA(transcript: string): Array<{ question: string; answer: string }> {
+  const pairs: Array<{ question: string; answer: string }> = [];
+  
+  // Split by the --- delimiter
+  const parts = transcript.split(/\n---\n/).filter(p => p.trim());
+  
+  let currentQuestion = '';
+  
+  for (const part of parts) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    
+    // Check if this is from coach/Sarah
+    if (trimmed.startsWith('Sarah (Coach):')) {
+      currentQuestion = trimmed.replace('Sarah (Coach):', '').trim();
+    } else if (trimmed.startsWith('You:')) {
+      const answer = trimmed.replace('You:', '').trim();
+      if (currentQuestion && answer) {
+        pairs.push({ question: currentQuestion, answer });
+        currentQuestion = '';
+      }
+    }
+  }
+  
+  return pairs;
+}
+
 export function SessionResultsView({
   sessionLabel,
   email,
@@ -24,27 +50,56 @@ export function SessionResultsView({
   analysisMarkdown,
   onStartOver,
 }: SessionResultsViewProps) {
-  // Determine if this is a quick prep session (no transcript/analysis needed)
   const isQuickPrep = sessionLabel.toLowerCase().includes('quick prep');
-  
-  // For quick prep, the prep packet IS the main content
-  // For mock interviews, we have prep packet + transcript + analysis
+  const hasPrepPacket = Boolean(prepPacket && prepPacket.length > 50);
   const hasTranscript = Boolean(transcript && transcript.length > 50);
   const hasAnalysis = Boolean(analysisMarkdown && analysisMarkdown.length > 50);
-  const hasPrepPacket = Boolean(prepPacket && prepPacket.length > 50);
   
-  // Determine which tabs to show
-  const showTranscriptTab = !isQuickPrep && hasTranscript;
-  const showSummaryTab = !isQuickPrep && hasAnalysis;
+  // Parse transcript into Q&A pairs
+  const qaPairs = hasTranscript ? parseTranscriptToQA(transcript!) : [];
 
-  // For Quick Prep: only show Prep Packet
-  // For Mock/Audio: show Summary, Prep Packet, Transcript
-  const defaultTab = isQuickPrep ? "prep" : (showSummaryTab ? "summary" : "prep");
+  const handleDownload = () => {
+    // Build a plain text report
+    let reportContent = `${sessionLabel} Results\n`;
+    reportContent += `${'='.repeat(50)}\n\n`;
+    reportContent += `Email: ${email}\n`;
+    reportContent += `Date: ${new Date().toLocaleDateString()}\n\n`;
+    
+    if (hasAnalysis && !isQuickPrep) {
+      reportContent += `PERFORMANCE SUMMARY\n${'─'.repeat(30)}\n\n`;
+      reportContent += analysisMarkdown + '\n\n';
+    }
+    
+    if (qaPairs.length > 0) {
+      reportContent += `INTERVIEW Q&A\n${'─'.repeat(30)}\n\n`;
+      qaPairs.forEach((qa, idx) => {
+        reportContent += `Question ${idx + 1}:\n${qa.question}\n\n`;
+        reportContent += `Your Answer:\n${qa.answer}\n\n`;
+        reportContent += '---\n\n';
+      });
+    }
+    
+    if (hasPrepPacket) {
+      reportContent += `PREPARATION MATERIALS\n${'─'.repeat(30)}\n\n`;
+      reportContent += prepPacket + '\n';
+    }
+    
+    // Create and download file
+    const blob = new Blob([reportContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `talendro-${sessionLabel.toLowerCase().replace(/\s+/g, '-')}-results.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <section className="flex-1 overflow-hidden bg-gradient-to-b from-background to-muted/30">
-      <div className="max-w-5xl mx-auto p-6 md:p-10">
-        {/* Header with branding */}
+      <div className="max-w-4xl mx-auto p-6 md:p-10">
+        {/* Header */}
         <header className="mb-8">
           <div className="flex items-center gap-3 mb-4">
             <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center">
@@ -63,96 +118,93 @@ export function SessionResultsView({
               <Mail className="h-4 w-4 text-primary" />
               Full results sent to <span className="font-medium text-foreground">{email}</span>
             </p>
-            {onStartOver && (
-              <Button variant="outline" onClick={onStartOver} className="gap-2">
-                <RotateCcw className="h-4 w-4" />
-                Start another session
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleDownload} className="gap-2">
+                <Download className="h-4 w-4" />
+                Download
               </Button>
-            )}
+              {onStartOver && (
+                <Button variant="outline" onClick={onStartOver} className="gap-2">
+                  <RotateCcw className="h-4 w-4" />
+                  Start Over
+                </Button>
+              )}
+            </div>
           </div>
         </header>
 
+        {/* Single Unified Report */}
         <Card className="shadow-lg border-border/50">
-          {isQuickPrep ? (
-            // Quick Prep: Single content view, no tabs
-            <div className="p-6 md:p-8">
-              <div className="flex items-center gap-2 mb-6">
-                <FileText className="h-5 w-5 text-primary" />
-                <h2 className="text-lg font-semibold text-foreground">Your Interview Preparation Packet</h2>
-              </div>
-              <ScrollArea className="h-[60vh] pr-4">
-                {hasPrepPacket ? (
-                  <MarkdownRenderer content={prepPacket!} />
-                ) : (
-                  <p className="text-muted-foreground">No prep packet was generated for this session.</p>
-                )}
-              </ScrollArea>
-            </div>
-          ) : (
-            // Mock/Audio: Tabbed interface
-            <Tabs defaultValue={defaultTab} className="w-full">
-              <div className="border-b border-border px-4 pt-4">
-                <TabsList className="grid w-full grid-cols-3 max-w-md">
-                  {showSummaryTab && (
-                    <TabsTrigger value="summary" className="gap-2">
-                      <BarChart3 className="h-4 w-4" />
-                      <span className="hidden sm:inline">Summary</span>
-                    </TabsTrigger>
-                  )}
-                  <TabsTrigger value="prep" className="gap-2">
-                    <FileText className="h-4 w-4" />
-                    <span className="hidden sm:inline">Prep Packet</span>
-                  </TabsTrigger>
-                  {showTranscriptTab && (
-                    <TabsTrigger value="transcript" className="gap-2">
-                      <MessageSquare className="h-4 w-4" />
-                      <span className="hidden sm:inline">Transcript</span>
-                    </TabsTrigger>
-                  )}
-                </TabsList>
-              </div>
-
-              {showSummaryTab && (
-                <TabsContent value="summary" className="mt-0 p-6 md:p-8">
-                  <div className="flex items-center gap-2 mb-6">
-                    <BarChart3 className="h-5 w-5 text-primary" />
-                    <h2 className="text-lg font-semibold text-foreground">Performance Summary & Recommendations</h2>
-                  </div>
-                  <ScrollArea className="h-[55vh] pr-4">
+          <ScrollArea className="h-[65vh]">
+            <div className="p-6 md:p-8 space-y-8">
+              
+              {/* Section 1: Performance Summary (for mock interviews) */}
+              {!isQuickPrep && hasAnalysis && (
+                <section>
+                  <h2 className="text-xl font-bold text-primary border-b-2 border-primary/20 pb-2 mb-4">
+                    📊 Performance Summary
+                  </h2>
+                  <div className="bg-muted/30 rounded-lg p-4 border border-border/50">
                     <MarkdownRenderer content={analysisMarkdown!} />
-                  </ScrollArea>
-                </TabsContent>
-              )}
-
-              <TabsContent value="prep" className="mt-0 p-6 md:p-8">
-                <div className="flex items-center gap-2 mb-6">
-                  <FileText className="h-5 w-5 text-primary" />
-                  <h2 className="text-lg font-semibold text-foreground">Interview Preparation Packet</h2>
-                </div>
-                <ScrollArea className="h-[55vh] pr-4">
-                  {hasPrepPacket ? (
-                    <MarkdownRenderer content={prepPacket!} />
-                  ) : (
-                    <p className="text-muted-foreground">No prep packet found for this session.</p>
-                  )}
-                </ScrollArea>
-              </TabsContent>
-
-              {showTranscriptTab && (
-                <TabsContent value="transcript" className="mt-0 p-6 md:p-8">
-                  <div className="flex items-center gap-2 mb-6">
-                    <MessageSquare className="h-5 w-5 text-primary" />
-                    <h2 className="text-lg font-semibold text-foreground">Interview Transcript</h2>
                   </div>
-                  <ScrollArea className="h-[55vh] pr-4">
-                    <TranscriptView transcript={transcript!} />
-                  </ScrollArea>
-                </TabsContent>
+                </section>
               )}
-            </Tabs>
-          )}
 
-          <Separator className="mx-6" />
+              {/* Section 2: Interview Q&A (for mock interviews) */}
+              {!isQuickPrep && qaPairs.length > 0 && (
+                <section>
+                  <h2 className="text-xl font-bold text-primary border-b-2 border-primary/20 pb-2 mb-4">
+                    💬 Interview Q&A
+                  </h2>
+                  <div className="space-y-6">
+                    {qaPairs.map((qa, idx) => (
+                      <div key={idx} className="border border-border/50 rounded-lg overflow-hidden">
+                        {/* Question */}
+                        <div className="bg-primary/5 p-4 border-b border-border/30">
+                          <p className="text-xs font-semibold text-primary mb-1">
+                            Question {idx + 1}
+                          </p>
+                          <p className="text-foreground font-medium leading-relaxed">
+                            {qa.question}
+                          </p>
+                        </div>
+                        {/* Answer */}
+                        <div className="bg-background p-4">
+                          <p className="text-xs font-semibold text-muted-foreground mb-1">
+                            Your Answer
+                          </p>
+                          <p className="text-foreground/90 leading-relaxed whitespace-pre-wrap">
+                            {qa.answer}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Section 3: Prep Packet */}
+              {hasPrepPacket && (
+                <section>
+                  <h2 className="text-xl font-bold text-primary border-b-2 border-primary/20 pb-2 mb-4">
+                    📋 {isQuickPrep ? 'Your Interview Preparation Packet' : 'Preparation Materials'}
+                  </h2>
+                  <div className="bg-muted/30 rounded-lg p-4 border border-border/50">
+                    <MarkdownRenderer content={prepPacket!} />
+                  </div>
+                </section>
+              )}
+
+              {/* Fallback for empty state */}
+              {!hasPrepPacket && !hasAnalysis && qaPairs.length === 0 && (
+                <div className="text-center py-12 text-muted-foreground">
+                  <p>No content available for this session.</p>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+
+          <Separator />
           <div className="p-6">
             <p className="text-sm text-muted-foreground">
               💡 <strong>Tip:</strong> If you didn't receive the email, check your Promotions or Spam folder and search for "Talendro".
