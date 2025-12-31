@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, User, Bot, Loader2, Pause, Play, Mic, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Progress } from '@/components/ui/progress';
+
 import { SessionType, SESSION_CONFIGS, DocumentInputs } from '@/types/session';
 import { sendAIMessage } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
@@ -432,7 +432,10 @@ export function ChatInterface({
                 <p className="text-sm text-muted-foreground">Loading your previous progress...</p>
               </div>
             </div>
-            <Progress value={50} className="h-2" />
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              <span>Loading your previous progress...</span>
+            </div>
           </div>
         </div>
       )}
