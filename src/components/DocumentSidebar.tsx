@@ -47,8 +47,6 @@ export function DocumentSidebar({
   const isMock = sessionType === 'full_mock';
   const requiresFirstName = isAudio || isMock; // Both Mock Interview and Audio Mock require first name
   const totalSteps = isPro ? 7 : (requiresFirstName ? 6 : 5);
-  const showSidebarProgress = sessionType !== 'full_mock' && sessionType !== 'premium_audio';
-
   const isFirstNameComplete = documents.firstName.trim().length >= 1;
   const isResumeComplete = documents.resume.trim().length > 50;
   const isJobComplete = documents.jobDescription.trim().length > 50;
@@ -82,25 +80,22 @@ export function DocumentSidebar({
   return (
     <aside className="w-full lg:w-[380px] bg-soft border-r border-border flex flex-col h-full">
       {/* YOUR DOCUMENTS Section with Progress */}
-      {showSidebarProgress && (
-        <div className="p-5 border-b border-border space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="font-extrabold text-sm uppercase tracking-wide text-foreground">
-              Your Documents
-            </h2>
-            <span className="text-xs font-medium text-muted-foreground">
-              {completedSteps}/{totalSteps} complete
-            </span>
-          </div>
-          <div className="space-y-1">
-            <Progress 
-              value={progressPercentage} 
-              className="h-2 bg-muted"
-            />
-          </div>
+      <div className="p-5 border-b border-border space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="font-extrabold text-sm uppercase tracking-wide text-foreground">
+            Your Documents
+          </h2>
+          <span className="text-xs font-medium text-muted-foreground">
+            {completedSteps}/{totalSteps} complete
+          </span>
         </div>
-      )}
-
+        <div className="space-y-1">
+          <Progress 
+            value={progressPercentage} 
+            className="h-2 bg-muted"
+          />
+        </div>
+      </div>
 
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
         {/* First Name Section - For Mock Interview and Audio Mock */}
