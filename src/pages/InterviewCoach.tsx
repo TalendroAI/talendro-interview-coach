@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { DocumentSidebar } from '@/components/DocumentSidebar';
@@ -18,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Loader2, CheckCircle } from 'lucide-react';
 import { ProInterviewType } from '@/components/ProInterviewTypeSelector';
 import { Button } from '@/components/ui/button';
+import confetti from 'canvas-confetti';
 
 interface PausedSession {
   id: string;
@@ -70,6 +71,23 @@ export default function InterviewCoach() {
   const [completedSessionResults, setCompletedSessionResults] = useState<any>(null);
   const [resultsReport, setResultsReport] = useState<any>(null);
   const [isSessionCompleted, setIsSessionCompleted] = useState(false);
+
+  // Completion confetti (fire once per session)
+  const completionConfettiFired = useRef(false);
+
+  useEffect(() => {
+    completionConfettiFired.current = false;
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (!isSessionCompleted) return;
+    if (completionConfettiFired.current) return;
+    completionConfettiFired.current = true;
+
+    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+    confetti({ particleCount: 140, spread: 75, startVelocity: 45, origin: { y: 0.65 }, colors });
+    confetti({ particleCount: 80, spread: 110, startVelocity: 55, origin: { y: 0.6 }, colors });
+  }, [isSessionCompleted]);
   
   // Resume from pause state
   const [resumeFromPause, setResumeFromPause] = useState(false);
