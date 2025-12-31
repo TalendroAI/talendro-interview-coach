@@ -283,21 +283,46 @@ serve(async (req) => {
       }
     }
 
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!ANTHROPIC_API_KEY) {
-      throw new Error("ANTHROPIC_API_KEY is not configured");
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
+    // Read ANTHROPIC_API_KEY from Supabase Vault using RPC
+    let ANTHROPIC_API_KEY: string | null = null;
+    try {
+      const { data: vaultData, error: vaultError } = await supabaseClient.rpc(
+        "get_secret_from_vault",
+        { secret_name: "ANTHROPIC_API_KEY" }
+      );
+
+      if (vaultError) {
+        logStep("Vault RPC error", { error: vaultError.message });
+      } else if (vaultData) {
+        ANTHROPIC_API_KEY = vaultData;
+        logStep("Loaded ANTHROPIC_API_KEY from Supabase Vault");
+      }
+    } catch (vaultErr) {
+      logStep("Vault access exception", { error: String(vaultErr) });
     }
-    
+
+    // Fallback to environment variable if Vault didn't return a key
+    if (!ANTHROPIC_API_KEY) {
+      ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? null;
+      if (ANTHROPIC_API_KEY) {
+        logStep("Loaded ANTHROPIC_API_KEY from environment variable (fallback)");
+      }
+    }
+
+    if (!ANTHROPIC_API_KEY) {
+      throw new Error("ANTHROPIC_API_KEY is not configured in Vault or environment");
+    }
+
     // Log masked API key for debugging - shows first 8 and last 4 chars
     const maskedKey = ANTHROPIC_API_KEY.length > 12 
       ? `${ANTHROPIC_API_KEY.substring(0, 8)}...${ANTHROPIC_API_KEY.substring(ANTHROPIC_API_KEY.length - 4)}`
       : "KEY_TOO_SHORT";
     logStep("Using Anthropic API key", { maskedKey, keyLength: ANTHROPIC_API_KEY.length });
-
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
 
     // Session validation: Require valid session_id for non-initial calls
     if (session_id) {
