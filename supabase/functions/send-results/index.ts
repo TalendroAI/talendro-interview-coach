@@ -506,7 +506,13 @@ serve(async (req) => {
       html: emailHtml,
     });
 
-    logStep("Email sent", { hasError: Boolean((emailResponse as any)?.error) });
+    // Log full Resend response for debugging delivery issues
+    logStep("Resend API response", { 
+      id: (emailResponse as any)?.data?.id || (emailResponse as any)?.id,
+      error: (emailResponse as any)?.error,
+      recipient: email,
+      sessionType: session.session_type
+    });
 
     if ((emailResponse as any)?.error) {
       throw new Error(`Email sending failed: ${(emailResponse as any).error?.message || "Unknown error"}`);
