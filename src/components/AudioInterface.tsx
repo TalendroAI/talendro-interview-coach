@@ -530,16 +530,9 @@ export function AudioInterface({
     setIsConnecting(true);
 
     try {
-      // Request microphone permission (and try to use the selected mic if provided)
-      console.log('Requesting microphone permission...');
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: selectedInputId ? { deviceId: { exact: selectedInputId } } : true,
-      });
-      stream.getTracks().forEach((track) => track.stop());
-      console.log('Microphone permission granted');
-
-      // Get a WebRTC token from the backend function (recommended for best audio quality)
-      console.log('Fetching token...');
+      // Get a WebRTC token from the backend function FIRST (before mic request)
+      // This ensures we have a valid token ready before starting the session
+      console.log('Fetching ElevenLabs token...');
       const { data, error } = await supabase.functions.invoke('elevenlabs-conversation-token', {
         body: { agentId: ELEVENLABS_AGENT_ID, mode: 'token' },
       });
@@ -549,7 +542,29 @@ export function AudioInterface({
       const token = (data as any)?.token;
 
       if (error || !token) {
-        throw new Error(error?.message || 'No token received');
+        throw new Error(error?.message || 'No token received from backend');
+      }
+
+      // Now request microphone permission
+      // ElevenLabs SDK will handle the actual stream - we just need to check permission
+      console.log('Checking microphone permission...');
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: selectedInputId ? { deviceId: { exact: selectedInputId } } : true,
+        });
+        // Store the stream reference - ElevenLabs needs access to active audio
+        mediaStreamRef.current = stream;
+        console.log('Microphone permission granted, stream active');
+      } catch (micError) {
+        console.error('Microphone access error:', micError);
+        if (micError instanceof Error) {
+          if (micError.name === 'NotAllowedError') {
+            throw new Error('Microphone access was denied. Please allow microphone access and try again.');
+          } else if (micError.name === 'NotFoundError') {
+            throw new Error('No microphone found. Please connect a microphone and try again.');
+          }
+        }
+        throw micError;
       }
 
       // Build context from documents (sent as contextual update once connected)
@@ -560,13 +575,18 @@ export function AudioInterface({
 
       console.log('Starting ElevenLabs session (WebRTC)...');
 
+      // Start the session - ElevenLabs SDK handles mic internally
       await conversation.startSession({
         conversationToken: token,
         connectionType: 'webrtc',
         inputDeviceId: selectedInputId || undefined,
       });
 
+      // Only send contextual update AFTER session is fully connected
+      // The onConnect callback will fire when ready
       if (contextParts.length > 0) {
+        // Small delay to ensure connection is stable before sending context
+        await new Promise(resolve => setTimeout(resolve, 500));
         console.log('Sending contextual update with documents:', contextParts.length);
         conversation.sendContextualUpdate(contextParts.join('\n\n'));
       }
@@ -631,11 +651,14 @@ export function AudioInterface({
     isResumingRef.current = true;
 
     try {
-      // Re-request microphone permission (try selected device)
+      // Request microphone - keep the stream active for ElevenLabs
+      console.log('Requesting microphone for reconnect...');
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: selectedInputId ? { deviceId: { exact: selectedInputId } } : true,
       });
-      stream.getTracks().forEach((track) => track.stop());
+      // Keep stream active - ElevenLabs SDK needs it
+      mediaStreamRef.current = stream;
+      console.log('Microphone ready for reconnect');
 
       // Fetch FULL conversation history from database
       const dbHistory = await getHistory();
@@ -710,6 +733,9 @@ Continue the interview naturally from where you left off. Ask the next question.
         contextParts.push(`=== COMPLETE INTERVIEW TRANSCRIPT (${transcriptRef.current.length} turns, ${questionsSoFar} questions asked) ===\n${fullTranscriptText}`);
       }
 
+      // Wait for connection to stabilize before sending context
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       // Send all context (instructions + documents + history) via contextual update
       conversation.sendContextualUpdate(contextParts.join('\n\n---\n\n'));
       
