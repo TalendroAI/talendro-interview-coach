@@ -603,124 +603,7 @@ export function AudioInterface({
     onVadScore: handleVadScore,
   });
 
-  const startConversation = useCallback(async () => {
-    console.log('Begin Interview clicked - starting conversation...');
-    console.log('isDocumentsSaved:', isDocumentsSaved);
-    console.log('documents:', documents);
-
-    // Fresh interview run
-    transcriptRef.current = [];
-    vadHistoryRef.current = [];
-    questionCountRef.current = 0;
-    lastAssistantTurnRef.current = null;
-    micWarningShownRef.current = false;
-    interviewStarted.current = false;
-    userEndedSession.current = false;
-    setConnectionDropped(false);
-    setReconnectAttempts(0);
-    setShowVadWarning(false);
-    setShowMicInputWarning(false);
-    setShowSilenceWarning(false);
-    setIsConnecting(true);
-
-    try {
-      // Get a WebRTC token from the backend function FIRST (before mic request)
-      // This ensures we have a valid token ready before starting the session
-      console.log('Fetching ElevenLabs token...');
-      const { data, error } = await supabase.functions.invoke('elevenlabs-conversation-token', {
-        body: { agentId: ELEVENLABS_AGENT_ID, mode: 'token' },
-      });
-
-      console.log('Token response:', { data, error });
-
-      const token = (data as any)?.token;
-
-      if (error || !token) {
-        throw new Error(error?.message || 'No token received from backend');
-      }
-
-      // Now request microphone permission
-      // ElevenLabs SDK will handle the actual stream - we just need to check permission
-      console.log('Checking microphone permission...');
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: selectedInputId ? { deviceId: { exact: selectedInputId } } : true,
-        });
-        // Store the stream reference - ElevenLabs needs access to active audio
-        mediaStreamRef.current = stream;
-        console.log('Microphone permission granted, stream active');
-      } catch (micError) {
-        console.error('Microphone access error:', micError);
-        if (micError instanceof Error) {
-          if (micError.name === 'NotAllowedError') {
-            throw new Error('Microphone access was denied. Please allow microphone access and try again.');
-          } else if (micError.name === 'NotFoundError') {
-            throw new Error('No microphone found. Please connect a microphone and try again.');
-          }
-        }
-        throw micError;
-      }
-
-      // Build context from documents (sent as contextual update once connected)
-      const contextParts: string[] = [];
-      if (documents?.resume) contextParts.push(`Candidate Resume:\n${documents.resume}`);
-      if (documents?.jobDescription) contextParts.push(`Job Description:\n${documents.jobDescription}`);
-      if (documents?.companyUrl) contextParts.push(`Company URL: ${documents.companyUrl}`);
-
-      console.log('Starting ElevenLabs session (WebRTC)...');
-
-      // Build the first message Sarah will say (just like reconnect does)
-      const firstName = documents?.firstName?.trim();
-      const firstMessage = firstName
-        ? `Hi ${firstName}, I'm Sarah. Thank you for your interest in this opportunity. I'll be conducting your interview today. Let's get started!`
-        : `Hello, I'm Sarah. Thank you for your interest in this opportunity. I'll be conducting your interview today. Let's get started!`;
-
-      // Start the session WITH OVERRIDES - this is what makes reconnect work!
-      // The key difference: reconnect uses overrides.agent.firstMessage, startConversation didn't
-      await conversation.startSession({
-        conversationToken: token,
-        connectionType: 'webrtc',
-        inputDeviceId: selectedInputId || undefined,
-        overrides: {
-          agent: {
-            firstMessage: firstMessage,
-          },
-        },
-      });
-
-      // Send contextual update with documents AFTER connection is established
-      // Small delay to ensure connection is stable before sending context
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      if (contextParts.length > 0) {
-        console.log('Sending contextual update with documents:', contextParts.length);
-        conversation.sendContextualUpdate(contextParts.join('\n\n'));
-      }
-
-      console.log('ElevenLabs session started successfully');
-    } catch (error) {
-      console.error('Failed to start conversation:', error);
-      cleanup();
-
-      let errorMessage = 'Could not start voice interview.';
-      if (error instanceof Error) {
-        if (error.name === 'NotAllowedError' || error.message.includes('permission')) {
-          errorMessage = 'Microphone access was denied. Please allow microphone access and try again.';
-        } else if (error.name === 'NotFoundError') {
-          errorMessage = 'No microphone found. Please connect a microphone and try again.';
-        } else {
-          errorMessage = error.message;
-        }
-      }
-
-      toast({
-        variant: 'destructive',
-        title: 'Connection Failed',
-        description: errorMessage,
-      });
-      setIsConnecting(false);
-    }
-  }, [conversation, documents, isDocumentsSaved, toast, cleanup, selectedInputId]);
+  // Initial connection uses `reconnect({ mode: 'initial' })` (the reconnect path is the stable one).
 
   const stopConversation = useCallback(async () => {
     userEndedSession.current = true;
@@ -734,140 +617,204 @@ export function AudioInterface({
     await conversation.endSession();
   }, [conversation, toast]);
 
-  const reconnect = useCallback(async () => {
-    setIsReconnecting(true);
-    setConnectionDropped(false);
-    setReconnectAttempts((prev) => prev + 1);
-    isResumingRef.current = true;
+  const reconnect = useCallback(
+    async (options?: { mode?: 'initial' | 'resume' }) => {
+      const mode: 'initial' | 'resume' = options?.mode === 'initial' ? 'initial' : 'resume';
+      const isInitial = mode === 'initial';
 
-    try {
-      // Request microphone - keep the stream active for ElevenLabs
-      console.log('Requesting microphone for reconnect...');
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: selectedInputId ? { deviceId: { exact: selectedInputId } } : true,
-      });
-      // Keep stream active - ElevenLabs SDK needs it
-      mediaStreamRef.current = stream;
-      console.log('Microphone ready for reconnect');
+      if (isInitial) {
+        // Fresh interview run (use the working reconnect path, but with first-time greeting/context)
+        transcriptRef.current = [];
+        vadHistoryRef.current = [];
+        questionCountRef.current = 0;
+        lastAssistantTurnRef.current = null;
+        micWarningShownRef.current = false;
+        interviewStarted.current = false;
+        userEndedSession.current = false;
+        setConnectionDropped(false);
+        setReconnectAttempts(0);
+        setShowVadWarning(false);
+        setShowMicInputWarning(false);
+        setShowSilenceWarning(false);
+        setIsConnecting(true);
+        setIsReconnecting(false);
+        isResumingRef.current = false;
+      } else {
+        setIsReconnecting(true);
+        setConnectionDropped(false);
+        setReconnectAttempts((prev) => prev + 1);
+        isResumingRef.current = true;
+      }
 
-      // Fetch FULL conversation history from database
-      const dbHistory = await getHistory();
-      
-      // If we have DB history, use it as the source of truth
-      if (dbHistory.length > 0) {
-        transcriptRef.current = dbHistory.map(h => ({
-          role: h.role === 'user' ? 'user' as const : 'assistant' as const,
-          text: h.content,
-          ts: new Date(h.created_at).getTime(),
-        }));
-        
-        // Find the last assistant message and update question count
-        const assistantMessages = dbHistory.filter(h => h.role === 'assistant');
-        if (assistantMessages.length > 0) {
-          const lastAssistant = assistantMessages[assistantMessages.length - 1];
-          lastAssistantTurnRef.current = lastAssistant.content;
-          // Count questions by counting assistant messages with "?"
-          questionCountRef.current = assistantMessages.filter(m => m.content.includes('?')).length;
+      try {
+        // Request microphone - keep the stream active for ElevenLabs
+        console.log('Requesting microphone for reconnect...');
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: selectedInputId ? { deviceId: { exact: selectedInputId } } : true,
+        });
+        // Keep stream active - ElevenLabs SDK needs it
+        mediaStreamRef.current = stream;
+        console.log('Microphone ready for reconnect');
+
+        // Fetch FULL conversation history from database (resume mode only)
+        let dbHistory: Awaited<ReturnType<typeof getHistory>> = [];
+        if (!isInitial) {
+          dbHistory = await getHistory();
+
+          // If we have DB history, use it as the source of truth
+          if (dbHistory.length > 0) {
+            transcriptRef.current = dbHistory.map((h) => ({
+              role: h.role === 'user' ? ('user' as const) : ('assistant' as const),
+              text: h.content,
+              ts: new Date(h.created_at).getTime(),
+            }));
+
+            // Find the last assistant message and update question count
+            const assistantMessages = dbHistory.filter((h) => h.role === 'assistant');
+            if (assistantMessages.length > 0) {
+              const lastAssistant = assistantMessages[assistantMessages.length - 1];
+              lastAssistantTurnRef.current = lastAssistant.content;
+              // Count questions by counting assistant messages with "?"
+              questionCountRef.current = assistantMessages.filter((m) => m.content.includes('?')).length;
+            }
+          }
         }
-      }
 
-      const { data, error } = await supabase.functions.invoke('elevenlabs-conversation-token', {
-        body: { agentId: ELEVENLABS_AGENT_ID, mode: 'token' },
-      });
+        const { data, error } = await supabase.functions.invoke('elevenlabs-conversation-token', {
+          body: { agentId: ELEVENLABS_AGENT_ID, mode: 'token' },
+        });
 
-      const token = (data as any)?.token;
-      if (error || !token) {
-        throw new Error(error?.message || 'No token received');
-      }
+        const token = (data as any)?.token;
+        if (error || !token) {
+          throw new Error(error?.message || 'No token received');
+        }
 
-      const lastSarahMessage = lastAssistantTurnRef.current;
-      const questionsSoFar = questionCountRef.current;
-      
-      // The firstMessage should be what Sarah SAYS, not instructions
-      // Keep it natural and short - instructions go in contextual update
-      const resumeGreeting = `Welcome back! Let's continue where we left off.`;
+        const firstName = documents?.firstName?.trim();
+        const nameForGreeting = firstName || 'there';
 
-      await conversation.startSession({
-        conversationToken: token,
-        connectionType: 'webrtc',
-        inputDeviceId: selectedInputId || undefined,
-        overrides: {
-          agent: {
-            firstMessage: resumeGreeting,
+        const firstTimeGreeting = `Hi ${nameForGreeting}, I'm Sarah, your interview coach today. I've reviewed your materials and I'm ready to put you through a realistic mock interview. We'll cover 16 questions across different categories. Take your time with each answer, and I'll give you feedback as we go. Ready to begin?`;
+
+        // The firstMessage should be what Sarah SAYS, not instructions
+        // Keep it natural and short - instructions go in contextual update
+        const resumeGreeting = `Welcome back! Let's continue where we left off.`;
+
+        await conversation.startSession({
+          conversationToken: token,
+          connectionType: 'webrtc',
+          inputDeviceId: selectedInputId || undefined,
+          overrides: {
+            agent: {
+              firstMessage: isInitial ? firstTimeGreeting : resumeGreeting,
+            },
           },
-        },
-      });
+        });
 
-      // Send resume instructions and context via contextual update (NOT spoken aloud)
-      const contextParts: string[] = [];
-      
-      // CRITICAL: Resume instructions go here, in the contextual update, NOT in firstMessage
-      const resumeInstructions = `CRITICAL CONTEXT: This is a RESUMED interview session, NOT a new one.
+        // Send context via contextual update (NOT spoken aloud)
+        const contextParts: string[] = [];
+
+        if (!isInitial) {
+          const lastSarahMessage = lastAssistantTurnRef.current;
+          const questionsSoFar = questionCountRef.current;
+
+          // CRITICAL: Resume instructions go here, in the contextual update, NOT in firstMessage
+          const resumeInstructions = `CRITICAL CONTEXT: This is a RESUMED interview session, NOT a new one.
 Do NOT re-introduce yourself. Do NOT ask the candidate to introduce themselves again.
 The candidate has already answered ${questionsSoFar} questions.
 ${lastSarahMessage ? `Your last message before the pause was: "${lastSarahMessage.substring(0, 300)}${lastSarahMessage.length > 300 ? '...' : ''}"` : ''}
 Continue the interview naturally from where you left off. Ask the next question.`;
-      
-      contextParts.push(resumeInstructions);
-      
-      if (documents?.resume) contextParts.push(`Candidate Resume:\n${documents.resume}`);
-      if (documents?.jobDescription) contextParts.push(`Job Description:\n${documents.jobDescription}`);
-      if (documents?.companyUrl) contextParts.push(`Company URL: ${documents.companyUrl}`);
 
-      // Send the FULL transcript, not just last 12 turns
-      const fullTranscriptText = transcriptRef.current
-        .map((t) => `${t.role === 'user' ? 'Candidate' : 'Sarah'}: ${t.text}`)
-        .join('\n\n');
+          contextParts.push(resumeInstructions);
+        }
 
-      if (fullTranscriptText) {
-        contextParts.push(`=== COMPLETE INTERVIEW TRANSCRIPT (${transcriptRef.current.length} turns, ${questionsSoFar} questions asked) ===\n${fullTranscriptText}`);
+        if (documents?.resume) contextParts.push(`Candidate Resume:\n${documents.resume}`);
+        if (documents?.jobDescription) contextParts.push(`Job Description:\n${documents.jobDescription}`);
+        if (documents?.companyUrl) contextParts.push(`Company URL: ${documents.companyUrl}`);
+
+        if (!isInitial) {
+          const questionsSoFar = questionCountRef.current;
+
+          // Send the FULL transcript, not just last 12 turns
+          const fullTranscriptText = transcriptRef.current
+            .map((t) => `${t.role === 'user' ? 'Candidate' : 'Sarah'}: ${t.text}`)
+            .join('\n\n');
+
+          if (fullTranscriptText) {
+            contextParts.push(
+              `=== COMPLETE INTERVIEW TRANSCRIPT (${transcriptRef.current.length} turns, ${questionsSoFar} questions asked) ===\n${fullTranscriptText}`
+            );
+          }
+        }
+
+        // Wait for connection to stabilize before sending context
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
+        if (contextParts.length > 0) {
+          conversation.sendContextualUpdate(
+            isInitial ? contextParts.join('\n\n') : contextParts.join('\n\n---\n\n')
+          );
+        }
+
+        if (!isInitial) {
+          const questionsSoFar = questionCountRef.current;
+
+          // Log successful reconnection
+          logEvent({
+            eventType: 'session_reconnected',
+            message: `Successfully reconnected with ${transcriptRef.current.length} history turns`,
+            context: {
+              questionCount: questionsSoFar,
+              historyLength: transcriptRef.current.length,
+              dbHistoryLength: dbHistory.length,
+            },
+          });
+        }
+      } catch (error) {
+        console.error(isInitial ? 'Connection failed:' : 'Reconnection failed:', error);
+
+        if (!isInitial) {
+          logEvent({
+            eventType: 'reconnect_failed',
+            message: error instanceof Error ? error.message : 'Unknown reconnection error',
+            context: { attemptNumber: reconnectAttempts + 1 },
+          });
+        }
+
+        toast({
+          variant: 'destructive',
+          title: isInitial ? 'Connection Failed' : 'Reconnection Failed',
+          description:
+            !isInitial && reconnectAttempts >= MAX_RECONNECT_ATTEMPTS - 1
+              ? 'Maximum reconnection attempts reached. Your session will end.'
+              : isInitial
+                ? 'Could not start the interview. Please try again.'
+                : 'Could not reconnect. Please try again.',
+        });
+
+        if (!isInitial && reconnectAttempts >= MAX_RECONNECT_ATTEMPTS - 1) {
+          handleGracefulEnd('connection_lost');
+        } else if (!isInitial) {
+          setConnectionDropped(true);
+          setIsReconnecting(false);
+        } else {
+          cleanup();
+          setIsConnecting(false);
+        }
+      } finally {
+        isResumingRef.current = false;
       }
-
-      // Wait for connection to stabilize before sending context
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Send all context (instructions + documents + history) via contextual update
-      conversation.sendContextualUpdate(contextParts.join('\n\n---\n\n'));
-      
-      // Log successful reconnection
-      logEvent({
-        eventType: 'session_reconnected',
-        message: `Successfully reconnected with ${transcriptRef.current.length} history turns`,
-        context: {
-          questionCount: questionsSoFar,
-          historyLength: transcriptRef.current.length,
-          dbHistoryLength: dbHistory.length,
-        },
-      });
-
-    } catch (error) {
-      console.error('Reconnection failed:', error);
-      
-      logEvent({
-        eventType: 'reconnect_failed',
-        message: error instanceof Error ? error.message : 'Unknown reconnection error',
-        context: { attemptNumber: reconnectAttempts + 1 },
-      });
-      
-      toast({
-        variant: 'destructive',
-        title: 'Reconnection Failed',
-        description:
-          reconnectAttempts >= MAX_RECONNECT_ATTEMPTS - 1
-            ? 'Maximum reconnection attempts reached. Your session will end.'
-            : 'Could not reconnect. Please try again.',
-      });
-
-      if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS - 1) {
-        handleGracefulEnd('connection_lost');
-      } else {
-        setConnectionDropped(true);
-        setIsReconnecting(false);
-      }
-    } finally {
-      isResumingRef.current = false;
-    }
-  }, [conversation, documents, toast, reconnectAttempts, handleGracefulEnd, selectedInputId, getHistory, logEvent]);
+    },
+    [
+      conversation,
+      documents,
+      toast,
+      reconnectAttempts,
+      handleGracefulEnd,
+      selectedInputId,
+      getHistory,
+      logEvent,
+      cleanup,
+    ]
+  );
 
   // Actual mute toggle (controls ElevenLabs SDK mic via `micMuted`)
   const toggleMute = useCallback(() => {
@@ -1179,7 +1126,7 @@ Continue the interview naturally from where you left off. Ask the next question.
             <Button
               variant="audio"
               size="lg"
-              onClick={reconnect}
+              onClick={() => reconnect()}
               disabled={isReconnecting}
               className="gap-2"
             >
@@ -1267,8 +1214,8 @@ Continue the interview naturally from where you left off. Ask the next question.
             <Button
               variant="audio"
               size="xl"
-              onClick={startConversation}
-              disabled={!canStartInterview || isConnecting}
+              onClick={() => reconnect({ mode: 'initial' })}
+              disabled={!canStartInterview || isConnecting || isReconnecting}
               className="gap-2 text-lg px-8 py-6"
             >
               Begin Interview
