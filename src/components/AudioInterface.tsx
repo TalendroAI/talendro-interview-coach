@@ -670,12 +670,9 @@ export function AudioInterface({
       const lastSarahMessage = lastAssistantTurnRef.current;
       const questionsSoFar = questionCountRef.current;
       
-      // Build a comprehensive resume message with full context
-      const resumeFirstMessage = `CRITICAL INSTRUCTION: This is a RESUMED interview session, NOT a new one. 
-You must NOT re-introduce yourself. You must NOT start from question 1.
-The candidate has already answered ${questionsSoFar} questions.
-${lastSarahMessage ? `Your last message was: "${lastSarahMessage.substring(0, 200)}${lastSarahMessage.length > 200 ? '...' : ''}"` : ''}
-Say something like "Welcome back! Let's continue where we left off." and then proceed to ask the next question or continue the conversation naturally.`;
+      // The firstMessage should be what Sarah SAYS, not instructions
+      // Keep it natural and short - instructions go in contextual update
+      const resumeGreeting = `Welcome back! Let's continue where we left off.`;
 
       await conversation.startSession({
         conversationToken: token,
@@ -683,13 +680,23 @@ Say something like "Welcome back! Let's continue where we left off." and then pr
         inputDeviceId: selectedInputId || undefined,
         overrides: {
           agent: {
-            firstMessage: resumeFirstMessage,
+            firstMessage: resumeGreeting,
           },
         },
       });
 
-      // Restore FULL context (documents + COMPLETE transcript history)
+      // Send resume instructions and context via contextual update (NOT spoken aloud)
       const contextParts: string[] = [];
+      
+      // CRITICAL: Resume instructions go here, in the contextual update, NOT in firstMessage
+      const resumeInstructions = `CRITICAL CONTEXT: This is a RESUMED interview session, NOT a new one.
+Do NOT re-introduce yourself. Do NOT ask the candidate to introduce themselves again.
+The candidate has already answered ${questionsSoFar} questions.
+${lastSarahMessage ? `Your last message before the pause was: "${lastSarahMessage.substring(0, 300)}${lastSarahMessage.length > 300 ? '...' : ''}"` : ''}
+Continue the interview naturally from where you left off. Ask the next question.`;
+      
+      contextParts.push(resumeInstructions);
+      
       if (documents?.resume) contextParts.push(`Candidate Resume:\n${documents.resume}`);
       if (documents?.jobDescription) contextParts.push(`Job Description:\n${documents.jobDescription}`);
       if (documents?.companyUrl) contextParts.push(`Company URL: ${documents.companyUrl}`);
@@ -703,9 +710,8 @@ Say something like "Welcome back! Let's continue where we left off." and then pr
         contextParts.push(`=== COMPLETE INTERVIEW TRANSCRIPT (${transcriptRef.current.length} turns, ${questionsSoFar} questions asked) ===\n${fullTranscriptText}`);
       }
 
-      if (contextParts.length > 0) {
-        conversation.sendContextualUpdate(contextParts.join('\n\n---\n\n'));
-      }
+      // Send all context (instructions + documents + history) via contextual update
+      conversation.sendContextualUpdate(contextParts.join('\n\n---\n\n'));
       
       // Log successful reconnection
       logEvent({
