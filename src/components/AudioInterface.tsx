@@ -46,6 +46,70 @@ export function AudioInterface({
   onInterviewComplete,
   userEmail
 }: AudioInterfaceProps) {
+  const { toast: toastFn } = useToast();
+  
+  // CRITICAL: Global error handler to intercept ElevenLabs SDK internal crashes
+  // The SDK's handleErrorEvent crashes when reading error_type from malformed errors
+  useEffect(() => {
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const reason = event.reason;
+      const message = reason?.message || '';
+      const stack = reason?.stack || '';
+      
+      // Check if this is the ElevenLabs SDK crash
+      if (message.includes('error_type') || 
+          stack.includes('handleErrorEvent') ||
+          stack.includes('onMessageCallback')) {
+        console.error('Intercepted ElevenLabs SDK crash:', reason);
+        event.preventDefault(); // Prevent the crash from propagating
+        
+        // Log for diagnostics
+        console.log('SDK crash details:', {
+          message,
+          stack: stack.substring(0, 500),
+          reason: JSON.stringify(reason).substring(0, 500)
+        });
+        
+        // Show non-destructive toast - connection may still be alive
+        toastFn({
+          title: 'Minor connection issue',
+          description: 'Continuing session...',
+        });
+        
+        return; // Don't let this crash the app
+      }
+    };
+
+    const handleError = (event: ErrorEvent) => {
+      const message = event.message || '';
+      const stack = event.error?.stack || '';
+      
+      // Check if this is the ElevenLabs SDK crash
+      if (message.includes('error_type') || 
+          stack.includes('handleErrorEvent') ||
+          stack.includes('onMessageCallback')) {
+        console.error('Intercepted ElevenLabs SDK error:', event.error);
+        event.preventDefault();
+        event.stopPropagation();
+        
+        toastFn({
+          title: 'Minor connection issue',
+          description: 'Continuing session...',
+        });
+        
+        return;
+      }
+    };
+
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    window.addEventListener('error', handleError);
+    
+    return () => {
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      window.removeEventListener('error', handleError);
+    };
+  }, [toastFn]);
+
   const [isConnecting, setIsConnecting] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [connectionDropped, setConnectionDropped] = useState(false);
@@ -61,7 +125,7 @@ export function AudioInterface({
   const [inputVolume, setInputVolume] = useState(0);
   const [showMicInputWarning, setShowMicInputWarning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const { toast } = useToast();
+  const toast = toastFn; // Use the toast from the top of the component
 
   const {
     inputs: micInputs,
