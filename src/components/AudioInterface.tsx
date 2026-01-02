@@ -669,37 +669,33 @@ export function AudioInterface({
 
       console.log('Starting ElevenLabs session (WebRTC)...');
 
-      // Start the session - ElevenLabs SDK handles mic internally
+      // Build the first message Sarah will say (just like reconnect does)
+      const firstName = documents?.firstName?.trim();
+      const firstMessage = firstName
+        ? `Hi ${firstName}, I'm Sarah. Thank you for your interest in this opportunity. I'll be conducting your interview today. Let's get started!`
+        : `Hello, I'm Sarah. Thank you for your interest in this opportunity. I'll be conducting your interview today. Let's get started!`;
+
+      // Start the session WITH OVERRIDES - this is what makes reconnect work!
+      // The key difference: reconnect uses overrides.agent.firstMessage, startConversation didn't
       await conversation.startSession({
         conversationToken: token,
         connectionType: 'webrtc',
         inputDeviceId: selectedInputId || undefined,
+        overrides: {
+          agent: {
+            firstMessage: firstMessage,
+          },
+        },
       });
 
-      // Only send contextual update AFTER session is fully connected
-      // The onConnect callback will fire when ready
+      // Send contextual update with documents AFTER connection is established
+      // Small delay to ensure connection is stable before sending context
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       if (contextParts.length > 0) {
-        // Small delay to ensure connection is stable before sending context
-        await new Promise(resolve => setTimeout(resolve, 500));
         console.log('Sending contextual update with documents:', contextParts.length);
         conversation.sendContextualUpdate(contextParts.join('\n\n'));
       }
-
-      // If the agent doesn't start speaking on its own (no configured first message), nudge it.
-      window.setTimeout(() => {
-        try {
-          if (conversation.status === 'connected' && !conversation.isSpeaking) {
-            console.log('No greeting detected; nudging Sarah to greet.');
-            const firstName = documents?.firstName?.trim();
-            const greeting = firstName
-              ? `Start the interview now. Greet the candidate warmly by saying: "Hi ${firstName}, I'm Sarah. Thank you for your interest in the opportunity. I'll be conducting your interview today." Then ask your first question.`
-              : 'Start the interview now. Greet the candidate warmly by saying: "Hello, I\'m Sarah. Thank you for your interest in the opportunity. I\'ll be conducting your interview today." Then ask your first question.';
-            conversation.sendUserMessage(greeting);
-          }
-        } catch (e) {
-          console.error('Failed to send greeting nudge:', e);
-        }
-      }, 900);
 
       console.log('ElevenLabs session started successfully');
     } catch (error) {
