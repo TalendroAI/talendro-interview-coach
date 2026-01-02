@@ -463,47 +463,77 @@ export function AudioInterface({
       }
     },
     onError: (error) => {
-      console.error('Conversation error:', error);
-      setConnectionQuality('poor');
-      
-      // Log error for diagnostics
-      const errorMessage = error && typeof error === 'object' && 'message' in (error as object)
-        ? String((error as { message: string }).message) 
-        : 'Unknown error';
-      const errorCode = error && typeof error === 'object' && 'code' in (error as object)
-        ? String((error as { code: string }).code)
-        : null;
-      
-      logEvent({
-        eventType: 'elevenlabs_error',
-        message: errorMessage,
-        code: errorCode,
-        context: {
-          errorObject: JSON.stringify(error),
-          questionCount: questionCountRef.current,
-          transcriptLength: transcriptRef.current.length,
-          connectionStatus: conversation.status,
-        },
-      });
-      
-      let userMessage = 'Failed to connect to voice agent.';
-      
-      if (errorMessage.includes('microphone') || errorMessage.includes('permission')) {
-        userMessage = 'Microphone access denied. Please enable microphone permissions.';
-      } else if (errorMessage.includes('network') || errorMessage.includes('connection')) {
-        userMessage = 'Network connection issue. Check your internet connection.';
-      } else if (errorMessage.includes('timeout')) {
-        userMessage = 'Connection timed out. Please try again.';
-      }
+      // CRITICAL: Wrap everything in try-catch to prevent crashes from malformed errors
+      try {
+        console.error('Conversation error (raw):', error);
+        console.log('Error type:', typeof error);
+        console.log('Error keys:', error && typeof error === 'object' ? Object.keys(error) : 'not an object');
+        
+        setConnectionQuality('poor');
+        
+        // Safely extract error details with extensive null checks
+        let errorMessage = 'Unknown error';
+        let errorCode: string | null = null;
+        let errorType: string | null = null;
+        
+        if (error) {
+          if (typeof error === 'string') {
+            errorMessage = error;
+          } else if (typeof error === 'object') {
+            // Safely access properties
+            const errObj = error as Record<string, unknown>;
+            errorMessage = String(errObj.message ?? errObj.error ?? errObj.reason ?? 'Unknown error');
+            errorCode = errObj.code ? String(errObj.code) : null;
+            errorType = errObj.error_type ? String(errObj.error_type) : null;
+          }
+        }
+        
+        logEvent({
+          eventType: 'elevenlabs_error',
+          message: errorMessage,
+          code: errorCode,
+          context: {
+            errorType,
+            errorRaw: JSON.stringify(error ?? 'null'),
+            questionCount: questionCountRef.current,
+            transcriptLength: transcriptRef.current.length,
+            connectionStatus: conversation.status,
+          },
+        });
+        
+        // Determine user-friendly message
+        let userMessage = 'Voice connection issue. Please try again.';
+        const lowerMessage = errorMessage.toLowerCase();
+        
+        if (lowerMessage.includes('microphone') || lowerMessage.includes('permission')) {
+          userMessage = 'Microphone access denied. Please enable microphone permissions.';
+        } else if (lowerMessage.includes('network') || lowerMessage.includes('connection')) {
+          userMessage = 'Network connection issue. Check your internet connection.';
+        } else if (lowerMessage.includes('timeout')) {
+          userMessage = 'Connection timed out. Please try again.';
+        } else if (lowerMessage.includes('token') || lowerMessage.includes('auth')) {
+          userMessage = 'Authentication error. Please refresh and try again.';
+        }
 
-      toast({
-        variant: 'destructive',
-        title: 'Connection Error',
-        description: userMessage,
-      });
-      
-      setIsConnecting(false);
-      setIsReconnecting(false);
+        toast({
+          variant: 'destructive',
+          title: 'Connection Error',
+          description: userMessage,
+        });
+      } catch (handlerError) {
+        // Even the error handler failed - log it and show generic message
+        console.error('Error handler crashed:', handlerError);
+        console.error('Original error was:', error);
+        
+        toast({
+          variant: 'destructive',
+          title: 'Connection Error',
+          description: 'An unexpected error occurred. Please refresh and try again.',
+        });
+      } finally {
+        setIsConnecting(false);
+        setIsReconnecting(false);
+      }
     },
     // VAD score monitoring for voice detection issues
     onVadScore: handleVadScore,
