@@ -38,7 +38,7 @@ interface ChatInterfaceProps {
   resumeFromPause?: boolean;
   onPauseStateChange?: (isPaused: boolean) => void;
   onHeaderPauseStateChange?: (state: HeaderPauseState) => void;
-  onRegisterPauseHandlers?: (handlers: { onPause?: () => void; onResume?: () => void }) => void;
+  onRegisterPauseHandlers?: (handlers: { onPause?: () => void; onResume?: () => void; onEnd?: () => void }) => void;
 }
 
 export function ChatInterface({ 
@@ -306,13 +306,25 @@ export function ChatInterface({
     }
   }, [resumeSession, messages, toast, onPauseStateChange]);
 
-  // Register pause/resume handlers with parent for Header component
+  // End interview early (user wants to stop and get results)
+  const handleEndInterview = useCallback(() => {
+    // Mark as complete and trigger completion flow
+    setIsInterviewComplete(true);
+    onInterviewComplete?.(messages);
+    toast({
+      title: 'Interview Ended',
+      description: 'Click "Complete Session & Get Results" to receive your report.',
+    });
+  }, [messages, onInterviewComplete, toast]);
+
+  // Register pause/resume/end handlers with parent for Header component
   useEffect(() => {
     onRegisterPauseHandlers?.({
       onPause: handlePauseInterview,
       onResume: handleResumeInterview,
+      onEnd: handleEndInterview,
     });
-  }, [onRegisterPauseHandlers, handlePauseInterview, handleResumeInterview]);
+  }, [onRegisterPauseHandlers, handlePauseInterview, handleResumeInterview, handleEndInterview]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

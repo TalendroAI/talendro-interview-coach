@@ -928,13 +928,21 @@ Continue the interview naturally from where you left off. Ask the next question.
       return;
     }
 
-    // IMPORTANT: Ensure the disconnect handler treats this as an intentional pause.
+    // CRITICAL: Set pause flags FIRST before any async operations
+    // This prevents onDisconnect from treating this as an unexpected disconnect
     isPausedRef.current = true;
     setIsPaused(true);
     setConnectionDropped(false);
 
+    // Disconnect ElevenLabs FIRST (synchronously sets the flag before disconnect fires)
     try {
-      // Save pause state to backend (also triggers pause email)
+      await conversation.endSession();
+    } catch (disconnectError) {
+      console.warn('ElevenLabs disconnect error (non-fatal):', disconnectError);
+    }
+
+    // Now save to backend (won't affect disconnect handler)
+    try {
       const appUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
       const { error } = await supabase.functions.invoke('audio-session', {
         body: {
@@ -947,11 +955,9 @@ Continue the interview naturally from where you left off. Ask the next question.
       });
 
       if (error) {
-        throw new Error(error.message || 'Failed to pause session');
+        console.error('Failed to save pause state:', error);
+        // Don't revert pause state - user can still resume from local state
       }
-
-      // Gracefully disconnect ElevenLabs
-      await conversation.endSession();
 
       toast({
         title: 'Interview Paused',
@@ -967,13 +973,12 @@ Continue the interview naturally from where you left off. Ask the next question.
         },
       });
     } catch (error) {
-      console.error('Failed to pause interview:', error);
-      isPausedRef.current = false;
-      setIsPaused(false);
+      console.error('Failed to save pause state:', error);
+      // Keep paused state - the disconnect already happened
       toast({
-        variant: 'destructive',
-        title: 'Pause Failed',
-        description: 'Could not pause the interview. Please try again.',
+        title: 'Interview Paused',
+        description: 'Your session is paused locally. Resume link may not be sent.',
+        variant: 'default',
       });
     }
   }, [sessionId, userEmail, conversation, toast, logEvent]);

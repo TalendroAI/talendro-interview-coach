@@ -2,7 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { SESSION_CONFIGS, SessionType } from '@/types/session';
-import { Shield, Pause, Play, Loader2 } from 'lucide-react';
+import { Shield, Pause, Play, Loader2, PhoneOff } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 const VALUE_PROPOSITIONS = [
@@ -22,6 +22,10 @@ interface HeaderProps {
   isResuming?: boolean;
   onPause?: () => void;
   onResume?: () => void;
+  // End Interview props (for Mock Interview)
+  showEndButton?: boolean;
+  isEnding?: boolean;
+  onEndInterview?: () => void;
 }
 
 export function Header({ 
@@ -32,6 +36,9 @@ export function Header({
   isResuming = false,
   onPause,
   onResume,
+  showEndButton = false,
+  isEnding = false,
+  onEndInterview,
 }: HeaderProps) {
   const config = sessionType ? SESSION_CONFIGS[sessionType] : null;
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -107,6 +114,24 @@ export function Header({
                 </Button>
               )}
             </>
+          )}
+          
+          {/* End Interview Button - For Mock Interview */}
+          {showEndButton && !isPaused && (
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={onEndInterview}
+              disabled={isEnding || isPausing}
+              className="gap-2"
+            >
+              {isEnding ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <PhoneOff className="h-4 w-4" />
+              )}
+              End Interview
+            </Button>
           )}
         </div>
       </div>

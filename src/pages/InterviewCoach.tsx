@@ -109,7 +109,9 @@ export default function InterviewCoach() {
   const [pauseHandlers, setPauseHandlers] = useState<{
     onPause?: () => void;
     onResume?: () => void;
+    onEnd?: () => void;
   }>({});
+  const [isEndingInterview, setIsEndingInterview] = useState(false);
 
   // Pro interview type selection state
   const [selectedProInterviewType, setSelectedProInterviewType] = useState<ProInterviewType | null>(null);
@@ -1006,6 +1008,13 @@ export default function InterviewCoach() {
         isResuming={headerPauseState.isResuming}
         onPause={pauseHandlers.onPause}
         onResume={pauseHandlers.onResume}
+        showEndButton={headerPauseState.showButton && effectiveSessionType === 'full_mock'}
+        isEnding={isEndingInterview}
+        onEndInterview={() => {
+          setIsEndingInterview(true);
+          pauseHandlers.onEnd?.();
+          setIsEndingInterview(false);
+        }}
       />
       
       <div className="flex-1 flex flex-col lg:flex-row">
