@@ -130,7 +130,14 @@ export function AudioInterface({
   const [inputVolume, setInputVolume] = useState(0);
   const [showMicInputWarning, setShowMicInputWarning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const isPausedRef = useRef(false);
   const toast = toastFn; // Use the toast from the top of the component
+
+  // IMPORTANT: onDisconnect can fire before React state updates land.
+  // Use a ref to reliably detect intentional pauses.
+  useEffect(() => {
+    isPausedRef.current = isPaused;
+  }, [isPaused]);
 
   const {
     inputs: micInputs,
@@ -480,12 +487,14 @@ export function AudioInterface({
       setIsReconnecting(false);
       setConnectionQuality('disconnected');
       cleanup();
-      
+
+      const paused = isPausedRef.current;
+
       // Log disconnect event for diagnostics
       const disconnectReason = typeof details === 'object' && details !== null
         ? JSON.stringify(details)
         : String(details ?? 'unknown');
-      
+
       logEvent({
         eventType: 'elevenlabs_disconnect',
         message: `Session disconnected after ${Math.round((Date.now() - lastActivityTime) / 1000)}s since last activity`,
@@ -495,16 +504,16 @@ export function AudioInterface({
           questionCount: questionCountRef.current,
           transcriptLength: transcriptRef.current.length,
           wasUserEnded: userEndedSession.current,
-          isPaused: isPaused,
+          isPaused: paused,
         },
       });
-      
+
       // Only complete the interview if user intentionally ended it or paused
       if (userEndedSession.current) {
         userEndedSession.current = false;
         handleGracefulEnd('user_ended');
-      } else if (isPaused) {
-        // User paused - don't show reconnect UI, just stay paused
+      } else if (paused) {
+        // User paused intentionally - don't show reconnect UI
         return;
       } else if (interviewStarted.current && !isSessionEnding) {
         // Unexpected disconnect - check if we should auto-reconnect
@@ -919,27 +928,36 @@ Continue the interview naturally from where you left off. Ask the next question.
       return;
     }
 
+    // IMPORTANT: Ensure the disconnect handler treats this as an intentional pause.
+    isPausedRef.current = true;
     setIsPaused(true);
-    
+    setConnectionDropped(false);
+
     try {
-      // Save pause state to database
-      await supabase.functions.invoke('audio-session', {
+      // Save pause state to backend (also triggers pause email)
+      const appUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
+      const { error } = await supabase.functions.invoke('audio-session', {
         body: {
           action: 'pause_session',
           sessionId,
           email: userEmail,
           questionNumber: questionCountRef.current,
+          app_url: appUrl,
         },
       });
-      
+
+      if (error) {
+        throw new Error(error.message || 'Failed to pause session');
+      }
+
       // Gracefully disconnect ElevenLabs
       await conversation.endSession();
-      
+
       toast({
         title: 'Interview Paused',
         description: 'Your progress is saved. You can resume within 24 hours.',
       });
-      
+
       logEvent({
         eventType: 'session_paused',
         message: `Interview paused at question ${questionCountRef.current}`,
@@ -950,6 +968,7 @@ Continue the interview naturally from where you left off. Ask the next question.
       });
     } catch (error) {
       console.error('Failed to pause interview:', error);
+      isPausedRef.current = false;
       setIsPaused(false);
       toast({
         variant: 'destructive',
@@ -1172,6 +1191,30 @@ Continue the interview naturally from where you left off. Ask the next question.
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+
+  // Paused - show a dedicated paused screen (instead of the "Begin Interview" screen)
+  if (isPaused && !isConnected && !isConnecting && !isReconnecting) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-tal-soft">
+        <div className="max-w-md w-full text-center animate-slide-up">
+          <div className="relative mb-8">
+            <div className="h-40 w-40 mx-auto rounded-full flex items-center justify-center bg-accent/10 border-4 border-accent/30">
+              <Pause className="h-16 w-16 text-muted-foreground" />
+            </div>
+          </div>
+
+          <h2 className="font-heading text-2xl font-bold text-foreground mb-2">Interview Paused</h2>
+          <p className="text-muted-foreground mb-8">Your progress is saved. Click Resume to continue within 24 hours.</p>
+
+          <Button variant="audio" size="lg" onClick={resumeInterview} className="gap-2">
+            <Play className="h-5 w-5" />
+            Resume Interview
+          </Button>
         </div>
       </div>
     );

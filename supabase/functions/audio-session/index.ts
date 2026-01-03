@@ -38,6 +38,7 @@ serve(async (req) => {
     const action = (body?.action as Action) ?? "append_turn";
     const sessionId = body?.sessionId as string | undefined;
     const email = body?.email as string | undefined;
+    const app_url = body?.app_url as string | undefined;
 
     // For get_paused_sessions, only email is required
     if (action === "get_paused_sessions") {
@@ -221,7 +222,7 @@ serve(async (req) => {
         context: { questionNumber },
       });
 
-      // Send pause confirmation email (fire and forget)
+      // Send pause confirmation email (best-effort; do not fail pause if email fails)
       try {
         const emailPayload = {
           session_id: sessionId,
@@ -230,27 +231,31 @@ serve(async (req) => {
           questions_completed: questionNumber,
           paused_at: pausedAt,
           is_reminder: false,
+          app_url,
         };
 
         console.log("[audio-session] Sending pause email:", emailPayload);
 
-        // Call the send-pause-email function
-        const emailResponse = await fetch(
-          `${SUPABASE_URL}/functions/v1/send-pause-email`,
+        // Call send-pause-email using the backend client (avoids manual HTTP wiring)
+        const { data: emailData, error: emailError } = await supabase.functions.invoke(
+          "send-pause-email",
           {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-            },
-            body: JSON.stringify(emailPayload),
+            body: emailPayload,
           }
         );
 
-        if (!emailResponse.ok) {
-          console.error("[audio-session] Pause email failed:", await emailResponse.text());
+        if (emailError) {
+          console.error("[audio-session] Pause email invoke error:", emailError);
+
+          await supabase.from("error_logs").insert({
+            error_type: "pause_email_failed",
+            error_message: emailError.message ?? "Pause email failed",
+            session_id: sessionId,
+            user_email: email,
+            context: { emailPayload, emailData },
+          });
         } else {
-          console.log("[audio-session] Pause email sent successfully");
+          console.log("[audio-session] Pause email sent successfully", emailData);
         }
       } catch (emailError) {
         console.error("[audio-session] Error sending pause email:", emailError);
