@@ -34,6 +34,8 @@ const VAD_WARNING_DURATION = 8000; // Show warning after 8s of low VAD
 const HEARTBEAT_INTERVAL = 5000; // Check connection health every 5s
 const SILENCE_TIMEOUT = 45000; // 45s of no activity triggers warning
 const MAX_RECONNECT_ATTEMPTS = 3;
+const KEEP_ALIVE_INTERVAL = 10000; // Send keep-alive every 10s
+const ANTI_INTERRUPT_VAD_THRESHOLD = 0.3; // Send activity signal when user is speaking above this VAD
 
 type ConnectionQuality = 'excellent' | 'good' | 'poor' | 'disconnected';
 
@@ -154,6 +156,10 @@ export function AudioInterface({
   const silenceWarningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   // Last VAD scores for averaging
   const vadHistoryRef = useRef<number[]>([]);
+  // Keep-alive interval reference
+  const keepAliveRef = useRef<NodeJS.Timeout | null>(null);
+  // Anti-interrupt: track if user is currently speaking
+  const userIsSpeakingRef = useRef(false);
 
   // Keep a rolling transcript so we can resume after reconnect (ElevenLabs sessions don't persist across reconnects)
   const transcriptRef = useRef<Array<{ role: 'user' | 'assistant'; text: string; ts: number }>>([]);
@@ -198,6 +204,10 @@ export function AudioInterface({
     if (silenceWarningTimeoutRef.current) {
       clearTimeout(silenceWarningTimeoutRef.current);
       silenceWarningTimeoutRef.current = null;
+    }
+    if (keepAliveRef.current) {
+      clearInterval(keepAliveRef.current);
+      keepAliveRef.current = null;
     }
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach(track => track.stop());
@@ -374,6 +384,13 @@ export function AudioInterface({
     // Calculate average VAD
     const avgVad = vadHistoryRef.current.reduce((a, b) => a + b, 0) / vadHistoryRef.current.length;
 
+    // Track if user is speaking for anti-interrupt
+    if (score >= ANTI_INTERRUPT_VAD_THRESHOLD) {
+      userIsSpeakingRef.current = true;
+    } else if (avgVad < ANTI_INTERRUPT_VAD_THRESHOLD) {
+      userIsSpeakingRef.current = false;
+    }
+
     // If VAD is consistently low, show warning
     if (avgVad < VAD_LOW_THRESHOLD && !showVadWarning) {
       if (!vadWarningTimeoutRef.current) {
@@ -424,6 +441,20 @@ export function AudioInterface({
 
       // Start heartbeat monitoring
       startHeartbeat(conversation);
+      
+      // Start keep-alive interval to prevent connection timeout
+      if (keepAliveRef.current) {
+        clearInterval(keepAliveRef.current);
+      }
+      keepAliveRef.current = setInterval(() => {
+        try {
+          // Send periodic activity signal to keep connection alive
+          conversation.sendUserActivity();
+          console.log('[KeepAlive] Sent activity signal');
+        } catch (e) {
+          console.warn('[KeepAlive] Failed to send activity:', e);
+        }
+      }, KEEP_ALIVE_INTERVAL);
     },
     onDisconnect: (details) => {
       console.log('Disconnected from ElevenLabs agent', details);
@@ -602,6 +633,24 @@ export function AudioInterface({
     // VAD score monitoring for voice detection issues
     onVadScore: handleVadScore,
   });
+
+  // ANTI-INTERRUPT: Send activity signal when user is speaking to prevent agent from cutting them off
+  useEffect(() => {
+    if (conversation.status !== 'connected') return;
+    
+    const antiInterruptInterval = setInterval(() => {
+      if (userIsSpeakingRef.current) {
+        try {
+          conversation.sendUserActivity();
+          console.log('[AntiInterrupt] User speaking, sent activity signal');
+        } catch (e) {
+          // Ignore errors
+        }
+      }
+    }, 500); // Check every 500ms
+    
+    return () => clearInterval(antiInterruptInterval);
+  }, [conversation.status, conversation]);
 
   // Initial connection uses `reconnect({ mode: 'initial' })` (the reconnect path is the stable one).
 
