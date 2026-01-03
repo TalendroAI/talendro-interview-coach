@@ -351,7 +351,10 @@ serve(async (req) => {
     const resend = new Resend(resendKey);
 
     const body = await req.json();
-    const { session_id, email, session_type, test_email, results } = body ?? {};
+    const { session_id, email, session_type, test_email, results, prep_content } = body ?? {};
+    
+    // prep_content is passed from client for Audio Mock sessions (contains combined prep packet + transcript)
+    const clientProvidedContent = typeof prep_content === "string" ? prep_content : null;
 
      const sanitizeEmailHtml = (html: string) =>
        stripProblemChars(html).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
@@ -447,6 +450,19 @@ serve(async (req) => {
     const sessionLabel = sessionTypeLabels[effectiveSessionType] || "Interview Coaching";
 
     const prepPacket = (() => {
+      // For Audio Mock, extract prep packet from client-provided content
+      if (effectiveSessionType === "premium_audio" && clientProvidedContent) {
+        const transcriptMarker = "# Audio Interview Transcript";
+        const markerIndex = clientProvidedContent.indexOf(transcriptMarker);
+        if (markerIndex > 0) {
+          // Content before the transcript marker is the prep packet
+          const prepPart = clientProvidedContent.substring(0, markerIndex).trim();
+          // Remove trailing separator
+          return prepPart.replace(/\n*---\n*$/, "").trim() || null;
+        }
+        return null;
+      }
+      
       const raw = session.prep_packet as any;
       if (!raw) return null;
       if (typeof raw === "string") return raw;
@@ -467,12 +483,41 @@ serve(async (req) => {
 
     const chatMessages = (session.chat_messages as ChatMessageRow[]) ?? [];
     const messageCount = chatMessages.length;
-    const transcript = buildTranscriptMarkdown(chatMessages);
-
-    const analysisMarkdown =
-      effectiveSessionType === "quick_prep"
-        ? prepPacket ?? "No prep packet was saved for this session."
-        : extractFinalSummaryMarkdown(chatMessages) ?? "# Final Summary\n\nYour full transcript is included above.";
+    
+    // For Audio Mock (premium_audio), use client-provided content since ElevenLabs 
+    // transcripts aren't stored in chat_messages table
+    let transcript: string;
+    let analysisMarkdown: string;
+    
+    if (effectiveSessionType === "premium_audio" && clientProvidedContent) {
+      // Parse client-provided content which contains prep packet + transcript
+      // Format: "prep packet content\n\n---\n\n# Audio Interview Transcript\n\ntranscript content"
+      const transcriptMarker = "# Audio Interview Transcript";
+      const markerIndex = clientProvidedContent.indexOf(transcriptMarker);
+      
+      if (markerIndex !== -1) {
+        transcript = clientProvidedContent.substring(markerIndex).trim();
+      } else {
+        // Fallback: treat entire content as transcript
+        transcript = clientProvidedContent;
+      }
+      
+      // For audio, we don't have Sarah's final summary from chat - use a placeholder
+      analysisMarkdown = "# Interview Complete\n\nYour full interview transcript and prep materials are included above. Review Sarah's verbal feedback during the session for your personalized score and recommendations.";
+      
+      logStep("Using client-provided audio content", {
+        contentLength: clientProvidedContent.length,
+        transcriptLength: transcript.length,
+      });
+    } else {
+      // Standard flow for text-based sessions (full_mock, quick_prep)
+      transcript = buildTranscriptMarkdown(chatMessages);
+      
+      analysisMarkdown =
+        effectiveSessionType === "quick_prep"
+          ? prepPacket ?? "No prep packet was saved for this session."
+          : extractFinalSummaryMarkdown(chatMessages) ?? "# Final Summary\n\nYour full transcript is included above.";
+    }
 
     logStep("Building email", {
       sessionType: effectiveSessionType,
