@@ -700,6 +700,8 @@ export function AudioInterface({
       const mode: 'initial' | 'resume' = options?.mode === 'initial' ? 'initial' : 'resume';
       const isInitial = mode === 'initial';
 
+      console.log('[reconnect] Starting with mode:', mode, 'resumeFromPause:', resumeFromPause);
+
       if (isInitial) {
         // Fresh interview run (use the working reconnect path, but with first-time greeting/context)
         transcriptRef.current = [];
@@ -726,18 +728,20 @@ export function AudioInterface({
 
       try {
         // Request microphone - keep the stream active for ElevenLabs
-        console.log('Requesting microphone for reconnect...');
+        console.log('[reconnect] Requesting microphone...');
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: selectedInputId ? { deviceId: { exact: selectedInputId } } : true,
         });
         // Keep stream active - ElevenLabs SDK needs it
         mediaStreamRef.current = stream;
-        console.log('Microphone ready for reconnect');
+        console.log('[reconnect] Microphone ready');
 
         // Fetch FULL conversation history from database (resume mode only)
         let dbHistory: Awaited<ReturnType<typeof getHistory>> = [];
         if (!isInitial) {
+          console.log('[reconnect] Fetching DB history for resume...');
           dbHistory = await getHistory();
+          console.log('[reconnect] Got', dbHistory.length, 'history entries from DB');
 
           // If we have DB history, use it as the source of truth
           if (dbHistory.length > 0) {
@@ -754,6 +758,7 @@ export function AudioInterface({
               lastAssistantTurnRef.current = lastAssistant.content;
               // Count questions by counting assistant messages with "?"
               questionCountRef.current = assistantMessages.filter((m) => m.content.includes('?')).length;
+              console.log('[reconnect] Restored question count:', questionCountRef.current);
             }
           }
         }
@@ -769,12 +774,17 @@ export function AudioInterface({
 
         const firstName = documents?.firstName?.trim();
         const nameForGreeting = firstName || 'there';
+        const questionsSoFar = questionCountRef.current;
+        const nextQuestion = questionsSoFar + 1;
 
         const firstTimeGreeting = `Hi ${nameForGreeting}, I'm Sarah, your interview coach today. I've reviewed your materials and I'm ready to put you through a realistic mock interview. We'll cover 16 questions across different categories. Take your time with each answer, and I'll give you feedback as we go. Ready to begin?`;
 
-        // The firstMessage should be what Sarah SAYS, not instructions
-        // Keep it natural and short - instructions go in contextual update
-        const resumeGreeting = `Welcome back! Let's continue where we left off.`;
+        // For resume, give a contextual welcome that acknowledges progress
+        const resumeGreeting = questionsSoFar > 0
+          ? `Welcome back${firstName ? `, ${firstName}` : ''}! Great to have you back. We were making good progress — you've already answered ${questionsSoFar} questions. Let's continue with question ${nextQuestion}.`
+          : `Welcome back${firstName ? `, ${firstName}` : ''}! Let's continue where we left off.`;
+
+        console.log('[reconnect] Starting ElevenLabs session with greeting:', isInitial ? 'initial' : 'resume');
 
         await conversation.startSession({
           conversationToken: token,
@@ -787,26 +797,49 @@ export function AudioInterface({
           },
         });
 
-        // Send context via contextual update (NOT spoken aloud)
+        // Build context parts for contextual update (NOT spoken aloud)
         const contextParts: string[] = [];
 
-        if (!isInitial) {
-          const lastSarahMessage = lastAssistantTurnRef.current;
-          const questionsSoFar = questionCountRef.current;
-
-          // CRITICAL: Resume instructions go here, in the contextual update, NOT in firstMessage
-          const resumeInstructions = `CRITICAL CONTEXT: This is a RESUMED interview session, NOT a new one.
-Do NOT re-introduce yourself. Do NOT ask the candidate to introduce themselves again.
-The candidate has already answered ${questionsSoFar} questions.
-${lastSarahMessage ? `Your last message before the pause was: "${lastSarahMessage.substring(0, 300)}${lastSarahMessage.length > 300 ? '...' : ''}"` : ''}
-Continue the interview naturally from where you left off. Ask the next question.`;
-
-          contextParts.push(resumeInstructions);
-        }
-
+        // Always include documents
         if (documents?.resume) contextParts.push(`Candidate Resume:\n${documents.resume}`);
         if (documents?.jobDescription) contextParts.push(`Job Description:\n${documents.jobDescription}`);
         if (documents?.companyUrl) contextParts.push(`Company URL: ${documents.companyUrl}`);
+
+        if (!isInitial && transcriptRef.current.length > 0) {
+          const lastSarahMessage = lastAssistantTurnRef.current;
+
+          // CRITICAL: Build comprehensive resume context with FULL transcript
+          const fullTranscriptText = transcriptRef.current
+            .map((t, idx) => `[Turn ${idx + 1}] ${t.role === 'user' ? 'CANDIDATE' : 'SARAH'}: ${t.text}`)
+            .join('\n\n');
+
+          // Comprehensive resume instructions
+          const resumeInstructions = `
+=== CRITICAL: THIS IS A RESUMED INTERVIEW SESSION ===
+
+STATUS:
+- Questions already asked: ${questionsSoFar}
+- Next question to ask: Question ${nextQuestion} of 16
+- Transcript turns restored: ${transcriptRef.current.length}
+
+INSTRUCTIONS:
+1. Do NOT re-introduce yourself - you already did when the session started
+2. Do NOT ask the candidate to introduce themselves again
+3. Do NOT repeat any questions from the transcript below
+4. Continue EXACTLY from question ${nextQuestion}
+5. Reference their previous answers when relevant to show continuity
+
+${lastSarahMessage ? `YOUR LAST MESSAGE BEFORE PAUSE:\n"${lastSarahMessage.substring(0, 500)}${lastSarahMessage.length > 500 ? '...' : ''}"` : ''}
+
+=== COMPLETE INTERVIEW TRANSCRIPT SO FAR ===
+${fullTranscriptText}
+=== END OF TRANSCRIPT ===
+
+Now continue the interview naturally. Ask question ${nextQuestion}.`;
+
+          contextParts.push(resumeInstructions);
+          console.log('[reconnect] Added resume context with', transcriptRef.current.length, 'turns');
+        }
 
         // IMPORTANT: Add closing instruction to remind Sarah about the email
         contextParts.push(`IMPORTANT END-OF-INTERVIEW INSTRUCTION: At the very end of the interview, after giving your verbal summary with the score and top 3 strengths and improvements, always tell the user: "Your complete prep packet with the full transcript and detailed feedback has been sent to your email. Check your inbox for everything we discussed today."`);
@@ -818,33 +851,13 @@ Continue the interview naturally from where you left off. Ask the next question.
 - Do NOT prompt them or ask if they're ready after just a few seconds
 - Wait patiently and silently for them to indicate they want to continue`);
 
-        if (!isInitial) {
-          const questionsSoFar = questionCountRef.current;
-
-          // Send the FULL transcript, not just last 12 turns
-          const fullTranscriptText = transcriptRef.current
-            .map((t) => `${t.role === 'user' ? 'Candidate' : 'Sarah'}: ${t.text}`)
-            .join('\n\n');
-
-          if (fullTranscriptText) {
-            contextParts.push(
-              `=== COMPLETE INTERVIEW TRANSCRIPT (${transcriptRef.current.length} turns, ${questionsSoFar} questions asked) ===\n${fullTranscriptText}`
-            );
-          }
-        }
-
-        // Wait for connection to stabilize before sending context
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
+        // Send context immediately - no artificial delay
         if (contextParts.length > 0) {
-          conversation.sendContextualUpdate(
-            isInitial ? contextParts.join('\n\n') : contextParts.join('\n\n---\n\n')
-          );
+          console.log('[reconnect] Sending contextual update with', contextParts.length, 'parts');
+          conversation.sendContextualUpdate(contextParts.join('\n\n---\n\n'));
         }
 
         if (!isInitial) {
-          const questionsSoFar = questionCountRef.current;
-
           // Log successful reconnection
           logEvent({
             eventType: 'session_reconnected',
@@ -901,6 +914,7 @@ Continue the interview naturally from where you left off. Ask the next question.
       getHistory,
       logEvent,
       cleanup,
+      resumeFromPause,
     ]
   );
 
@@ -1204,24 +1218,42 @@ Continue the interview naturally from where you left off. Ask the next question.
   }
 
 
-  // Paused - show a dedicated paused screen (instead of the "Begin Interview" screen)
+  // Paused - show a dedicated paused screen with Resume and End options
   if (isPaused && !isConnected && !isConnecting && !isReconnecting) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 bg-tal-soft">
         <div className="max-w-md w-full text-center animate-slide-up">
           <div className="relative mb-8">
-            <div className="h-40 w-40 mx-auto rounded-full flex items-center justify-center bg-accent/10 border-4 border-accent/30">
-              <Pause className="h-16 w-16 text-muted-foreground" />
+            <div className="h-40 w-40 mx-auto rounded-full flex items-center justify-center bg-primary/10 border-4 border-primary/30">
+              <Pause className="h-16 w-16 text-primary" />
             </div>
           </div>
 
           <h2 className="font-heading text-2xl font-bold text-foreground mb-2">Interview Paused</h2>
-          <p className="text-muted-foreground mb-8">Your progress is saved. Click Resume to continue within 24 hours.</p>
+          <p className="text-muted-foreground mb-4">Your progress is saved. You can resume within 24 hours.</p>
+          
+          {/* Question progress indicator */}
+          <div className="mb-8 p-4 bg-card rounded-lg border border-border inline-block">
+            <p className="text-sm text-muted-foreground">
+              Questions completed: <span className="font-semibold text-foreground">{questionCountRef.current}</span> of 16
+            </p>
+          </div>
 
-          <Button variant="audio" size="lg" onClick={resumeInterview} className="gap-2">
-            <Play className="h-5 w-5" />
-            Resume Interview
-          </Button>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Button variant="audio" size="lg" onClick={resumeInterview} className="gap-2 w-full sm:w-auto">
+              <Play className="h-5 w-5" />
+              Resume Interview
+            </Button>
+            <Button 
+              variant="outline" 
+              size="lg" 
+              onClick={() => handleGracefulEnd('user_ended')}
+              className="gap-2 w-full sm:w-auto"
+            >
+              <PhoneOff className="h-5 w-5" />
+              End & Get Results
+            </Button>
+          </div>
         </div>
       </div>
     );

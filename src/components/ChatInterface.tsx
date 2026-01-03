@@ -168,12 +168,36 @@ export function ChatInterface({
   const sendResumeMessage = async (previousMessages: Message[]) => {
     setIsLoading(true);
     try {
-      // Build context from previous messages
+      // Count how many questions have been asked (assistant messages with "?")
+      const assistantMessages = previousMessages.filter(m => m.role === 'assistant');
+      const questionsAsked = assistantMessages.filter(m => m.content.includes('?')).length;
+      const nextQuestion = questionsAsked + 1;
+      
+      // Build complete context from previous messages
       const historyContext = previousMessages
-        .map(m => `${m.role === 'user' ? 'Candidate' : 'Interviewer'}: ${m.content}`)
+        .map((m, idx) => `[Turn ${idx + 1}] ${m.role === 'user' ? 'CANDIDATE' : 'INTERVIEWER'}: ${m.content}`)
         .join('\n\n');
       
-      const resumePrompt = `[SYSTEM: The candidate has returned from a pause. Here is the conversation so far:\n\n${historyContext}\n\nContinue the interview naturally. Say something like "Welcome back! Let's continue where we left off." and then proceed with the next question or follow up on their last answer.]`;
+      const resumePrompt = `[SYSTEM CONTEXT: The candidate has RESUMED their paused interview session.
+
+=== SESSION STATUS ===
+- Questions already asked: ${questionsAsked}
+- Next question to ask: Question ${nextQuestion} of 10
+- Total transcript turns: ${previousMessages.length}
+
+=== CRITICAL INSTRUCTIONS ===
+1. Do NOT re-introduce yourself
+2. Do NOT ask the candidate to introduce themselves again  
+3. Do NOT repeat any questions from the transcript below
+4. Acknowledge their return warmly with something like "Welcome back! Great to have you back."
+5. Briefly reference where you left off (e.g., "We were making good progress on question ${questionsAsked}")
+6. Then IMMEDIATELY proceed to question ${nextQuestion} - do NOT ask if they're ready
+
+=== COMPLETE INTERVIEW TRANSCRIPT ===
+${historyContext}
+=== END OF TRANSCRIPT ===
+
+Now provide your welcome-back message and immediately continue with question ${nextQuestion}.]`;
       
       const response = await sendAIMessage(
         sessionId,
