@@ -287,8 +287,16 @@ export function ChatInterface({
       setIsPaused(false);
       onPauseStateChange?.(false);
       
-      // Send a resume message to continue naturally
-      await sendResumeMessage(messages);
+      // Use messages from database if available, otherwise use current state
+      const historyMessages = result.messages.length > 0 ? result.messages : messages;
+      
+      // Update local state with database messages if we got them
+      if (result.messages.length > 0) {
+        setMessages(result.messages);
+      }
+      
+      // Send a resume message with the full history context
+      await sendResumeMessage(historyMessages);
       
       toast({
         title: 'Interview Resumed',
