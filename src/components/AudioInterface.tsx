@@ -20,6 +20,7 @@ interface AudioInterfaceProps {
     companyUrl: string;
   };
   isDocumentsSaved?: boolean;
+  resumeFromPause?: boolean;
   onInterviewStarted?: () => void;
   onInterviewComplete?: () => void;
   // Callback with results data for parent to show results screen (like Mock Interview)
@@ -42,10 +43,11 @@ const ANTI_INTERRUPT_VAD_THRESHOLD = 0.3; // Send activity signal when user is s
 type ConnectionQuality = 'excellent' | 'good' | 'poor' | 'disconnected';
 
 export function AudioInterface({
-  isActive, 
-  sessionId, 
-  documents, 
+  isActive,
+  sessionId,
+  documents,
   isDocumentsSaved = false,
+  resumeFromPause = false,
   onInterviewStarted,
   onInterviewComplete,
   onSessionComplete,
@@ -1334,16 +1336,16 @@ Continue the interview naturally from where you left off. Ask the next question.
             </ul>
           </div>
 
-          {/* Start Button */}
+          {/* Start / Resume Button */}
           <div className="flex justify-center">
             <Button
               variant="audio"
               size="xl"
-              onClick={() => reconnect({ mode: 'initial' })}
+              onClick={() => (resumeFromPause ? reconnect() : reconnect({ mode: 'initial' }))}
               disabled={!canStartInterview || isConnecting || isReconnecting}
               className="gap-2 text-lg px-8 py-6"
             >
-              Begin Interview
+              {resumeFromPause ? 'Resume Interview' : 'Begin Interview'}
             </Button>
           </div>
         </div>

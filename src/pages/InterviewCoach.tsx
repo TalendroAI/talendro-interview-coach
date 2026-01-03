@@ -755,11 +755,13 @@ export default function InterviewCoach() {
     
     // Fetch documents from the paused session (use backend function to bypass RLS)
     try {
+      const emailForLookup = userEmail ?? searchParams.get('email') ?? undefined;
+
       const { data, error } = await supabase.functions.invoke('audio-session', {
         body: {
           action: 'get_session',
           sessionId: pausedSessionId,
-          email: userEmail,
+          email: emailForLookup,
         },
       });
 
@@ -971,6 +973,7 @@ export default function InterviewCoach() {
           sessionId={sessionId}
           documents={documents}
           isDocumentsSaved={isDocumentsSaved}
+          resumeFromPause={resumeFromPause}
           onInterviewStarted={() => setIsAudioInterviewStarted(true)}
           onInterviewComplete={() => setIsAudioInterviewComplete(true)}
           onSessionComplete={handleAudioSessionComplete}

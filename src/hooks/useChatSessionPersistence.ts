@@ -120,12 +120,15 @@ export function useChatSessionPersistence(sessionId?: string, userEmail?: string
     }
 
     try {
+      const appUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
+
       const { error } = await supabase.functions.invoke('audio-session', {
         body: {
           action: 'pause_session',
           sessionId,
           email: userEmail,
           questionNumber: questionCountRef.current,
+          app_url: appUrl,
         },
       });
 
