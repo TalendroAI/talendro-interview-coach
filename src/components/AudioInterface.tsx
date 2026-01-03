@@ -22,6 +22,8 @@ interface AudioInterfaceProps {
   isDocumentsSaved?: boolean;
   onInterviewStarted?: () => void;
   onInterviewComplete?: () => void;
+  // Callback with results data for parent to show results screen (like Mock Interview)
+  onSessionComplete?: (resultsData: { transcript: string; prepPacket: string | null }) => void;
   userEmail?: string;
 }
 
@@ -46,6 +48,7 @@ export function AudioInterface({
   isDocumentsSaved = false,
   onInterviewStarted,
   onInterviewComplete,
+  onSessionComplete,
   userEmail
 }: AudioInterfaceProps) {
   const { toast: toastFn } = useToast();
@@ -310,29 +313,44 @@ export function AudioInterface({
     const messages: Record<typeof reason, { title: string; description: string }> = {
       user_ended: {
         title: 'Interview Complete',
-        description: 'Great job! Sending your results now...',
+        description: 'Great job! Preparing your results...',
       },
       connection_lost: {
         title: 'Session Ended',
-        description: 'The connection was lost. We\'re sending whatever results we captured.',
+        description: 'The connection was lost. Preparing your results...',
       },
       timeout: {
         title: 'Session Timed Out',
-        description: 'The session ended due to inactivity. Sending your partial results.',
+        description: 'The session ended due to inactivity. Preparing your results...',
       },
       error: {
         title: 'Session Ended Unexpectedly',
-        description: 'Something went wrong. We\'ll try to send your results.',
+        description: 'Something went wrong. Preparing your results...',
       },
     };
 
     toast(messages[reason]);
 
-    await sendAudioResults();
+    // Build transcript from captured turns
+    const transcriptContent = transcriptRef.current
+      .map(t => `**${t.role === 'user' ? 'Your Answer' : 'Sarah (Coach)'}:**\n${t.text}`)
+      .join('\n\n---\n\n');
+    
+    // Fetch prep packet
+    const prepPacket = await fetchPrepPacket();
+
+    // Pass results to parent so it can show the results screen (like Mock Interview)
+    if (onSessionComplete) {
+      onSessionComplete({
+        transcript: transcriptContent,
+        prepPacket,
+      });
+    }
+
     setIsSessionEnding(false);
     interviewStarted.current = false;
     onInterviewComplete?.();
-  }, [cleanup, sendAudioResults, toast, onInterviewComplete]);
+  }, [cleanup, toast, onInterviewComplete, onSessionComplete]);
 
   // Start heartbeat monitoring
   const startHeartbeat = useCallback((conversationRef: ReturnType<typeof useConversation>) => {
@@ -778,6 +796,9 @@ Continue the interview naturally from where you left off. Ask the next question.
         if (documents?.resume) contextParts.push(`Candidate Resume:\n${documents.resume}`);
         if (documents?.jobDescription) contextParts.push(`Job Description:\n${documents.jobDescription}`);
         if (documents?.companyUrl) contextParts.push(`Company URL: ${documents.companyUrl}`);
+
+        // IMPORTANT: Add closing instruction to remind Sarah about the email
+        contextParts.push(`IMPORTANT END-OF-INTERVIEW INSTRUCTION: At the very end of the interview, after giving your verbal summary with the score and top 3 strengths and improvements, always tell the user: "Your complete prep packet with the full transcript and detailed feedback has been sent to your email. Check your inbox for everything we discussed today."`);
 
         if (!isInitial) {
           const questionsSoFar = questionCountRef.current;
