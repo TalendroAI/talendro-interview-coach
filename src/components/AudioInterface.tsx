@@ -1147,31 +1147,53 @@ Now continue the interview naturally. Ask question ${nextQuestion}.`;
   const canStartInterview = isDocumentsSaved;
 
   // Connection quality indicator component
-  const ConnectionIndicator = () => (
-    <div className="flex items-center gap-2">
-      <div
-        className={cn(
-          "h-2 w-2 rounded-full transition-colors",
-          connectionQuality === 'excellent' && "bg-primary",
-          connectionQuality === 'good' && "bg-secondary",
-          connectionQuality === 'poor' && "bg-accent animate-pulse",
-          connectionQuality === 'disconnected' && "bg-destructive"
-        )}
-      />
-      <span className="text-sm text-muted-foreground">
-        {connectionQuality === 'excellent' && 'Excellent connection'}
-        {connectionQuality === 'good' && 'Good connection'}
-        {connectionQuality === 'poor' && 'Poor connection'}
-        {connectionQuality === 'disconnected' && 'Disconnected'}
-      </span>
-      {showVadWarning && (
-        <span className="text-sm text-destructive flex items-center gap-1">
-          <AlertTriangle className="h-3 w-3" />
-          Mic issue
+  const ConnectionIndicator = () => {
+    // Show paused state if paused
+    if (isPaused && !isConnected) {
+      return (
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-accent" />
+          <span className="text-sm text-muted-foreground">Paused</span>
+        </div>
+      );
+    }
+    
+    // Show reconnecting state
+    if (isReconnecting) {
+      return (
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-3 w-3 animate-spin text-primary" />
+          <span className="text-sm text-muted-foreground">Reconnecting...</span>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="flex items-center gap-2">
+        <div
+          className={cn(
+            "h-2 w-2 rounded-full transition-colors",
+            connectionQuality === 'excellent' && "bg-primary",
+            connectionQuality === 'good' && "bg-secondary",
+            connectionQuality === 'poor' && "bg-accent animate-pulse",
+            connectionQuality === 'disconnected' && "bg-destructive"
+          )}
+        />
+        <span className="text-sm text-muted-foreground">
+          {connectionQuality === 'excellent' && 'Excellent connection'}
+          {connectionQuality === 'good' && 'Good connection'}
+          {connectionQuality === 'poor' && 'Poor connection'}
+          {connectionQuality === 'disconnected' && 'Connection lost'}
         </span>
-      )}
-    </div>
-  );
+        {showVadWarning && (
+          <span className="text-sm text-destructive flex items-center gap-1">
+            <AlertTriangle className="h-3 w-3" />
+            Mic issue
+          </span>
+        )}
+      </div>
+    );
+  };
 
   // Session ending screen
   if (isSessionEnding) {
@@ -1542,10 +1564,12 @@ Now continue the interview naturally. Ask question ${nextQuestion}.`;
           </div>
         )}
 
-        {/* Connection status indicator */}
-        <div className="mt-4 flex items-center justify-center">
-          <ConnectionIndicator />
-        </div>
+        {/* Connection status indicator - only show when connected or was previously connected */}
+        {(isConnected || isPaused || connectionDropped || isReconnecting) && (
+          <div className="mt-4 flex items-center justify-center">
+            <ConnectionIndicator />
+          </div>
+        )}
       </div>
     </div>
   );
