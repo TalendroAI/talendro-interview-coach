@@ -523,6 +523,73 @@ export default function InterviewCoach() {
     setIsMockInterviewComplete(true);
   };
 
+  // Audio interview completion state for passing transcript to results
+  const [audioInterviewData, setAudioInterviewData] = useState<{
+    transcript: string;
+    prepPacket: string | null;
+  } | null>(null);
+
+  // Callback when audio interview is complete with results data
+  const handleAudioSessionComplete = (resultsData: { transcript: string; prepPacket: string | null }) => {
+    setAudioInterviewData(resultsData);
+    setIsAudioInterviewComplete(true);
+    // Trigger the results flow immediately
+    handleAudioResultsFlow(resultsData);
+  };
+
+  // Handle audio results flow - send email and show results screen
+  const handleAudioResultsFlow = async (resultsData: { transcript: string; prepPacket: string | null }) => {
+    setIsLoading(true);
+    
+    try {
+      // Combine prep packet + transcript
+      let contentToSend = '';
+      if (resultsData.prepPacket) {
+        contentToSend = resultsData.prepPacket + '\n\n---\n\n# Audio Interview Transcript\n\n' + resultsData.transcript;
+      } else {
+        contentToSend = '# Audio Interview Transcript\n\n' + resultsData.transcript;
+      }
+
+      const { data, error } = await supabase.functions.invoke('send-results', {
+        body: {
+          session_id: sessionId,
+          email: userEmail,
+          session_type: 'premium_audio',
+          prep_content: contentToSend,
+          results: null,
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to send results');
+      }
+
+      // Show the same deliverable on-screen that we email
+      if (data?.report) {
+        setResultsReport(data.report);
+      }
+      if (data?.session_results) {
+        setCompletedSessionResults(data.session_results);
+      }
+
+      toast({
+        title: 'Results sent!',
+        description: 'Your full report is shown here and has been emailed to you.',
+      });
+
+      setIsSessionCompleted(true);
+    } catch (err) {
+      console.error('Error sending audio results:', err);
+      toast({
+        title: 'Error sending results',
+        description: err instanceof Error ? err.message : 'Failed to send your results.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Helper to fetch prep packet from session
   const fetchPrepPacket = async (): Promise<string | null> => {
     if (!sessionId) return null;
@@ -904,6 +971,7 @@ export default function InterviewCoach() {
           isDocumentsSaved={isDocumentsSaved}
           onInterviewStarted={() => setIsAudioInterviewStarted(true)}
           onInterviewComplete={() => setIsAudioInterviewComplete(true)}
+          onSessionComplete={handleAudioSessionComplete}
           userEmail={userEmail}
         />
       );
