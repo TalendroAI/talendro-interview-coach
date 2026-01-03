@@ -50,25 +50,26 @@ serve(async (req) => {
 
     const resend = new Resend(resendKey);
 
-    const { 
-      session_id, 
-      email, 
-      session_type, 
-      questions_completed, 
+    const {
+      session_id,
+      email,
+      session_type,
+      questions_completed,
       paused_at,
-      is_reminder 
+      is_reminder,
+      app_url,
     } = await req.json();
 
     if (!session_id || !email) {
       throw new Error("session_id and email are required");
     }
 
-    logStep("Processing pause email", { 
-      session_id, 
-      email: "***", 
-      session_type, 
+    logStep("Processing pause email", {
+      session_id,
+      email: "***",
+      session_type,
       questions_completed,
-      is_reminder 
+      is_reminder,
     });
 
     const supabaseClient = createClient(
@@ -89,16 +90,23 @@ serve(async (req) => {
     }
 
     // Build resume URL with session parameters
-    const appUrl = 'https://coach.talendro.com'; // Production URL for Interview Coach
+    const rawAppUrl = typeof app_url === 'string' ? app_url : '';
+    const appUrl = rawAppUrl && rawAppUrl.startsWith('http')
+      ? rawAppUrl.replace(/\/$/, '')
+      : 'https://coach.talendro.com';
+
     const resumeUrl = `${appUrl}/interview-coach?resume_session=${session_id}&email=${encodeURIComponent(email)}`;
 
     const sessionLabel = sessionTypeLabels[session_type] || "Interview Session";
     const pausedDate = new Date(paused_at || session.paused_at);
     const expirationDate = new Date(pausedDate.getTime() + 24 * 60 * 60 * 1000);
-    const hoursRemaining = Math.max(0, Math.floor((expirationDate.getTime() - Date.now()) / (1000 * 60 * 60)));
+    const hoursRemaining = Math.max(
+      0,
+      Math.floor((expirationDate.getTime() - Date.now()) / (1000 * 60 * 60))
+    );
 
     const totalQuestions = sessionQuestionCounts[session_type] || 10;
-    
+
     const emailHtml = generatePauseEmail({
       sessionLabel,
       questionsCompleted: questions_completed || session.current_question_number || 0,
@@ -107,25 +115,49 @@ serve(async (req) => {
       expirationDate,
       hoursRemaining,
       resumeUrl,
-      isReminder: is_reminder || false
+      isReminder: is_reminder || false,
     });
 
-    const subject = is_reminder 
+    const subject = is_reminder
       ? `⚠️ Your Interview Session Expires in ${hoursRemaining} Hours`
       : "Your Talendro Interview Session is Paused";
 
-    const emailResponse = await resend.emails.send({
-      from: "Talendro Interview Coach <noreply@talendro.com>",
+    const primaryFrom = "Talendro Interview Coach <noreply@talendro.com>";
+    const fallbackFrom = "Talendro Interview Coach <onboarding@resend.dev>";
+
+    let emailResponse = await resend.emails.send({
+      from: primaryFrom,
       reply_to: "support@talendro.com",
       to: [email],
       subject,
       html: emailHtml,
     });
 
+    // If the custom domain isn't verified in the email provider, fall back to resend.dev
+    if (emailResponse.error) {
+      logStep("Primary sender failed; retrying with fallback sender", {
+        error: emailResponse.error,
+      });
+
+      emailResponse = await resend.emails.send({
+        from: fallbackFrom,
+        reply_to: "support@talendro.com",
+        to: [email],
+        subject,
+        html: emailHtml,
+      });
+    }
+
     logStep("Email sent", { emailResponse });
 
-    if (emailResponse.error) {
-      throw new Error(`Email sending failed: ${emailResponse.error.message || 'Unknown error'}`);
+    const sendError = (emailResponse as any)?.error;
+    if (sendError) {
+      const msg =
+        typeof sendError === "object" && sendError !== null
+          ? String((sendError as any).message ?? JSON.stringify(sendError))
+          : String(sendError);
+
+      throw new Error(`Email sending failed: ${msg || "Unknown error"}`);
     }
 
     return new Response(JSON.stringify({ 
