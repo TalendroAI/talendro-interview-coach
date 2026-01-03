@@ -800,6 +800,13 @@ Continue the interview naturally from where you left off. Ask the next question.
         // IMPORTANT: Add closing instruction to remind Sarah about the email
         contextParts.push(`IMPORTANT END-OF-INTERVIEW INSTRUCTION: At the very end of the interview, after giving your verbal summary with the score and top 3 strengths and improvements, always tell the user: "Your complete prep packet with the full transcript and detailed feedback has been sent to your email. Check your inbox for everything we discussed today."`);
 
+        // PAUSE HANDLING INSTRUCTIONS
+        contextParts.push(`HANDLING PAUSE REQUESTS: If the candidate says "let's pause", "I need to pause", "pause the interview", "can we take a break", or similar:
+- Say "No problem, take all the time you need. Click the Pause button on your screen when you're ready to stop, and Resume when you want to continue."
+- Do NOT continue the interview until they explicitly say they're ready to resume
+- Do NOT prompt them or ask if they're ready after just a few seconds
+- Wait patiently and silently for them to indicate they want to continue`);
+
         if (!isInitial) {
           const questionsSoFar = questionCountRef.current;
 
