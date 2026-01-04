@@ -26,7 +26,7 @@ const sessionTypeLabels: Record<string, string> = {
 const sessionQuestionCounts: Record<string, number> = {
   quick_prep: 5,
   full_mock: 10,
-  premium_audio: 10,
+  premium_audio: 16,
   pro: 10
 };
 
@@ -208,7 +208,8 @@ function generatePauseEmail(params: PauseEmailParams): string {
       day: 'numeric',
       hour: 'numeric',
       minute: '2-digit',
-      hour12: true
+      hour12: true,
+      timeZone: 'UTC',
     });
   };
 
@@ -234,7 +235,7 @@ function generatePauseEmail(params: PauseEmailParams): string {
                 <tr>
                   <td style="background-color: #FEF3E8; border: 2px solid #F59E0B; padding: 20px; border-radius: 12px; text-align: center;">
                     <p style="margin: 0; color: #D97706; font-size: 16px; font-weight: 700;">
-                      ⚠️ Your progress will be lost if you don't resume by ${formatDate(expirationDate)}
+                      ⚠️ Your progress will be lost if you don't resume by ${formatDate(expirationDate)} (UTC)
                     </p>
                   </td>
                 </tr>
@@ -335,11 +336,11 @@ function generatePauseEmail(params: PauseEmailParams): string {
                       </tr>
                       <tr>
                         <td style="padding: 8px 0; color: #6B7280; font-size: 15px;">Paused At:</td>
-                        <td style="padding: 8px 0; color: #2C2F38; font-size: 15px; font-weight: 600;">${formatDate(pausedAt)}</td>
+                        <td style="padding: 8px 0; color: #2C2F38; font-size: 15px; font-weight: 600;">${formatDate(pausedAt)} (UTC)</td>
                       </tr>
                       <tr>
                         <td style="padding: 8px 0; color: #6B7280; font-size: 15px;">Expires At:</td>
-                        <td style="padding: 8px 0; color: ${isReminder ? '#D97706' : '#2C2F38'}; font-size: 15px; font-weight: 600;">${formatDate(expirationDate)}</td>
+                        <td style="padding: 8px 0; color: ${isReminder ? '#D97706' : '#2C2F38'}; font-size: 15px; font-weight: 600;">${formatDate(expirationDate)} (UTC)</td>
                       </tr>
                     </table>
                   </td>

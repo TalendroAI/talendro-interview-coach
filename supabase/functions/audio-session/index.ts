@@ -10,6 +10,7 @@ type Action =
   | "append_turn"
   | "get_history"
   | "get_session"
+  | "save_documents"
   | "log_event"
   | "pause_session"
   | "resume_session"
@@ -73,7 +74,7 @@ serve(async (req) => {
     const { data: session, error: sessionError } = await supabase
       .from("coaching_sessions")
       .select(
-        "id, email, session_type, paused_at, current_question_number, status, resume_text, job_description, company_url"
+        "id, email, session_type, paused_at, current_question_number, status, resume_text, job_description, company_url, first_name"
       )
       .eq("id", sessionId)
       .eq("email", email)
@@ -95,6 +96,7 @@ serve(async (req) => {
             pausedAt: session.paused_at,
             currentQuestionNumber: session.current_question_number,
             documents: {
+              firstName: session.first_name ?? "",
               resume: session.resume_text ?? "",
               jobDescription: session.job_description ?? "",
               companyUrl: session.company_url ?? "",
@@ -103,6 +105,42 @@ serve(async (req) => {
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // === SAVE DOCUMENTS (persists resume/job/company/first name for resume links) ===
+    if (action === "save_documents") {
+      const resume =
+        (body?.resume as string | undefined) ??
+        (body?.resume_text as string | undefined) ??
+        null;
+      const jobDescription =
+        (body?.jobDescription as string | undefined) ??
+        (body?.job_description as string | undefined) ??
+        null;
+      const companyUrl =
+        (body?.companyUrl as string | undefined) ??
+        (body?.company_url as string | undefined) ??
+        null;
+      const firstName =
+        (body?.firstName as string | undefined) ??
+        (body?.first_name as string | undefined) ??
+        null;
+
+      const { error } = await supabase
+        .from("coaching_sessions")
+        .update({
+          resume_text: resume,
+          job_description: jobDescription,
+          company_url: companyUrl,
+          first_name: firstName,
+        })
+        .eq("id", sessionId);
+
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // === GET HISTORY ===
@@ -200,14 +238,43 @@ serve(async (req) => {
 
     // === PAUSE SESSION ===
     if (action === "pause_session") {
-      const questionNumber = (body?.questionNumber as number | undefined) ?? session.current_question_number ?? 0;
       const pausedAt = new Date().toISOString();
+
+      // Compute progress from DB (not client):
+      // - Count assistant messages that contain "?" (questions asked)
+      // - If the last message is an assistant question, assume it is unanswered → completed = asked - 1
+      const { count: askedCount, error: countError } = await supabase
+        .from("chat_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("session_id", sessionId)
+        .eq("role", "assistant")
+        .ilike("content", "%?%");
+
+      if (countError) throw countError;
+
+      const { data: lastMsg, error: lastMsgError } = await supabase
+        .from("chat_messages")
+        .select("role, content")
+        .eq("session_id", sessionId)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (lastMsgError) throw lastMsgError;
+
+      const lastRole = (lastMsg?.[0]?.role as string | undefined) ?? null;
+      const lastContent = (lastMsg?.[0]?.content as string | undefined) ?? "";
+
+      const questionsAsked = askedCount ?? 0;
+      const lastWasUnansweredQuestion = lastRole === "assistant" && lastContent.includes("?");
+      const questionsCompleted = lastWasUnansweredQuestion
+        ? Math.max(questionsAsked - 1, 0)
+        : questionsAsked;
 
       const { error } = await supabase
         .from("coaching_sessions")
         .update({
           paused_at: pausedAt,
-          current_question_number: questionNumber,
+          current_question_number: questionsCompleted,
         })
         .eq("id", sessionId);
 
@@ -216,10 +283,10 @@ serve(async (req) => {
       // Log the pause event
       await supabase.from("error_logs").insert({
         error_type: "session_paused",
-        error_message: `Session paused at question ${questionNumber}`,
+        error_message: `Session paused at question ${questionsCompleted}`,
         session_id: sessionId,
         user_email: email,
-        context: { questionNumber },
+        context: { questionsAsked, questionsCompleted, lastRole, lastContentHasQuestion: lastContent.includes("?") },
       });
 
       // Send pause confirmation email (best-effort; do not fail pause if email fails)
@@ -228,7 +295,7 @@ serve(async (req) => {
           session_id: sessionId,
           email: email,
           session_type: session.session_type,
-          questions_completed: questionNumber,
+          questions_completed: questionsCompleted,
           paused_at: pausedAt,
           is_reminder: false,
           app_url,
@@ -262,7 +329,7 @@ serve(async (req) => {
         // Don't fail the pause operation if email fails
       }
 
-      return new Response(JSON.stringify({ ok: true, pausedAt }), {
+      return new Response(JSON.stringify({ ok: true, pausedAt, questionsCompleted }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -320,6 +387,12 @@ serve(async (req) => {
           messages: messages ?? [],
           currentQuestionNumber: session.current_question_number,
           sessionType: session.session_type,
+          documents: {
+            firstName: session.first_name ?? "",
+            resume: session.resume_text ?? "",
+            jobDescription: session.job_description ?? "",
+            companyUrl: session.company_url ?? "",
+          },
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
