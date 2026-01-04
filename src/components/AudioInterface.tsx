@@ -345,7 +345,7 @@ export function AudioInterface({
         setShowSilenceWarning(true);
         toast({
           title: 'Are you still there?',
-          description: 'Sarah hasn\'t heard from you in a while. Speak or click the microphone to continue.',
+          description: "Sarah hasn't heard from you in a while. Speak or click the microphone to continue.",
           duration: 10000,
         });
       }
@@ -712,10 +712,29 @@ export function AudioInterface({
 
         const firstTimeGreeting = `Hi ${nameForGreeting}, I'm Sarah, your interview coach today. I've reviewed your materials and I'm ready to put you through a realistic mock interview. We'll cover 16 questions across different categories. Take your time with each answer, and I'll give you feedback as we go. Ready to begin?`;
 
-        // *** FIX: Resume greeting that IMMEDIATELY asks the next question ***
-        const resumeGreeting = questionsSoFar > 0
-          ? `Welcome back${firstName ? `, ${firstName}` : ''}! You've completed ${questionsSoFar} questions so far. Let's continue with question ${nextQuestion}. Here it is:`
-          : `Welcome back${firstName ? `, ${firstName}` : ''}! Let's pick up where we left off. Here's your next question:`;
+        // *** FIX: Resume greeting that handles both scenarios ***
+        // Get the last question Sarah asked from the transcript
+        const lastSarahQuestion = transcriptRef.current
+          .filter(t => t.role === 'assistant' && t.text.includes('?'))
+          .pop()?.text || null;
+        
+        // Check if user answered the last question before pausing
+        const lastTranscriptEntry = transcriptRef.current[transcriptRef.current.length - 1];
+        const didUserAnswerLast = lastTranscriptEntry?.role === 'user';
+        
+        let resumeGreeting: string;
+        if (questionsSoFar > 0 && !didUserAnswerLast && lastSarahQuestion) {
+          // User paused BEFORE answering - repeat the question
+          const truncatedQuestion = lastSarahQuestion.length > 500 
+            ? lastSarahQuestion.substring(0, 500) + '...' 
+            : lastSarahQuestion;
+          resumeGreeting = `Welcome back${firstName ? `, ${firstName}` : ''}! Let me repeat the question you were on: ${truncatedQuestion}`;
+        } else if (questionsSoFar > 0 && didUserAnswerLast) {
+          // User answered before pausing - move to next question
+          resumeGreeting = `Welcome back${firstName ? `, ${firstName}` : ''}! You've completed ${questionsSoFar} questions so far. Let's continue with question ${nextQuestion}.`;
+        } else {
+          resumeGreeting = `Welcome back${firstName ? `, ${firstName}` : ''}! Let's continue where we left off.`;
+        }
 
         // *** FIX: Build context BEFORE starting session ***
         const contextParts: string[] = [];
@@ -732,30 +751,53 @@ export function AudioInterface({
             .join('\n\n');
 
           // *** FIX: More forceful resume instructions ***
+          // Find what the last unanswered question was
+          const lastQuestionFromSarah = transcriptRef.current
+            .filter(t => t.role === 'assistant' && t.text.includes('?'))
+            .pop()?.text || null;
+          
+          // Check if user answered the last question
+          const transcriptLength = transcriptRef.current.length;
+          const lastEntry = transcriptRef.current[transcriptLength - 1];
+          const userAnsweredLastQuestion = lastEntry?.role === 'user';
+          
           const resumeInstructions = `
 === CRITICAL: THIS IS A RESUMED INTERVIEW SESSION ===
 
 YOU MUST FOLLOW THESE INSTRUCTIONS EXACTLY:
 
 STATUS:
-- Questions already completed: ${questionsSoFar}
-- Next question number: ${nextQuestion} of 16
+- Questions already asked: ${questionsSoFar}
 - Transcript turns restored: ${transcriptRef.current.length}
+- Did user answer the last question before pausing? ${userAnsweredLastQuestion ? 'YES' : 'NO'}
 
-IMMEDIATE ACTIONS REQUIRED:
-1. Do NOT introduce yourself again - you already did
-2. Do NOT ask the candidate to introduce themselves
-3. Do NOT ask any question that appears in the transcript below
-4. IMMEDIATELY after your greeting, ask Question ${nextQuestion}
-5. Do NOT wait for the user to speak first - ask the question right away
+${lastQuestionFromSarah ? `THE LAST QUESTION YOU ASKED WAS:\n"${lastQuestionFromSarah.substring(0, 500)}"` : ''}
 
-${lastSarahMessage ? `YOUR LAST MESSAGE BEFORE PAUSE:\n"${lastSarahMessage.substring(0, 300)}..."` : ''}
+WHAT YOU MUST DO NOW:
+${userAnsweredLastQuestion 
+  ? `The user ANSWERED your last question before pausing. So now you must:
+1. Briefly acknowledge you're resuming
+2. Then IMMEDIATELY ask Question ${nextQuestion} - do not wait for the user to speak
+3. YOU must speak first and ask the next question`
+  : `The user did NOT answer your last question before pausing. So now you must:
+1. Say "Welcome back! Let me repeat the question for you."
+2. Then REPEAT the last question in full
+3. YOU must speak first and repeat the question - do NOT wait silently
+4. After repeating, wait for their answer`
+}
 
-=== COMPLETE INTERVIEW TRANSCRIPT - DO NOT REPEAT ANYTHING FROM THIS ===
+FORBIDDEN ACTIONS:
+- Do NOT wait silently for the user to speak first - YOU must always speak first on resume
+- Do NOT say "I don't hear you" and restart from the beginning
+- Do NOT re-introduce yourself
+- Do NOT ask question 1 again
+- Do NOT say "let's start over"
+
+=== COMPLETE INTERVIEW TRANSCRIPT SO FAR ===
 ${fullTranscriptText}
 === END OF TRANSCRIPT ===
 
-CRITICAL: After saying "Welcome back" and acknowledging their progress, you MUST immediately ask Question ${nextQuestion}. Do not wait. Do not pause. Ask the next question immediately.`;
+CRITICAL: You MUST speak first when the session resumes. Either ask the next question (if they answered) or repeat the last question (if they didn't). Never wait silently.`;
 
           contextParts.push(resumeInstructions);
           console.log('[reconnect] Built resume context with', transcriptRef.current.length, 'turns');
@@ -854,7 +896,7 @@ CRITICAL: After saying "Welcome back" and acknowledging their progress, you MUST
     
     toast({
       title: isMuted ? 'Microphone Unmuted' : 'Microphone Muted',
-      description: isMuted ? 'Sarah can hear you now.' : 'Sarah can\'t hear you. Click again to unmute.',
+      description: isMuted ? 'Sarah can hear you now.' : "Sarah can't hear you. Click again to unmute.",
       duration: 2000,
     });
   }, [isMuted, toast]);
@@ -974,23 +1016,22 @@ CRITICAL: After saying "Welcome back" and acknowledging their progress, you MUST
         if (assistantMessages.length > 0) {
           lastAssistantTurnRef.current = assistantMessages[assistantMessages.length - 1].content;
           questionCountRef.current = assistantMessages.filter((m: any) => m.content.includes('?')).length;
+          console.log('[resumeInterview] Restored question count:', questionCountRef.current);
         }
-        
-        console.log('[resumeInterview] Restored', transcriptRef.current.length, 'turns, question count:', questionCountRef.current);
       }
 
       setIsPaused(false);
       isPausedRef.current = false;
       
-      // Now reconnect with resume mode
-      await reconnect();
-
+      // *** FIX: Call reconnect in resume mode - it will use the transcript we just restored ***
+      await reconnect({ mode: 'resume' });
+      
     } catch (error) {
-      console.error('[resumeInterview] Failed:', error);
+      console.error('[resumeInterview] Failed to resume interview:', error);
       toast({
         variant: 'destructive',
         title: 'Resume Failed',
-        description: error instanceof Error ? error.message : 'Could not resume session. Please try again.',
+        description: error instanceof Error ? error.message : 'Could not resume the interview.',
       });
       setIsReconnecting(false);
       isResumingRef.current = false;
@@ -1046,7 +1087,7 @@ CRITICAL: After saying "Welcome back" and acknowledging their progress, you MUST
             micWarningShownRef.current = true;
             toast({
               variant: 'destructive',
-              title: 'Sarah can\'t hear your microphone',
+              title: "Sarah can't hear your microphone",
               description: 'Your mic input looks near-silent. Select the right microphone and try again.',
               duration: 7000,
             });
@@ -1162,7 +1203,12 @@ CRITICAL: After saying "Welcome back" and acknowledging their progress, you MUST
           </div>
 
           <h3 className="text-xl font-semibold text-gray-900 mb-2">Interview Paused</h3>
-          <p className="text-gray-500 mb-4">Your progress is saved. You can resume within 24 hours.</p>
+          <p className="text-gray-500 mb-2">Your progress is saved. Click below to continue where you left off.</p>
+          
+          {/* Clear instruction for users coming from email */}
+          <p className="text-sm text-blue-600 font-medium mb-4">
+            👆 Click "Resume Interview" to reconnect with Sarah
+          </p>
           
           <div className="bg-gray-50 rounded-lg p-3 mb-6">
             <p className="text-sm text-gray-600">
@@ -1174,7 +1220,7 @@ CRITICAL: After saying "Welcome back" and acknowledging their progress, you MUST
             <Button
               onClick={resumeInterview}
               disabled={isReconnecting}
-              className="gap-2 w-full sm:w-auto"
+              className="gap-2 w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
             >
               <Play className="w-4 h-4" />
               Resume Interview
@@ -1372,7 +1418,7 @@ CRITICAL: After saying "Welcome back" and acknowledging their progress, you MUST
                 ? 'Please wait while we email your results'
                 : showVadWarning
                   ? 'Check your microphone or speak louder'
-                  : 'Speak naturally when you\'re ready to respond'}
+                  : "Speak naturally when you're ready to respond"}
         </p>
 
         {showSilenceWarning && isConnected && (
