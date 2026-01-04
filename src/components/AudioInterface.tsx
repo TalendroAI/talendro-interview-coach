@@ -23,22 +23,19 @@ interface AudioInterfaceProps {
   resumeFromPause?: boolean;
   onInterviewStarted?: () => void;
   onInterviewComplete?: () => void;
-  // Callback with results data for parent to show results screen (like Mock Interview)
   onSessionComplete?: (resultsData: { transcript: string; prepPacket: string | null }) => void;
   userEmail?: string;
 }
 
-// Replace with your ElevenLabs agent ID
 const ELEVENLABS_AGENT_ID = 'agent_1901kb0ray8kfph9x9bh4w97bbe4';
 
-// Connection quality thresholds
-const VAD_LOW_THRESHOLD = 0.15; // Below this = mic probably not picking up voice
-const VAD_WARNING_DURATION = 8000; // Show warning after 8s of low VAD
-const HEARTBEAT_INTERVAL = 5000; // Check connection health every 5s
-const SILENCE_TIMEOUT = 45000; // 45s of no activity triggers warning
+const VAD_LOW_THRESHOLD = 0.15;
+const VAD_WARNING_DURATION = 8000;
+const HEARTBEAT_INTERVAL = 5000;
+const SILENCE_TIMEOUT = 45000;
 const MAX_RECONNECT_ATTEMPTS = 3;
-const KEEP_ALIVE_INTERVAL = 10000; // Send keep-alive every 10s
-const ANTI_INTERRUPT_VAD_THRESHOLD = 0.3; // Send activity signal when user is speaking above this VAD
+const KEEP_ALIVE_INTERVAL = 10000;
+const ANTI_INTERRUPT_VAD_THRESHOLD = 0.3;
 
 type ConnectionQuality = 'excellent' | 'good' | 'poor' | 'disconnected';
 
@@ -55,35 +52,24 @@ export function AudioInterface({
 }: AudioInterfaceProps) {
   const { toast: toastFn } = useToast();
   
-  // CRITICAL: Global error handler to intercept ElevenLabs SDK internal crashes
-  // The SDK's handleErrorEvent crashes when reading error_type from malformed errors
   useEffect(() => {
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       const reason = event.reason;
       const message = reason?.message || '';
       const stack = reason?.stack || '';
       
-      // Check if this is the ElevenLabs SDK crash
       if (message.includes('error_type') || 
           stack.includes('handleErrorEvent') ||
           stack.includes('onMessageCallback')) {
         console.error('Intercepted ElevenLabs SDK crash:', reason);
-        event.preventDefault(); // Prevent the crash from propagating
+        event.preventDefault();
         
-        // Log for diagnostics
-        console.log('SDK crash details:', {
-          message,
-          stack: stack.substring(0, 500),
-          reason: JSON.stringify(reason).substring(0, 500)
-        });
-        
-        // Show non-destructive toast - connection may still be alive
         toastFn({
           title: 'Minor connection issue',
           description: 'Continuing session...',
         });
         
-        return; // Don't let this crash the app
+        return;
       }
     };
 
@@ -91,7 +77,6 @@ export function AudioInterface({
       const message = event.message || '';
       const stack = event.error?.stack || '';
       
-      // Check if this is the ElevenLabs SDK crash
       if (message.includes('error_type') || 
           stack.includes('handleErrorEvent') ||
           stack.includes('onMessageCallback')) {
@@ -124,8 +109,8 @@ export function AudioInterface({
   const [isSendingResults, setIsSendingResults] = useState(false);
   const [connectionQuality, setConnectionQuality] = useState<ConnectionQuality>('disconnected');
   const [showVadWarning, setShowVadWarning] = useState(false);
-  const [vadScore, setVadScore] = useState<number>(0);
-  const [lastActivityTime, setLastActivityTime] = useState<number>(Date.now());
+  const [vadScore, setVadScore] = useState(0);
+  const [lastActivityTime, setLastActivityTime] = useState(Date.now());
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [showSilenceWarning, setShowSilenceWarning] = useState(false);
   const [isSessionEnding, setIsSessionEnding] = useState(false);
@@ -133,10 +118,8 @@ export function AudioInterface({
   const [showMicInputWarning, setShowMicInputWarning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const isPausedRef = useRef(false);
-  const toast = toastFn; // Use the toast from the top of the component
+  const toast = toastFn;
 
-  // IMPORTANT: onDisconnect can fire before React state updates land.
-  // Use a ref to reliably detect intentional pauses.
   useEffect(() => {
     isPausedRef.current = isPaused;
   }, [isPaused]);
@@ -149,36 +132,26 @@ export function AudioInterface({
     isEnumerating,
   } = useAudioDevices();
   
-  // Real-time persistence hook
   const { appendTurn, getHistory, logEvent } = useAudioSessionPersistence(sessionId, userEmail);
   
   const micWarningShownRef = useRef(false);
-
-  // Track if user intentionally ended the session
   const userEndedSession = useRef(false);
-  // Track if interview has started (to distinguish intentional end vs drop)
   const interviewStarted = useRef(false);
-  // Media stream reference for actual muting
   const mediaStreamRef = useRef<MediaStream | null>(null);
-  // Heartbeat interval reference
-  const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
-  // VAD warning timeout reference
-  const vadWarningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  // Silence warning timeout reference
-  const silenceWarningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  // Last VAD scores for averaging
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const vadWarningTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const silenceWarningTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const vadHistoryRef = useRef<number[]>([]);
-  // Keep-alive interval reference
-  const keepAliveRef = useRef<NodeJS.Timeout | null>(null);
-  // Anti-interrupt: track if user is currently speaking
+  const keepAliveRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const userIsSpeakingRef = useRef(false);
 
-  // Keep a rolling transcript so we can resume after reconnect (ElevenLabs sessions don't persist across reconnects)
   const transcriptRef = useRef<Array<{ role: 'user' | 'assistant'; text: string; ts: number }>>([]);
   const lastAssistantTurnRef = useRef<string | null>(null);
   const questionCountRef = useRef(0);
-  // Track if we're resuming from a pause/reconnect
   const isResumingRef = useRef(false);
+  
+  // *** FIX: Store pending context to send AFTER connection ***
+  const pendingContextRef = useRef<string | null>(null);
 
   const appendTranscriptTurn = useCallback((role: 'user' | 'assistant', text: unknown) => {
     const clean = typeof text === 'string' ? text.trim() : '';
@@ -190,12 +163,10 @@ export function AudioInterface({
     transcriptRef.current.push({ role, text: clean, ts: Date.now() });
     setLastActivityTime(Date.now());
 
-    // Prevent unbounded growth
     if (transcriptRef.current.length > 200) {
       transcriptRef.current = transcriptRef.current.slice(-200);
     }
     
-    // Persist turn to database in real-time
     appendTurn({
       role,
       text: clean,
@@ -203,7 +174,6 @@ export function AudioInterface({
     });
   }, [appendTurn]);
 
-  // Cleanup function for intervals and timeouts
   const cleanup = useCallback(() => {
     if (heartbeatRef.current) {
       clearInterval(heartbeatRef.current);
@@ -227,12 +197,10 @@ export function AudioInterface({
     }
   }, []);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => cleanup();
   }, [cleanup]);
 
-  // Helper to fetch prep packet from session
   const fetchPrepPacket = async (): Promise<string | null> => {
     if (!sessionId) return null;
     
@@ -248,7 +216,6 @@ export function AudioInterface({
         return null;
       }
       
-      // prep_packet is stored as { content: string }
       const packet = data.prep_packet as { content?: string };
       return packet?.content || null;
     } catch (err) {
@@ -257,7 +224,6 @@ export function AudioInterface({
     }
   };
 
-  // Send results when audio interview ends
   const sendAudioResults = useCallback(async () => {
     if (!sessionId || !userEmail) {
       console.error('Cannot send results: missing sessionId or userEmail');
@@ -267,15 +233,12 @@ export function AudioInterface({
     setIsSendingResults(true);
 
     try {
-      // Fetch the prep packet that was generated at session start
       const prepPacket = await fetchPrepPacket();
       
-      // Build transcript from our captured turns
       const transcriptContent = transcriptRef.current
         .map(t => `**${t.role === 'user' ? 'Your Answer' : 'Sarah (Coach)'}:**\n${t.text}`)
         .join('\n\n---\n\n');
       
-      // Combine prep packet + transcript
       let contentToSend = '';
       if (prepPacket) {
         contentToSend = prepPacket + '\n\n---\n\n# Audio Interview Transcript\n\n' + transcriptContent;
@@ -283,14 +246,13 @@ export function AudioInterface({
         contentToSend = '# Audio Interview Transcript\n\n' + transcriptContent;
       }
 
-      // Send results via the send-results function
       const { data, error } = await supabase.functions.invoke('send-results', {
         body: {
           session_id: sessionId,
           email: userEmail,
           session_type: 'premium_audio',
           prep_content: contentToSend,
-          results: null, // Audio doesn't have structured scores
+          results: null,
         }
       });
 
@@ -314,12 +276,11 @@ export function AudioInterface({
     }
   }, [sessionId, userEmail, toast]);
 
-  // Graceful session ending with user notification
   const handleGracefulEnd = useCallback(async (reason: 'user_ended' | 'connection_lost' | 'timeout' | 'error') => {
     setIsSessionEnding(true);
     cleanup();
 
-    const messages: Record<typeof reason, { title: string; description: string }> = {
+    const messages: Record<string, { title: string; description: string }> = {
       user_ended: {
         title: 'Interview Complete',
         description: 'Great job! Preparing your results...',
@@ -340,15 +301,12 @@ export function AudioInterface({
 
     toast(messages[reason]);
 
-    // Build transcript from captured turns
     const transcriptContent = transcriptRef.current
       .map(t => `**${t.role === 'user' ? 'Your Answer' : 'Sarah (Coach)'}:**\n${t.text}`)
       .join('\n\n---\n\n');
     
-    // Fetch prep packet
     const prepPacket = await fetchPrepPacket();
 
-    // Pass results to parent so it can show the results screen (like Mock Interview)
     if (onSessionComplete) {
       onSessionComplete({
         transcript: transcriptContent,
@@ -361,7 +319,6 @@ export function AudioInterface({
     onInterviewComplete?.();
   }, [cleanup, toast, onInterviewComplete, onSessionComplete]);
 
-  // Start heartbeat monitoring
   const startHeartbeat = useCallback((conversationRef: ReturnType<typeof useConversation>) => {
     if (heartbeatRef.current) {
       clearInterval(heartbeatRef.current);
@@ -371,7 +328,6 @@ export function AudioInterface({
       const now = Date.now();
       const timeSinceActivity = now - lastActivityTime;
 
-      // Update connection quality based on activity
       if (conversationRef.status !== 'connected') {
         setConnectionQuality('disconnected');
         return;
@@ -385,7 +341,6 @@ export function AudioInterface({
         setConnectionQuality('poor');
       }
 
-      // Check for silence timeout
       if (timeSinceActivity > SILENCE_TIMEOUT && !showSilenceWarning) {
         setShowSilenceWarning(true);
         toast({
@@ -397,28 +352,23 @@ export function AudioInterface({
     }, HEARTBEAT_INTERVAL);
   }, [lastActivityTime, showSilenceWarning, toast]);
 
-  // Handle VAD score updates
   const handleVadScore = useCallback((props: { vadScore: number }) => {
     const score = props.vadScore;
     setVadScore(score);
     vadHistoryRef.current.push(score);
     
-    // Keep last 10 scores
     if (vadHistoryRef.current.length > 10) {
       vadHistoryRef.current.shift();
     }
 
-    // Calculate average VAD
     const avgVad = vadHistoryRef.current.reduce((a, b) => a + b, 0) / vadHistoryRef.current.length;
 
-    // Track if user is speaking for anti-interrupt
     if (score >= ANTI_INTERRUPT_VAD_THRESHOLD) {
       userIsSpeakingRef.current = true;
     } else if (avgVad < ANTI_INTERRUPT_VAD_THRESHOLD) {
       userIsSpeakingRef.current = false;
     }
 
-    // If VAD is consistently low, show warning
     if (avgVad < VAD_LOW_THRESHOLD && !showVadWarning) {
       if (!vadWarningTimeoutRef.current) {
         vadWarningTimeoutRef.current = setTimeout(() => {
@@ -431,7 +381,6 @@ export function AudioInterface({
         }, VAD_WARNING_DURATION);
       }
     } else if (avgVad >= VAD_LOW_THRESHOLD) {
-      // Voice detected, clear warning
       if (vadWarningTimeoutRef.current) {
         clearTimeout(vadWarningTimeoutRef.current);
         vadWarningTimeoutRef.current = null;
@@ -442,9 +391,10 @@ export function AudioInterface({
     }
   }, [showVadWarning, toast]);
 
-  const conversation = useConversation({ micMuted: isMuted,
+  const conversation = useConversation({
+    micMuted: isMuted,
     onConnect: () => {
-      console.log('Connected to ElevenLabs agent');
+      console.log('[AudioInterface] Connected to ElevenLabs agent');
       setIsConnecting(false);
       setIsReconnecting(false);
       setConnectionDropped(false);
@@ -466,25 +416,34 @@ export function AudioInterface({
         onInterviewStarted?.();
       }
 
-      // Start heartbeat monitoring
       startHeartbeat(conversation);
       
-      // Start keep-alive interval to prevent connection timeout
       if (keepAliveRef.current) {
         clearInterval(keepAliveRef.current);
       }
       keepAliveRef.current = setInterval(() => {
         try {
-          // Send periodic activity signal to keep connection alive
           conversation.sendUserActivity();
           console.log('[KeepAlive] Sent activity signal');
         } catch (e) {
           console.warn('[KeepAlive] Failed to send activity:', e);
         }
       }, KEEP_ALIVE_INTERVAL);
+      
+      // *** FIX: Send pending context IMMEDIATELY after connection ***
+      if (pendingContextRef.current) {
+        console.log('[AudioInterface] Sending pending resume context NOW');
+        setTimeout(() => {
+          if (pendingContextRef.current) {
+            conversation.sendContextualUpdate(pendingContextRef.current);
+            console.log('[AudioInterface] Resume context sent successfully');
+            pendingContextRef.current = null;
+          }
+        }, 100); // Tiny delay to ensure connection is stable
+      }
     },
     onDisconnect: (details) => {
-      console.log('Disconnected from ElevenLabs agent', details);
+      console.log('[AudioInterface] Disconnected from ElevenLabs agent', details);
       setIsConnecting(false);
       setIsReconnecting(false);
       setConnectionQuality('disconnected');
@@ -492,7 +451,6 @@ export function AudioInterface({
 
       const paused = isPausedRef.current;
 
-      // Log disconnect event for diagnostics
       const disconnectReason = typeof details === 'object' && details !== null
         ? JSON.stringify(details)
         : String(details ?? 'unknown');
@@ -510,15 +468,12 @@ export function AudioInterface({
         },
       });
 
-      // Only complete the interview if user intentionally ended it or paused
       if (userEndedSession.current) {
         userEndedSession.current = false;
         handleGracefulEnd('user_ended');
       } else if (paused) {
-        // User paused intentionally - don't show reconnect UI
         return;
       } else if (interviewStarted.current && !isSessionEnding) {
-        // Unexpected disconnect - check if we should auto-reconnect
         if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
           setConnectionDropped(true);
           toast({
@@ -527,17 +482,15 @@ export function AudioInterface({
             description: `Sarah got disconnected. Click "Reconnect" to continue (${MAX_RECONNECT_ATTEMPTS - reconnectAttempts} attempts remaining).`,
           });
         } else {
-          // Max reconnects reached, end gracefully
           handleGracefulEnd('connection_lost');
         }
       }
     },
     onMessage: (message) => {
-      console.log('Message from agent:', message);
+      console.log('[AudioInterface] Message from agent:', message);
       setLastActivityTime(Date.now());
       setShowSilenceWarning(false);
 
-      // Capture transcript events so we can restore context after reconnect
       try {
         const type = (message as any)?.type;
 
@@ -559,20 +512,17 @@ export function AudioInterface({
           const clean = typeof text === 'string' ? text.trim() : '';
           if (clean) {
             lastAssistantTurnRef.current = clean;
-            // Super light heuristic: count questions by “?”
             if (clean.includes('?')) {
               questionCountRef.current += 1;
             }
           }
         }
 
-        // Handle agent response correction (when user interrupts)
         if (type === 'agent_response_correction') {
           const correctedText =
             (message as any)?.agent_response_correction_event?.corrected_agent_response ??
             (message as any)?.corrected_agent_response;
           if (correctedText) {
-            // Update the last assistant message with corrected version
             const lastIdx = transcriptRef.current.length - 1;
             if (lastIdx >= 0 && transcriptRef.current[lastIdx].role === 'assistant') {
               transcriptRef.current[lastIdx].text = correctedText;
@@ -583,19 +533,15 @@ export function AudioInterface({
           }
         }
       } catch (e) {
-        console.warn('Failed to parse transcript message:', e);
+        console.warn('[AudioInterface] Failed to parse transcript message:', e);
       }
     },
     onError: (error) => {
-      // CRITICAL: Wrap everything in try-catch to prevent crashes from malformed errors
       try {
-        console.error('Conversation error (raw):', error);
-        console.log('Error type:', typeof error);
-        console.log('Error keys:', error && typeof error === 'object' ? Object.keys(error) : 'not an object');
+        console.error('[AudioInterface] Conversation error (raw):', error);
         
         setConnectionQuality('poor');
         
-        // Safely extract error details with extensive null checks
         let errorMessage = 'Unknown error';
         let errorCode: string | null = null;
         let errorType: string | null = null;
@@ -604,8 +550,7 @@ export function AudioInterface({
           if (typeof error === 'string') {
             errorMessage = error;
           } else if (typeof error === 'object') {
-            // Safely access properties
-            const errObj = error as Record<string, unknown>;
+            const errObj = error as Record<string, any>;
             errorMessage = String(errObj.message ?? errObj.error ?? errObj.reason ?? 'Unknown error');
             errorCode = errObj.code ? String(errObj.code) : null;
             errorType = errObj.error_type ? String(errObj.error_type) : null;
@@ -625,7 +570,6 @@ export function AudioInterface({
           },
         });
         
-        // Determine user-friendly message
         let userMessage = 'Voice connection issue. Please try again.';
         const lowerMessage = errorMessage.toLowerCase();
         
@@ -645,9 +589,7 @@ export function AudioInterface({
           description: userMessage,
         });
       } catch (handlerError) {
-        // Even the error handler failed - log it and show generic message
-        console.error('Error handler crashed:', handlerError);
-        console.error('Original error was:', error);
+        console.error('[AudioInterface] Error handler crashed:', handlerError);
         
         toast({
           variant: 'destructive',
@@ -659,11 +601,9 @@ export function AudioInterface({
         setIsReconnecting(false);
       }
     },
-    // VAD score monitoring for voice detection issues
     onVadScore: handleVadScore,
   });
 
-  // ANTI-INTERRUPT: Send activity signal when user is speaking to prevent agent from cutting them off
   useEffect(() => {
     if (conversation.status !== 'connected') return;
     
@@ -671,17 +611,14 @@ export function AudioInterface({
       if (userIsSpeakingRef.current) {
         try {
           conversation.sendUserActivity();
-          console.log('[AntiInterrupt] User speaking, sent activity signal');
         } catch (e) {
           // Ignore errors
         }
       }
-    }, 500); // Check every 500ms
+    }, 500);
     
     return () => clearInterval(antiInterruptInterval);
   }, [conversation.status, conversation]);
-
-  // Initial connection uses `reconnect({ mode: 'initial' })` (the reconnect path is the stable one).
 
   const stopConversation = useCallback(async () => {
     userEndedSession.current = true;
@@ -695,15 +632,15 @@ export function AudioInterface({
     await conversation.endSession();
   }, [conversation, toast]);
 
+  // *** FIXED RECONNECT FUNCTION ***
   const reconnect = useCallback(
     async (options?: { mode?: 'initial' | 'resume' }) => {
       const mode: 'initial' | 'resume' = options?.mode === 'initial' ? 'initial' : 'resume';
       const isInitial = mode === 'initial';
 
-      console.log('[reconnect] Starting with mode:', mode, 'resumeFromPause:', resumeFromPause);
+      console.log('[reconnect] Starting with mode:', mode);
 
       if (isInitial) {
-        // Fresh interview run (use the working reconnect path, but with first-time greeting/context)
         transcriptRef.current = [];
         vadHistoryRef.current = [];
         questionCountRef.current = 0;
@@ -719,6 +656,7 @@ export function AudioInterface({
         setIsConnecting(true);
         setIsReconnecting(false);
         isResumingRef.current = false;
+        pendingContextRef.current = null;
       } else {
         setIsReconnecting(true);
         setConnectionDropped(false);
@@ -727,23 +665,20 @@ export function AudioInterface({
       }
 
       try {
-        // Request microphone - keep the stream active for ElevenLabs
         console.log('[reconnect] Requesting microphone...');
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: selectedInputId ? { deviceId: { exact: selectedInputId } } : true,
         });
-        // Keep stream active - ElevenLabs SDK needs it
         mediaStreamRef.current = stream;
         console.log('[reconnect] Microphone ready');
 
-        // Fetch FULL conversation history from database (resume mode only)
+        // *** FIX: Fetch history BEFORE starting session for resume mode ***
         let dbHistory: Awaited<ReturnType<typeof getHistory>> = [];
         if (!isInitial) {
           console.log('[reconnect] Fetching DB history for resume...');
           dbHistory = await getHistory();
           console.log('[reconnect] Got', dbHistory.length, 'history entries from DB');
 
-          // If we have DB history, use it as the source of truth
           if (dbHistory.length > 0) {
             transcriptRef.current = dbHistory.map((h) => ({
               role: h.role === 'user' ? ('user' as const) : ('assistant' as const),
@@ -751,12 +686,10 @@ export function AudioInterface({
               ts: new Date(h.created_at).getTime(),
             }));
 
-            // Find the last assistant message and update question count
             const assistantMessages = dbHistory.filter((h) => h.role === 'assistant');
             if (assistantMessages.length > 0) {
               const lastAssistant = assistantMessages[assistantMessages.length - 1];
               lastAssistantTurnRef.current = lastAssistant.content;
-              // Count questions by counting assistant messages with "?"
               questionCountRef.current = assistantMessages.filter((m) => m.content.includes('?')).length;
               console.log('[reconnect] Restored question count:', questionCountRef.current);
             }
@@ -779,10 +712,67 @@ export function AudioInterface({
 
         const firstTimeGreeting = `Hi ${nameForGreeting}, I'm Sarah, your interview coach today. I've reviewed your materials and I'm ready to put you through a realistic mock interview. We'll cover 16 questions across different categories. Take your time with each answer, and I'll give you feedback as we go. Ready to begin?`;
 
-        // For resume, give a contextual welcome that acknowledges progress
+        // *** FIX: Resume greeting that IMMEDIATELY asks the next question ***
         const resumeGreeting = questionsSoFar > 0
-          ? `Welcome back${firstName ? `, ${firstName}` : ''}! Great to have you back. We were making good progress — you've already answered ${questionsSoFar} questions. Let's continue with question ${nextQuestion}.`
-          : `Welcome back${firstName ? `, ${firstName}` : ''}! Let's continue where we left off.`;
+          ? `Welcome back${firstName ? `, ${firstName}` : ''}! You've completed ${questionsSoFar} questions so far. Let's continue with question ${nextQuestion}. Here it is:`
+          : `Welcome back${firstName ? `, ${firstName}` : ''}! Let's pick up where we left off. Here's your next question:`;
+
+        // *** FIX: Build context BEFORE starting session ***
+        const contextParts: string[] = [];
+
+        if (documents?.resume) contextParts.push(`Candidate Resume:\n${documents.resume}`);
+        if (documents?.jobDescription) contextParts.push(`Job Description:\n${documents.jobDescription}`);
+        if (documents?.companyUrl) contextParts.push(`Company URL: ${documents.companyUrl}`);
+
+        if (!isInitial && transcriptRef.current.length > 0) {
+          const lastSarahMessage = lastAssistantTurnRef.current;
+
+          const fullTranscriptText = transcriptRef.current
+            .map((t, idx) => `[Turn ${idx + 1}] ${t.role === 'user' ? 'CANDIDATE' : 'SARAH'}: ${t.text}`)
+            .join('\n\n');
+
+          // *** FIX: More forceful resume instructions ***
+          const resumeInstructions = `
+=== CRITICAL: THIS IS A RESUMED INTERVIEW SESSION ===
+
+YOU MUST FOLLOW THESE INSTRUCTIONS EXACTLY:
+
+STATUS:
+- Questions already completed: ${questionsSoFar}
+- Next question number: ${nextQuestion} of 16
+- Transcript turns restored: ${transcriptRef.current.length}
+
+IMMEDIATE ACTIONS REQUIRED:
+1. Do NOT introduce yourself again - you already did
+2. Do NOT ask the candidate to introduce themselves
+3. Do NOT ask any question that appears in the transcript below
+4. IMMEDIATELY after your greeting, ask Question ${nextQuestion}
+5. Do NOT wait for the user to speak first - ask the question right away
+
+${lastSarahMessage ? `YOUR LAST MESSAGE BEFORE PAUSE:\n"${lastSarahMessage.substring(0, 300)}..."` : ''}
+
+=== COMPLETE INTERVIEW TRANSCRIPT - DO NOT REPEAT ANYTHING FROM THIS ===
+${fullTranscriptText}
+=== END OF TRANSCRIPT ===
+
+CRITICAL: After saying "Welcome back" and acknowledging their progress, you MUST immediately ask Question ${nextQuestion}. Do not wait. Do not pause. Ask the next question immediately.`;
+
+          contextParts.push(resumeInstructions);
+          console.log('[reconnect] Built resume context with', transcriptRef.current.length, 'turns');
+        }
+
+        contextParts.push(`IMPORTANT END-OF-INTERVIEW INSTRUCTION: At the very end of the interview, after giving your verbal summary with the score and top 3 strengths and improvements, always tell the user: "Your complete prep packet with the full transcript and detailed feedback has been sent to your email. Check your inbox for everything we discussed today."`);
+
+        contextParts.push(`HANDLING PAUSE REQUESTS: If the candidate says "let's pause", "I need to pause", "pause the interview", or similar:
+- Say "No problem, take all the time you need. Click the Pause button on your screen when you're ready to stop, and Resume when you want to continue."
+- Do NOT continue the interview until they explicitly say they're ready to resume
+- Wait patiently for them to indicate they want to continue`);
+
+        // *** FIX: Store context to send IMMEDIATELY after connection ***
+        if (contextParts.length > 0) {
+          pendingContextRef.current = contextParts.join('\n\n---\n\n');
+          console.log('[reconnect] Stored pending context for post-connection send');
+        }
 
         console.log('[reconnect] Starting ElevenLabs session with greeting:', isInitial ? 'initial' : 'resume');
 
@@ -797,68 +787,9 @@ export function AudioInterface({
           },
         });
 
-        // Build context parts for contextual update (NOT spoken aloud)
-        const contextParts: string[] = [];
-
-        // Always include documents
-        if (documents?.resume) contextParts.push(`Candidate Resume:\n${documents.resume}`);
-        if (documents?.jobDescription) contextParts.push(`Job Description:\n${documents.jobDescription}`);
-        if (documents?.companyUrl) contextParts.push(`Company URL: ${documents.companyUrl}`);
-
-        if (!isInitial && transcriptRef.current.length > 0) {
-          const lastSarahMessage = lastAssistantTurnRef.current;
-
-          // CRITICAL: Build comprehensive resume context with FULL transcript
-          const fullTranscriptText = transcriptRef.current
-            .map((t, idx) => `[Turn ${idx + 1}] ${t.role === 'user' ? 'CANDIDATE' : 'SARAH'}: ${t.text}`)
-            .join('\n\n');
-
-          // Comprehensive resume instructions
-          const resumeInstructions = `
-=== CRITICAL: THIS IS A RESUMED INTERVIEW SESSION ===
-
-STATUS:
-- Questions already asked: ${questionsSoFar}
-- Next question to ask: Question ${nextQuestion} of 16
-- Transcript turns restored: ${transcriptRef.current.length}
-
-INSTRUCTIONS:
-1. Do NOT re-introduce yourself - you already did when the session started
-2. Do NOT ask the candidate to introduce themselves again
-3. Do NOT repeat any questions from the transcript below
-4. Continue EXACTLY from question ${nextQuestion}
-5. Reference their previous answers when relevant to show continuity
-
-${lastSarahMessage ? `YOUR LAST MESSAGE BEFORE PAUSE:\n"${lastSarahMessage.substring(0, 500)}${lastSarahMessage.length > 500 ? '...' : ''}"` : ''}
-
-=== COMPLETE INTERVIEW TRANSCRIPT SO FAR ===
-${fullTranscriptText}
-=== END OF TRANSCRIPT ===
-
-Now continue the interview naturally. Ask question ${nextQuestion}.`;
-
-          contextParts.push(resumeInstructions);
-          console.log('[reconnect] Added resume context with', transcriptRef.current.length, 'turns');
-        }
-
-        // IMPORTANT: Add closing instruction to remind Sarah about the email
-        contextParts.push(`IMPORTANT END-OF-INTERVIEW INSTRUCTION: At the very end of the interview, after giving your verbal summary with the score and top 3 strengths and improvements, always tell the user: "Your complete prep packet with the full transcript and detailed feedback has been sent to your email. Check your inbox for everything we discussed today."`);
-
-        // PAUSE HANDLING INSTRUCTIONS
-        contextParts.push(`HANDLING PAUSE REQUESTS: If the candidate says "let's pause", "I need to pause", "pause the interview", "can we take a break", or similar:
-- Say "No problem, take all the time you need. Click the Pause button on your screen when you're ready to stop, and Resume when you want to continue."
-- Do NOT continue the interview until they explicitly say they're ready to resume
-- Do NOT prompt them or ask if they're ready after just a few seconds
-- Wait patiently and silently for them to indicate they want to continue`);
-
-        // Send context immediately - no artificial delay
-        if (contextParts.length > 0) {
-          console.log('[reconnect] Sending contextual update with', contextParts.length, 'parts');
-          conversation.sendContextualUpdate(contextParts.join('\n\n---\n\n'));
-        }
+        // Context will be sent in onConnect callback
 
         if (!isInitial) {
-          // Log successful reconnection
           logEvent({
             eventType: 'session_reconnected',
             message: `Successfully reconnected with ${transcriptRef.current.length} history turns`,
@@ -870,7 +801,7 @@ Now continue the interview naturally. Ask question ${nextQuestion}.`;
           });
         }
       } catch (error) {
-        console.error(isInitial ? 'Connection failed:' : 'Reconnection failed:', error);
+        console.error(isInitial ? '[reconnect] Connection failed:' : '[reconnect] Reconnection failed:', error);
 
         if (!isInitial) {
           logEvent({
@@ -918,12 +849,7 @@ Now continue the interview naturally. Ask question ${nextQuestion}.`;
     ]
   );
 
-  // Actual mute toggle (controls ElevenLabs SDK mic via `micMuted`)
   const toggleMute = useCallback(() => {
-    if (mediaStreamRef.current) {
-      // No-op: ElevenLabs SDK manages its own mic stream.
-      // We only request mic permission directly for better UX.
-    }
     setIsMuted(!isMuted);
     
     toast({
@@ -933,7 +859,6 @@ Now continue the interview naturally. Ask question ${nextQuestion}.`;
     });
   }, [isMuted, toast]);
 
-  // Pause the interview - saves state and disconnects gracefully
   const pauseInterview = useCallback(async () => {
     if (!sessionId || !userEmail) {
       toast({
@@ -944,20 +869,16 @@ Now continue the interview naturally. Ask question ${nextQuestion}.`;
       return;
     }
 
-    // CRITICAL: Set pause flags FIRST before any async operations
-    // This prevents onDisconnect from treating this as an unexpected disconnect
     isPausedRef.current = true;
     setIsPaused(true);
     setConnectionDropped(false);
 
-    // Disconnect ElevenLabs FIRST (synchronously sets the flag before disconnect fires)
     try {
       await conversation.endSession();
     } catch (disconnectError) {
-      console.warn('ElevenLabs disconnect error (non-fatal):', disconnectError);
+      console.warn('[pauseInterview] ElevenLabs disconnect error (non-fatal):', disconnectError);
     }
 
-    // Now save to backend (won't affect disconnect handler)
     try {
       const appUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
       const { error } = await supabase.functions.invoke('audio-session', {
@@ -971,8 +892,7 @@ Now continue the interview naturally. Ask question ${nextQuestion}.`;
       });
 
       if (error) {
-        console.error('Failed to save pause state:', error);
-        // Don't revert pause state - user can still resume from local state
+        console.error('[pauseInterview] Failed to save pause state:', error);
       }
 
       toast({
@@ -989,8 +909,7 @@ Now continue the interview naturally. Ask question ${nextQuestion}.`;
         },
       });
     } catch (error) {
-      console.error('Failed to save pause state:', error);
-      // Keep paused state - the disconnect already happened
+      console.error('[pauseInterview] Failed to save pause state:', error);
       toast({
         title: 'Interview Paused',
         description: 'Your session is paused locally. Resume link may not be sent.',
@@ -999,7 +918,7 @@ Now continue the interview naturally. Ask question ${nextQuestion}.`;
     }
   }, [sessionId, userEmail, conversation, toast, logEvent]);
 
-  // Resume from paused state
+  // *** FIXED RESUME FUNCTION ***
   const resumeInterview = useCallback(async () => {
     if (!sessionId || !userEmail) {
       toast({
@@ -1014,7 +933,8 @@ Now continue the interview naturally. Ask question ${nextQuestion}.`;
     isResumingRef.current = true;
 
     try {
-      // Call resume endpoint to get full history and check expiration
+      console.log('[resumeInterview] Calling resume_session endpoint...');
+      
       const { data, error } = await supabase.functions.invoke('audio-session', {
         body: {
           action: 'resume_session',
@@ -1039,8 +959,10 @@ Now continue the interview naturally. Ask question ${nextQuestion}.`;
         return;
       }
 
-      // Restore transcript from database
+      // *** FIX: Restore transcript from database BEFORE reconnect ***
       const messages = data?.messages || [];
+      console.log('[resumeInterview] Got', messages.length, 'messages from DB');
+      
       if (messages.length > 0) {
         transcriptRef.current = messages.map((m: any) => ({
           role: m.role === 'user' ? 'user' as const : 'assistant' as const,
@@ -1053,39 +975,38 @@ Now continue the interview naturally. Ask question ${nextQuestion}.`;
           lastAssistantTurnRef.current = assistantMessages[assistantMessages.length - 1].content;
           questionCountRef.current = assistantMessages.filter((m: any) => m.content.includes('?')).length;
         }
+        
+        console.log('[resumeInterview] Restored', transcriptRef.current.length, 'turns, question count:', questionCountRef.current);
       }
 
-      // Clear paused state
       setIsPaused(false);
+      isPausedRef.current = false;
       
-      // Use the existing reconnect flow
+      // Now reconnect with resume mode
       await reconnect();
-      
+
     } catch (error) {
-      console.error('Failed to resume interview:', error);
+      console.error('[resumeInterview] Failed:', error);
       toast({
         variant: 'destructive',
         title: 'Resume Failed',
-        description: error instanceof Error ? error.message : 'Could not resume the interview.',
+        description: error instanceof Error ? error.message : 'Could not resume session. Please try again.',
       });
       setIsReconnecting(false);
       isResumingRef.current = false;
     }
   }, [sessionId, userEmail, toast, reconnect]);
 
-  // Signal user activity to prevent interruption
   const signalActivity = useCallback(() => {
     setLastActivityTime(Date.now());
     setShowSilenceWarning(false);
     try {
       conversation.sendUserActivity();
     } catch (e) {
-      console.warn('Failed to send user activity:', e);
+      console.warn('[signalActivity] Failed to send user activity:', e);
     }
   }, [conversation]);
 
-  // Lightweight mic diagnostics: if we're "listening" but mic level stays near 0,
-  // show a clear warning + meter so users can pick the right device.
   useEffect(() => {
     if (conversation.status !== 'connected') {
       setInputVolume(0);
@@ -1110,7 +1031,6 @@ Now continue the interview naturally. Ask question ${nextQuestion}.`;
           return;
         }
 
-        // If user is speaking, input volume and VAD should both spike.
         const looksLikeNoAudio = vol < 0.02 && vadScore < VAD_LOW_THRESHOLD;
 
         if (!looksLikeNoAudio) {
@@ -1126,7 +1046,7 @@ Now continue the interview naturally. Ask question ${nextQuestion}.`;
             micWarningShownRef.current = true;
             toast({
               variant: 'destructive',
-              title: 'Sarah can’t hear your microphone',
+              title: 'Sarah can\'t hear your microphone',
               description: 'Your mic input looks near-silent. Select the right microphone and try again.',
               duration: 7000,
             });
@@ -1146,48 +1066,49 @@ Now continue the interview naturally. Ask question ${nextQuestion}.`;
   const isSpeaking = conversation.isSpeaking;
   const canStartInterview = isDocumentsSaved;
 
-  // Connection quality indicator component
+  // *** FIX: Connection indicator only shows when actually connected or in specific states ***
   const ConnectionIndicator = () => {
-    // Show paused state if paused
     if (isPaused && !isConnected) {
       return (
-        <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-accent" />
-          <span className="text-sm text-muted-foreground">Paused</span>
+        <div className="flex items-center gap-2 text-sm text-amber-600">
+          <Pause className="w-4 h-4" />
+          Paused
         </div>
       );
     }
     
-    // Show reconnecting state
     if (isReconnecting) {
       return (
-        <div className="flex items-center gap-2">
-          <Loader2 className="h-3 w-3 animate-spin text-primary" />
-          <span className="text-sm text-muted-foreground">Reconnecting...</span>
+        <div className="flex items-center gap-2 text-sm text-blue-600">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Reconnecting...
         </div>
       );
+    }
+    
+    // *** FIX: Only show connection status when actually connected ***
+    if (!isConnected) {
+      return null;
     }
     
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 text-sm">
         <div
           className={cn(
-            "h-2 w-2 rounded-full transition-colors",
-            connectionQuality === 'excellent' && "bg-primary",
-            connectionQuality === 'good' && "bg-secondary",
-            connectionQuality === 'poor' && "bg-accent animate-pulse",
-            connectionQuality === 'disconnected' && "bg-destructive"
+            'w-2 h-2 rounded-full',
+            connectionQuality === 'excellent' && 'bg-green-500',
+            connectionQuality === 'good' && 'bg-yellow-500',
+            connectionQuality === 'poor' && 'bg-red-500'
           )}
         />
-        <span className="text-sm text-muted-foreground">
+        <span className="text-gray-600">
           {connectionQuality === 'excellent' && 'Excellent connection'}
           {connectionQuality === 'good' && 'Good connection'}
           {connectionQuality === 'poor' && 'Poor connection'}
-          {connectionQuality === 'disconnected' && 'Connection lost'}
         </span>
         {showVadWarning && (
-          <span className="text-sm text-destructive flex items-center gap-1">
-            <AlertTriangle className="h-3 w-3" />
+          <span className="text-amber-600 flex items-center gap-1">
+            <AlertTriangle className="w-3 h-3" />
             Mic issue
           </span>
         )}
@@ -1195,43 +1116,36 @@ Now continue the interview naturally. Ask question ${nextQuestion}.`;
     );
   };
 
-  // Session ending screen
   if (isSessionEnding) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gradient-to-b from-background to-muted/30">
-        <div className="max-w-lg w-full animate-slide-up">
-          <div className="bg-card border border-border rounded-2xl shadow-xl overflow-hidden">
-            {/* Header */}
-            <div className="bg-primary/5 border-b border-border px-8 py-6">
-              <div className="flex items-center gap-4">
-                <div className="h-14 w-14 rounded-xl bg-primary flex items-center justify-center animate-pulse">
-                  <span className="text-2xl">📊</span>
-                </div>
-                <div>
-                  <h2 className="font-heading text-xl font-bold text-foreground">
-                    Wrapping Up Your Interview
-                  </h2>
-                  <p className="text-muted-foreground mt-1">
-                    Preparing your results...
-                  </p>
-                </div>
-              </div>
+      <div className="flex flex-col items-center justify-center min-h-[400px] p-8">
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+              <span className="text-2xl">📊</span>
             </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Wrapping Up Your Interview
+              </h3>
+              <p className="text-sm text-gray-500">
+                Preparing your results...
+              </p>
+            </div>
+          </div>
 
-            {/* Progress */}
-            <div className="px-8 py-6 space-y-4">
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
-                <span className="text-foreground">Interview transcript captured</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
-                <span className="text-foreground">Performance analysis complete</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                <span className="text-foreground font-medium">Sending results to your email...</span>
-              </div>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-green-600">
+              <CheckCircle2 className="w-5 h-5" />
+              Interview transcript captured
+            </div>
+            <div className="flex items-center gap-2 text-green-600">
+              <CheckCircle2 className="w-5 h-5" />
+              Performance analysis complete
+            </div>
+            <div className="flex items-center gap-2 text-blue-600">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Sending results to your email...
             </div>
           </div>
         </div>
@@ -1239,40 +1153,38 @@ Now continue the interview naturally. Ask question ${nextQuestion}.`;
     );
   }
 
-
-  // Paused - show a dedicated paused screen with Resume and End options
   if (isPaused && !isConnected && !isConnecting && !isReconnecting) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-tal-soft">
-        <div className="max-w-md w-full text-center animate-slide-up">
-          <div className="relative mb-8">
-            <div className="h-40 w-40 mx-auto rounded-full flex items-center justify-center bg-primary/10 border-4 border-primary/30">
-              <Pause className="h-16 w-16 text-primary" />
-            </div>
+      <div className="flex flex-col items-center justify-center min-h-[400px] p-8">
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+          <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+            <Pause className="w-8 h-8 text-amber-600" />
           </div>
 
-          <h2 className="font-heading text-2xl font-bold text-foreground mb-2">Interview Paused</h2>
-          <p className="text-muted-foreground mb-4">Your progress is saved. You can resume within 24 hours.</p>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Interview Paused</h3>
+          <p className="text-gray-500 mb-4">Your progress is saved. You can resume within 24 hours.</p>
           
-          {/* Question progress indicator */}
-          <div className="mb-8 p-4 bg-card rounded-lg border border-border inline-block">
-            <p className="text-sm text-muted-foreground">
-              Questions completed: <span className="font-semibold text-foreground">{questionCountRef.current}</span> of 16
+          <div className="bg-gray-50 rounded-lg p-3 mb-6">
+            <p className="text-sm text-gray-600">
+              Questions completed: {questionCountRef.current} of 16
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button variant="audio" size="lg" onClick={resumeInterview} className="gap-2 w-full sm:w-auto">
-              <Play className="h-5 w-5" />
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button
+              onClick={resumeInterview}
+              disabled={isReconnecting}
+              className="gap-2 w-full sm:w-auto"
+            >
+              <Play className="w-4 h-4" />
               Resume Interview
             </Button>
-            <Button 
-              variant="outline" 
-              size="lg" 
+            <Button
+              variant="outline"
               onClick={() => handleGracefulEnd('user_ended')}
               className="gap-2 w-full sm:w-auto"
             >
-              <PhoneOff className="h-5 w-5" />
+              <PhoneOff className="w-4 h-4" />
               End & Get Results
             </Button>
           </div>
@@ -1281,51 +1193,45 @@ Now continue the interview naturally. Ask question ${nextQuestion}.`;
     );
   }
 
-  // Connection dropped - show reconnect UI
   if (connectionDropped && !isConnected && !isConnecting) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-tal-soft">
-        <div className="max-w-md w-full text-center animate-slide-up">
-          <div className="relative mb-8">
-            <div className="h-40 w-40 mx-auto rounded-full flex items-center justify-center bg-destructive/10 border-4 border-destructive/30">
-              <WifiOff className="h-16 w-16 text-destructive/60" />
-            </div>
+      <div className="flex flex-col items-center justify-center min-h-[400px] p-8">
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+          <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+            <WifiOff className="w-8 h-8 text-red-600" />
           </div>
 
-          <h2 className="font-heading text-2xl font-bold text-foreground mb-2">
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">
             Connection Lost
-          </h2>
-          <p className="text-muted-foreground mb-4">
+          </h3>
+          <p className="text-gray-500 mb-2">
             Sarah got disconnected unexpectedly. Don't worry — your transcript is saved and you can reconnect to continue.
           </p>
           
-          <p className="text-sm text-muted-foreground mb-8">
+          <p className="text-sm text-gray-400 mb-6">
             {MAX_RECONNECT_ATTEMPTS - reconnectAttempts} reconnection {MAX_RECONNECT_ATTEMPTS - reconnectAttempts === 1 ? 'attempt' : 'attempts'} remaining
           </p>
 
-          <div className="flex items-center justify-center gap-4">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button
-              variant="audio"
-              size="lg"
               onClick={() => reconnect()}
               disabled={isReconnecting}
               className="gap-2"
             >
               {isReconnecting ? (
                 <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                   Reconnecting...
                 </>
               ) : (
                 <>
-                  <RefreshCw className="h-5 w-5" />
+                  <RefreshCw className="w-4 h-4" />
                   Reconnect
                 </>
               )}
             </Button>
             <Button
               variant="outline"
-              size="lg"
               onClick={() => handleGracefulEnd('connection_lost')}
             >
               End & Get Results
@@ -1336,35 +1242,31 @@ Now continue the interview naturally. Ask question ${nextQuestion}.`;
     );
   }
 
-  // Pre-interview welcome screen (brand-standard layout)
   if (!isConnected && !isConnecting && !isReconnecting) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-tal-soft">
-        <div className="max-w-2xl w-full animate-slide-up">
-          {/* Title */}
-          <div className="text-center mb-10">
-            <h1 className="text-3xl md:text-4xl font-heading font-bold text-primary flex items-center justify-center gap-3">
-              <span className="text-4xl">🎙️</span>
-              Premium Audio Mock Interview
-            </h1>
+      <div className="flex flex-col items-center justify-center min-h-[400px] p-8">
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-lg w-full">
+          <div className="text-center mb-6">
+            <div className="flex items-center justify-center gap-2 text-2xl font-semibold text-gray-900 mb-2">
+              <span>🎙️</span>
+              <span>Premium Audio Mock Interview</span>
+            </div>
           </div>
 
-          {/* Sarah's Headshot */}
-          <div className="flex justify-center mb-8">
+          <div className="flex justify-center mb-6">
             <div className="relative">
-              <img 
-                src={sarahHeadshot} 
-                alt="Sarah - Your AI Interview Coach" 
-                className="h-40 w-40 rounded-full object-cover border-4 border-primary shadow-lg"
+              <img
+                src={sarahHeadshot}
+                alt="Sarah - AI Interview Coach"
+                className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
               />
-              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-semibold">
+              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-white px-3 py-1 rounded-full shadow text-sm font-medium">
                 Sarah
               </div>
             </div>
           </div>
 
-          {/* Audio device selection */}
-          <div className="mb-6 p-4 bg-card rounded-lg border border-border">
+          <div className="mb-6">
             <AudioDeviceSelect
               devices={micInputs}
               value={selectedInputId}
@@ -1374,13 +1276,12 @@ Now continue the interview naturally. Ask question ${nextQuestion}.`;
             />
           </div>
 
-          {/* Tips Section - Moved above button */}
-          <div className="mb-8 p-4 bg-card rounded-lg border border-border">
-            <div className="flex items-start gap-2 mb-3">
-              <Lightbulb className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-              <h3 className="font-heading font-semibold text-foreground">Tips for a great interview:</h3>
+          <div className="bg-blue-50 rounded-lg p-4 mb-6">
+            <div className="flex items-center gap-2 text-blue-700 font-medium mb-2">
+              <Lightbulb className="w-4 h-4" />
+              Tips for a great interview:
             </div>
-            <ul className="text-sm text-muted-foreground space-y-2 ml-7">
+            <ul className="text-sm text-blue-600 space-y-1">
               <li>• Use headphones for best audio quality</li>
               <li>• Speak clearly and at a natural pace</li>
               <li>• Use a quiet environment for best results</li>
@@ -1390,11 +1291,9 @@ Now continue the interview naturally. Ask question ${nextQuestion}.`;
             </ul>
           </div>
 
-          {/* Start / Resume Button */}
           <div className="flex justify-center">
             <Button
-              variant="audio"
-              size="xl"
+              size="lg"
               onClick={() => (resumeFromPause ? reconnect() : reconnect({ mode: 'initial' }))}
               disabled={!canStartInterview || isConnecting || isReconnecting}
               className="gap-2 text-lg px-8 py-6"
@@ -1407,61 +1306,52 @@ Now continue the interview naturally. Ask question ${nextQuestion}.`;
     );
   }
 
-  // Active interview or connecting state
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-8">
-      <div className="max-w-md w-full text-center animate-slide-up">
-        {/* Voice Visualization with Sarah's Headshot */}
-        <div className="relative mb-8">
+    <div className="flex flex-col items-center justify-center min-h-[400px] p-8">
+      <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+        <div className="relative w-32 h-32 mx-auto mb-6">
           <div
             className={cn(
-              "h-40 w-40 mx-auto rounded-full flex items-center justify-center transition-all duration-300 overflow-hidden",
-              isConnected
-                ? isSpeaking
-                  ? "ring-4 ring-session-audio animate-pulse"
-                  : "ring-2 ring-primary/50"
-                : "bg-muted"
+              'w-full h-full rounded-full flex items-center justify-center transition-all duration-300',
+              isConnecting && 'bg-blue-100',
+              isConnected && !isSpeaking && 'bg-green-100',
+              isConnected && isSpeaking && 'bg-blue-100 scale-110'
             )}
           >
             {isConnecting ? (
-              <Loader2 className="h-16 w-16 text-primary animate-spin" />
+              <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
             ) : isConnected ? (
-              <img 
-                src={sarahHeadshot} 
-                alt="Sarah - Your AI Interview Coach" 
+              <img
+                src={sarahHeadshot}
+                alt="Sarah"
                 className={cn(
-                  "h-full w-full object-cover transition-transform duration-300",
-                  isSpeaking && "scale-105"
+                  'w-24 h-24 rounded-full object-cover transition-transform duration-300',
+                  isSpeaking && 'scale-110'
                 )}
               />
             ) : (
-              <Volume2 className="h-16 w-16 text-muted-foreground" />
+              <Volume2 className="w-12 h-12 text-gray-400" />
             )}
           </div>
           
-          {/* Ripple effect when speaking */}
           {isConnected && isSpeaking && (
             <>
-              <div className="absolute inset-0 h-40 w-40 mx-auto rounded-full bg-session-audio/20 animate-ping" />
-              <div className="absolute inset-0 h-40 w-40 mx-auto rounded-full bg-session-audio/10 animate-ping animation-delay-200" />
+              <div className="absolute inset-0 rounded-full border-4 border-blue-400 animate-ping opacity-20" />
+              <div className="absolute inset-0 rounded-full border-2 border-blue-300 animate-pulse opacity-40" />
             </>
           )}
           
-          {/* VAD indicator */}
           {isConnected && !isSpeaking && (
             <div className="absolute -bottom-2 left-1/2 -translate-x-1/2">
-              <div 
-                className={cn(
-                  "h-1 rounded-full transition-all duration-200",
-                  showVadWarning ? "bg-destructive w-16" : "bg-primary"
-                )}
-                style={{ width: `${Math.max(16, vadScore * 80)}px` }}
+              <div
+                className="h-2 rounded-full bg-green-500 transition-all duration-100"
+                style={{ width: `${Math.max(vadScore * 100, 10)}px` }}
               />
             </div>
           )}
         </div>
 
-        <h2 className="font-heading text-2xl font-bold text-foreground mb-2">
+        <h3 className="text-lg font-semibold text-gray-900 mb-1">
           {isConnecting 
             ? 'Connecting to Sarah...' 
             : isSpeaking
@@ -1471,9 +1361,9 @@ Now continue the interview naturally. Ask question ${nextQuestion}.`;
                 : showVadWarning
                   ? 'Having trouble hearing you...'
                   : 'Listening to your response...'}
-        </h2>
+        </h3>
         
-        <p className="text-muted-foreground mb-6">
+        <p className="text-sm text-gray-500 mb-6">
           {isConnecting
             ? 'Setting up your voice connection...'
             : isSpeaking
@@ -1485,88 +1375,82 @@ Now continue the interview naturally. Ask question ${nextQuestion}.`;
                   : 'Speak naturally when you\'re ready to respond'}
         </p>
 
-        {/* Silence warning */}
         {showSilenceWarning && isConnected && (
-          <div className="mb-4 p-3 bg-accent/10 border border-accent/20 rounded-lg">
-            <p className="text-sm text-foreground flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+            <div className="flex items-center justify-center gap-2 text-amber-700">
+              <AlertTriangle className="w-4 h-4" />
               Sarah hasn't heard from you in a while.
-              <button
+              <Button
+                size="sm"
+                variant="outline"
                 onClick={signalActivity}
-                className="underline font-medium text-foreground/90 hover:text-foreground"
+                className="ml-2"
               >
                 I'm still here
-              </button>
-            </p>
+              </Button>
+            </div>
           </div>
         )}
 
-        {/* Controls */}
         {isConnected && (
-          <div className="flex items-center justify-center gap-4 mb-6">
+          <div className="flex items-center justify-center gap-4">
             <Button
-              variant="outline"
               size="lg"
+              variant={isMuted ? 'destructive' : 'outline'}
               onClick={toggleMute}
-              className={cn(
-                "rounded-full h-14 w-14",
-                isMuted && "bg-destructive/10 border-destructive text-destructive"
-              )}
+              className="w-14 h-14 rounded-full p-0"
             >
-              {isMuted ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
+              {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
             </Button>
             
             <Button
-              variant="outline"
               size="lg"
+              variant="outline"
               onClick={pauseInterview}
-              disabled={isSendingResults}
-              className="rounded-full h-14 w-14"
+              className="w-14 h-14 rounded-full p-0"
               title="Pause Interview"
             >
-              <Pause className="h-6 w-6" />
+              <Pause className="w-6 h-6" />
             </Button>
             
             <Button
-              variant="destructive"
               size="lg"
+              variant="destructive"
               onClick={stopConversation}
               disabled={isSendingResults}
-              className="rounded-full h-14 w-14"
+              className="w-14 h-14 rounded-full p-0"
             >
               {isSendingResults ? (
-                <Loader2 className="h-6 w-6 animate-spin" />
+                <Loader2 className="w-6 h-6 animate-spin" />
               ) : (
-                <PhoneOff className="h-6 w-6" />
+                <PhoneOff className="w-6 h-6" />
               )}
             </Button>
           </div>
         )}
         
-        {/* Paused state UI */}
         {isPaused && !isConnected && !isReconnecting && (
-          <div className="flex flex-col items-center gap-4 mb-6">
-            <div className="p-3 bg-accent/10 border border-accent/20 rounded-lg">
-              <p className="text-sm text-foreground flex items-center gap-2">
-                <Pause className="h-4 w-4" />
+          <div className="mt-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
+              <div className="flex items-center justify-center gap-2 text-amber-700">
+                <Pause className="w-4 h-4" />
                 Interview Paused — Your progress is saved
-              </p>
+              </div>
             </div>
             <Button
-              variant="audio"
-              size="lg"
               onClick={resumeInterview}
+              disabled={isReconnecting}
               className="gap-2"
             >
-              <Play className="h-5 w-5" />
+              <Play className="w-4 h-4" />
               Resume Interview
             </Button>
           </div>
         )}
 
-        {/* Connection status indicator - only show when connected or was previously connected */}
-        {(isConnected || isPaused || connectionDropped || isReconnecting) && (
-          <div className="mt-4 flex items-center justify-center">
+        {/* *** FIX: Only show connection indicator when connected *** */}
+        {isConnected && (
+          <div className="mt-4 flex justify-center">
             <ConnectionIndicator />
           </div>
         )}
