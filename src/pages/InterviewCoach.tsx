@@ -178,6 +178,29 @@ export default function InterviewCoach() {
 
   const proceedWithSaveDocuments = async () => {
     setIsDocumentsSaved(true);
+
+    // Persist documents for resume links (backend function uses service role; safe for anon sessions)
+    if (sessionId && userEmail) {
+      try {
+        const { error } = await supabase.functions.invoke('audio-session', {
+          body: {
+            action: 'save_documents',
+            sessionId,
+            email: userEmail,
+            firstName: documents.firstName,
+            resume: documents.resume,
+            jobDescription: documents.jobDescription,
+            companyUrl: documents.companyUrl,
+          },
+        });
+
+        if (error) {
+          console.error('Error saving documents to session:', error);
+        }
+      } catch (err) {
+        console.error('Exception saving documents to session:', err);
+      }
+    }
     
     // For Pro users, wait until they select an interview type
     if (resolvedSessionType === 'pro' && !selectedProInterviewType) {
@@ -417,52 +440,54 @@ export default function InterviewCoach() {
     const resumeSessionId = searchParams.get('resume_session');
     const resumeEmail = searchParams.get('email');
     
-    if (resumeSessionId && resumeEmail) {
-      // User clicked resume link from email - auto-resume the session
-      const autoResume = async () => {
-        try {
-          const { data, error } = await supabase.functions.invoke('audio-session', {
-            body: {
-              action: 'resume_session',
-              sessionId: resumeSessionId,
-              email: resumeEmail,
-            },
-          });
-          
-          if (error) {
-            throw error;
-          }
-          
-          if (data?.expired) {
-            toast({
-              variant: 'destructive',
-              title: 'Session Expired',
-              description: 'This session has expired. Paused sessions are only resumable within 24 hours.',
-            });
-            // Redirect to home page
-            navigate('/');
-            return;
-          }
-          
-          if (data?.ok) {
-            // Resume successful - trigger the resume flow
-            handleResumePausedSession(resumeSessionId, data.sessionType);
-          }
-        } catch (err) {
-          console.error('Error auto-resuming session:', err);
+    if (!resumeSessionId || !resumeEmail) return;
+
+    // User clicked resume link from email - auto-resume the session
+    const autoResume = async () => {
+      setIsVerifying(true);
+
+      try {
+        const { data, error } = await supabase.functions.invoke('audio-session', {
+          body: {
+            action: 'resume_session',
+            sessionId: resumeSessionId,
+            email: resumeEmail,
+          },
+        });
+        
+        if (error) {
+          throw error;
+        }
+        
+        if (data?.expired) {
           toast({
             variant: 'destructive',
-            title: 'Resume Failed',
-            description: 'Could not resume your session. It may have expired.',
+            title: 'Session Expired',
+            description: 'This session has expired. Paused sessions are only resumable within 24 hours.',
           });
-        } finally {
-          setIsVerifying(false);
+          // Redirect to home page
+          navigate('/');
+          return;
         }
-      };
-      
-      autoResume();
-      return; // Skip normal payment verification
-    }
+        
+        if (data?.ok) {
+          // Resume successful - hydrate docs first, then show the resumed interview UI
+          await handleResumePausedSession(resumeSessionId, data.sessionType, resumeEmail);
+        }
+      } catch (err) {
+        console.error('Error auto-resuming session:', err);
+        toast({
+          variant: 'destructive',
+          title: 'Resume Failed',
+          description: 'Could not resume your session. It may have expired.',
+        });
+      } finally {
+        setIsVerifying(false);
+      }
+    };
+    
+    autoResume();
+    return; // Skip normal payment verification
   }, [searchParams, navigate]);
 
   // Verify payment on page load
@@ -742,21 +767,20 @@ export default function InterviewCoach() {
   };
 
   // Handle resume from paused session
-  const handleResumePausedSession = async (pausedSessionId: string, pausedSessionType: string) => {
-    // Set the session to resume
-    setSessionId(pausedSessionId);
-    setResumeFromPause(true);
-    setResumingSessionType(pausedSessionType);
-    // CRITICAL: Set sessionTypeOverride so resolvedSessionType is available for handleStartSession
-    setSessionTypeOverride(pausedSessionType as SessionType);
-    setIsPaymentVerified(true);
-    setIsSessionStarted(true);
-    setIsDocumentsSaved(true); // Assume docs were saved before pause
-    
-    // Fetch documents from the paused session (use backend function to bypass RLS)
-    try {
-      const emailForLookup = userEmail ?? searchParams.get('email') ?? undefined;
+  const handleResumePausedSession = async (pausedSessionId: string, pausedSessionType: string, emailOverride?: string) => {
+    const emailForLookup = emailOverride ?? userEmail ?? searchParams.get('email') ?? undefined;
 
+    if (!emailForLookup) {
+      toast({
+        variant: 'destructive',
+        title: 'Resume Failed',
+        description: 'Email not found in the resume link.',
+      });
+      return;
+    }
+
+    // Fetch documents FIRST (so we don't render a blank, locked form)
+    try {
       const { data, error } = await supabase.functions.invoke('audio-session', {
         body: {
           action: 'get_session',
@@ -765,28 +789,53 @@ export default function InterviewCoach() {
         },
       });
 
-      if (!error && data?.ok && data?.session?.documents) {
-        const docs = data.session.documents as {
-          resume?: string;
-          jobDescription?: string;
-          companyUrl?: string;
-        };
-
-        setDocuments({
-          firstName: (docs as any).firstName || '',
-          resume: docs.resume || '',
-          jobDescription: docs.jobDescription || '',
-          companyUrl: docs.companyUrl || '',
-        });
+      if (error) throw error;
+      if (!data?.ok || !data?.session?.documents) {
+        throw new Error('Session documents not found');
       }
+
+      const docs = data.session.documents as {
+        firstName?: string;
+        resume?: string;
+        jobDescription?: string;
+        companyUrl?: string;
+      };
+
+      setDocuments({
+        firstName: docs.firstName || '',
+        resume: docs.resume || '',
+        jobDescription: docs.jobDescription || '',
+        companyUrl: docs.companyUrl || '',
+      });
+
+      const hasAnyDocs = Boolean(
+        (docs.firstName && docs.firstName.trim().length > 0) ||
+          (docs.resume && docs.resume.trim().length > 0) ||
+          (docs.jobDescription && docs.jobDescription.trim().length > 0) ||
+          (docs.companyUrl && docs.companyUrl.trim().length > 0)
+      );
+      setIsDocumentsSaved(hasAnyDocs);
+
+      // Now switch UI into resumed-session mode
+      setSessionId(pausedSessionId);
+      setResumeFromPause(true);
+      setResumingSessionType(pausedSessionType);
+      setSessionTypeOverride(pausedSessionType as SessionType);
+      setIsPaymentVerified(true);
+      setIsSessionStarted(true);
+
+      toast({
+        title: 'Resuming Session',
+        description: 'Loading your saved progress...',
+      });
     } catch (err) {
-      console.error('Error fetching paused session documents:', err);
+      console.error('Error resuming session (hydration):', err);
+      toast({
+        variant: 'destructive',
+        title: 'Resume Failed',
+        description: 'Could not load your saved documents for this session.',
+      });
     }
-    
-    toast({
-      title: 'Resuming Session',
-      description: 'Loading your saved progress...',
-    });
   };
 
   const handleAbandonSession = (abandonedSessionId: string) => {

@@ -149,9 +149,10 @@ export function AudioInterface({
   const lastAssistantTurnRef = useRef<string | null>(null);
   const questionCountRef = useRef(0);
   const isResumingRef = useRef(false);
-  
-  // *** FIX: Store pending context to send AFTER connection ***
+
+  // Stored resume context and a forced "kickoff" message to guarantee Sarah speaks first on resume.
   const pendingContextRef = useRef<string | null>(null);
+  const pendingResumeKickoffRef = useRef<string | null>(null);
 
   const appendTranscriptTurn = useCallback((role: 'user' | 'assistant', text: unknown) => {
     const clean = typeof text === 'string' ? text.trim() : '';
@@ -170,7 +171,8 @@ export function AudioInterface({
     appendTurn({
       role,
       text: clean,
-      questionNumber: role === 'assistant' && clean.includes('?') ? questionCountRef.current : null,
+      // questionCountRef increments AFTER we receive this assistant turn, so persist +1 here.
+      questionNumber: role === 'assistant' && clean.includes('?') ? questionCountRef.current + 1 : null,
     });
   }, [appendTurn]);
 
@@ -430,18 +432,33 @@ export function AudioInterface({
         }
       }, KEEP_ALIVE_INTERVAL);
       
-      // *** FIX: Send pending context IMMEDIATELY after connection ***
-      if (pendingContextRef.current) {
-        console.log('[AudioInterface] Sending pending resume context NOW');
-        setTimeout(() => {
-          if (pendingContextRef.current) {
-            conversation.sendContextualUpdate(pendingContextRef.current);
-            console.log('[AudioInterface] Resume context sent successfully');
-            pendingContextRef.current = null;
-          }
-        }, 100); // Tiny delay to ensure connection is stable
-      }
-    },
+       // *** FIX: Send pending context IMMEDIATELY after connection ***
+       if (pendingContextRef.current) {
+         console.log('[AudioInterface] Sending pending resume context NOW');
+         setTimeout(() => {
+           if (pendingContextRef.current) {
+             conversation.sendContextualUpdate(pendingContextRef.current);
+             console.log('[AudioInterface] Resume context sent successfully');
+             pendingContextRef.current = null;
+           }
+         }, 100); // Tiny delay to ensure connection is stable
+       }
+
+       // Force an immediate agent response on resume so Sarah never waits silently.
+       if (pendingResumeKickoffRef.current) {
+         const kickoff = pendingResumeKickoffRef.current;
+         setTimeout(() => {
+           try {
+             conversation.sendUserMessage(kickoff);
+             console.log('[AudioInterface] Resume kickoff message sent');
+           } catch (e) {
+             console.warn('[AudioInterface] Failed to send resume kickoff message:', e);
+           } finally {
+             pendingResumeKickoffRef.current = null;
+           }
+         }, 175);
+       }
+     },
     onDisconnect: (details) => {
       console.log('[AudioInterface] Disconnected from ElevenLabs agent', details);
       setIsConnecting(false);
@@ -712,29 +729,41 @@ export function AudioInterface({
 
         const firstTimeGreeting = `Hi ${nameForGreeting}, I'm Sarah, your interview coach today. I've reviewed your materials and I'm ready to put you through a realistic mock interview. We'll cover 16 questions across different categories. Take your time with each answer, and I'll give you feedback as we go. Ready to begin?`;
 
-        // *** FIX: Resume greeting that handles both scenarios ***
-        // Get the last question Sarah asked from the transcript
+        // Resume behavior: Sarah must speak first and immediately ask/repeat the correct question.
         const lastSarahQuestion = transcriptRef.current
           .filter(t => t.role === 'assistant' && t.text.includes('?'))
           .pop()?.text || null;
-        
-        // Check if user answered the last question before pausing
+
         const lastTranscriptEntry = transcriptRef.current[transcriptRef.current.length - 1];
         const didUserAnswerLast = lastTranscriptEntry?.role === 'user';
-        
-        let resumeGreeting: string;
-        if (questionsSoFar > 0 && !didUserAnswerLast && lastSarahQuestion) {
-          // User paused BEFORE answering - repeat the question
-          const truncatedQuestion = lastSarahQuestion.length > 500 
-            ? lastSarahQuestion.substring(0, 500) + '...' 
-            : lastSarahQuestion;
-          resumeGreeting = `Welcome back${firstName ? `, ${firstName}` : ''}! Let me repeat the question you were on: ${truncatedQuestion}`;
-        } else if (questionsSoFar > 0 && didUserAnswerLast) {
-          // User answered before pausing - move to next question
-          resumeGreeting = `Welcome back${firstName ? `, ${firstName}` : ''}! You've completed ${questionsSoFar} questions so far. Let's continue with question ${nextQuestion}.`;
-        } else {
-          resumeGreeting = `Welcome back${firstName ? `, ${firstName}` : ''}! Let's continue where we left off.`;
-        }
+
+        // questionsSoFar = number of questions Sarah already asked (counted by "?")
+        const completedQuestions = didUserAnswerLast ? questionsSoFar : Math.max(questionsSoFar - 1, 0);
+        const resumeQuestionNumber = didUserAnswerLast ? completedQuestions + 1 : Math.max(questionsSoFar, 1);
+
+        const safeQuestionText =
+          !didUserAnswerLast && lastSarahQuestion
+            ? (lastSarahQuestion.length > 500
+              ? lastSarahQuestion.substring(0, 500) + '...'
+              : lastSarahQuestion)
+            : null;
+
+        // Keep the built-in firstMessage effectively silent on resume; we force a kickoff response immediately on connect.
+        const resumeGreeting = ' ';
+
+        const nameSuffix = firstName ? `, ${firstName}` : '';
+        pendingResumeKickoffRef.current = [
+          'CRITICAL: You are Sarah, resuming a paused interview session.',
+          'You MUST speak first immediately. Do not wait for the candidate.',
+          'Do NOT say "I don\'t hear you", "let\'s start over", or restart the interview.',
+          '',
+          'Respond in ONE message with this exact structure (replace the bracketed placeholder if present):',
+          `"Welcome back${nameSuffix}! Before pausing, we completed question ${completedQuestions}. We will now resume with question ${resumeQuestionNumber}. Question ${resumeQuestionNumber} is: ${safeQuestionText ?? '[ASK THE FULL QUESTION NOW]'}"`,
+          '',
+          safeQuestionText
+            ? 'Use the question text exactly as provided after "Question X is:".'
+            : 'Replace [ASK THE FULL QUESTION NOW] with the full question text, then stop and wait for the answer.',
+        ].join('\n');
 
         // *** FIX: Build context BEFORE starting session ***
         const contextParts: string[] = [];
