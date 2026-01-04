@@ -159,9 +159,15 @@ export default function InterviewCoach() {
 
   const handleSaveDocuments = async () => {
     if (isResumeComplete && isJobComplete) {
-      // Paused sessions should be non-blocking once a purchased session exists.
-      // Only check for conflicts when we don't yet have a session to work with.
-      if (!sessionId) {
+      // CRITICAL: Never check for paused sessions if this is a NEW PURCHASE.
+      // A new checkout_session_id = user paid for a new session = always start fresh.
+      // Also skip if we already have a sessionId from the checkout flow.
+      const isNewPurchase = Boolean(checkoutSessionId);
+      const hasExistingSession = Boolean(sessionId);
+      
+      if (!isNewPurchase && !hasExistingSession) {
+        // Only check for paused session conflicts when NOT a new purchase
+        // and we don't have a session yet
         const pausedSession = await checkForPausedSessions();
 
         if (pausedSession) {
