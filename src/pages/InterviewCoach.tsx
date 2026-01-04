@@ -1022,6 +1022,8 @@ export default function InterviewCoach() {
     }
 
     if (activeType === 'premium_audio') {
+      console.log('[InterviewCoach] Rendering AudioInterface with resumeFromPause:', resumeFromPause);
+
       return (
         <AudioInterface 
           isActive={isSessionStarted} 

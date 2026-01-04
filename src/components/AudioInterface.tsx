@@ -655,7 +655,7 @@ export function AudioInterface({
       const mode: 'initial' | 'resume' = options?.mode === 'initial' ? 'initial' : 'resume';
       const isInitial = mode === 'initial';
 
-      console.log('[reconnect] Starting with mode:', mode);
+      console.log('[AudioInterface] reconnect called with mode:', mode, 'resumeFromPause prop:', resumeFromPause);
 
       if (isInitial) {
         transcriptRef.current = [];
