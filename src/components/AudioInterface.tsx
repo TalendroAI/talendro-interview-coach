@@ -39,6 +39,56 @@ const ANTI_INTERRUPT_VAD_THRESHOLD = 0.3;
 
 type ConnectionQuality = 'excellent' | 'good' | 'poor' | 'disconnected';
 
+// Helper function to detect actual interview questions (not greetings or conversational)
+const isInterviewQuestion = (text: string): boolean => {
+  if (!text || !text.includes('?')) return false;
+  
+  // Skip common non-question patterns
+  const skipPatterns = [
+    /ready to begin/i,
+    /shall we (start|begin|continue)/i,
+    /are you ready/i,
+    /can you hear me/i,
+    /is that clear/i,
+    /does that make sense/i,
+    /any questions before we/i,
+    /sound good/i,
+    /welcome back/i,
+  ];
+  
+  for (const pattern of skipPatterns) {
+    if (pattern.test(text)) return false;
+  }
+  
+  // Actual interview question patterns
+  const questionPatterns = [
+    /^what /i,
+    /^why /i,
+    /^how /i,
+    /^tell me/i,
+    /^describe/i,
+    /^can you (tell|describe|explain|walk|share|give)/i,
+    /^walk me/i,
+    /^explain/i,
+    /^give me/i,
+    /^share /i,
+    /^have you (ever )?/i,
+    /^when /i,
+    /^where /i,
+    /question \d+/i,
+    /let's start with/i,
+    /first question/i,
+    /next question/i,
+  ];
+  
+  const trimmed = text.trim();
+  for (const pattern of questionPatterns) {
+    if (pattern.test(trimmed)) return true;
+  }
+  
+  return false;
+};
+
 export function AudioInterface({
   isActive,
   sessionId,
@@ -178,7 +228,7 @@ export function AudioInterface({
     appendTurn({
       role,
       text: clean,
-      questionNumber: role === 'assistant' && clean.includes('?') ? questionCountRef.current + 1 : null,
+      questionNumber: role === 'assistant' && isInterviewQuestion(clean) ? questionCountRef.current + 1 : null,
     });
   }, [appendTurn]);
 
@@ -537,7 +587,7 @@ export function AudioInterface({
           const clean = typeof messageText === 'string' ? messageText.trim() : '';
           if (clean) {
             lastAssistantTurnRef.current = clean;
-            if (clean.includes('?')) {
+            if (isInterviewQuestion(clean)) {
               questionCountRef.current += 1;
             }
           }
@@ -556,7 +606,7 @@ export function AudioInterface({
             const clean = typeof text === 'string' ? text.trim() : '';
             if (clean) {
               lastAssistantTurnRef.current = clean;
-              if (clean.includes('?')) questionCountRef.current += 1;
+              if (isInterviewQuestion(clean)) questionCountRef.current += 1;
             }
           }
         }
@@ -730,7 +780,7 @@ export function AudioInterface({
             if (assistantMessages.length > 0) {
               const lastAssistant = assistantMessages[assistantMessages.length - 1];
               lastAssistantTurnRef.current = lastAssistant.content;
-              questionCountRef.current = assistantMessages.filter((m) => m.content.includes('?')).length;
+              questionCountRef.current = assistantMessages.filter((m) => isInterviewQuestion(m.content)).length;
               console.log('[reconnect] Restored question count:', questionCountRef.current);
             }
           }
@@ -753,7 +803,7 @@ export function AudioInterface({
         const firstTimeGreeting = `Hi ${nameForGreeting}, I'm Sarah, your interview coach today. I've reviewed your materials and I'm ready to put you through a realistic mock interview. We'll cover 16 questions across different categories. Take your time with each answer, and I'll give you feedback as we go. Ready to begin?`;
 
         const lastSarahQuestion = transcriptRef.current
-          .filter(t => t.role === 'assistant' && t.text.includes('?'))
+          .filter(t => t.role === 'assistant' && isInterviewQuestion(t.text))
           .pop()?.text || null;
 
         const lastTranscriptEntry = transcriptRef.current[transcriptRef.current.length - 1];
@@ -800,7 +850,7 @@ export function AudioInterface({
             .join('\n\n');
 
           const lastQuestionFromSarah = transcriptRef.current
-            .filter(t => t.role === 'assistant' && t.text.includes('?'))
+            .filter(t => t.role === 'assistant' && isInterviewQuestion(t.text))
             .pop()?.text || null;
           
           const transcriptLength = transcriptRef.current.length;
@@ -943,9 +993,14 @@ ${fullTranscriptText}
 
     setIsReconnecting(true);
     isResumingRef.current = true;
+    
+    // CRITICAL: Clear all local state before loading from database
+    transcriptRef.current = [];
+    questionCountRef.current = 0;
+    lastAssistantTurnRef.current = null;
 
     try {
-      console.log('[resumeInterview] Calling resume_session endpoint...');
+      console.log('[resumeInterview] Calling resume_session endpoint for session:', sessionId);
       
       const { data, error } = await supabase.functions.invoke('audio-session', {
         body: { action: 'resume_session', sessionId, email: userEmail },
@@ -974,8 +1029,9 @@ ${fullTranscriptText}
         const assistantMessages = messages.filter((m: any) => m.role === 'assistant');
         if (assistantMessages.length > 0) {
           lastAssistantTurnRef.current = assistantMessages[assistantMessages.length - 1].content;
-          questionCountRef.current = assistantMessages.filter((m: any) => m.content.includes('?')).length;
+          questionCountRef.current = assistantMessages.filter((m: any) => isInterviewQuestion(m.content)).length;
         }
+        console.log('[resumeInterview] Loaded from DB - transcript entries:', transcriptRef.current.length, 'questionCount:', questionCountRef.current);
       }
 
       setIsPaused(false);
