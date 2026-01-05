@@ -150,17 +150,22 @@ export function AudioInterface({
   const questionCountRef = useRef(0);
   const isResumingRef = useRef(false);
 
-  // Stored resume context and a forced "kickoff" message to guarantee Sarah speaks first on resume.
   const pendingContextRef = useRef<string | null>(null);
   const pendingResumeKickoffRef = useRef<string | null>(null);
 
   const appendTranscriptTurn = useCallback((role: 'user' | 'assistant', text: unknown) => {
     console.log('[appendTranscriptTurn] Called with role:', role, 'text length:', typeof text === 'string' ? text.length : 0);
     const clean = typeof text === 'string' ? text.trim() : '';
-    if (!clean) return;
+    if (!clean) {
+      console.log('[appendTranscriptTurn] SKIPPED - empty text');
+      return;
+    }
 
     const last = transcriptRef.current[transcriptRef.current.length - 1];
-    if (last && last.role === role && last.text === clean) return;
+    if (last && last.role === role && last.text === clean) {
+      console.log('[appendTranscriptTurn] SKIPPED - duplicate');
+      return;
+    }
 
     transcriptRef.current.push({ role, text: clean, ts: Date.now() });
     setLastActivityTime(Date.now());
@@ -169,10 +174,10 @@ export function AudioInterface({
       transcriptRef.current = transcriptRef.current.slice(-200);
     }
     
+    console.log('[appendTranscriptTurn] Calling appendTurn to save to database...');
     appendTurn({
       role,
       text: clean,
-      // questionCountRef increments AFTER we receive this assistant turn, so persist +1 here.
       questionNumber: role === 'assistant' && clean.includes('?') ? questionCountRef.current + 1 : null,
     });
   }, [appendTurn]);
@@ -433,33 +438,31 @@ export function AudioInterface({
         }
       }, KEEP_ALIVE_INTERVAL);
       
-       // *** FIX: Send pending context IMMEDIATELY after connection ***
-       if (pendingContextRef.current) {
-         console.log('[AudioInterface] Sending pending resume context NOW');
-         setTimeout(() => {
-           if (pendingContextRef.current) {
-             conversation.sendContextualUpdate(pendingContextRef.current);
-             console.log('[AudioInterface] Resume context sent successfully');
-             pendingContextRef.current = null;
-           }
-         }, 100); // Tiny delay to ensure connection is stable
-       }
+      if (pendingContextRef.current) {
+        console.log('[AudioInterface] Sending pending resume context NOW');
+        setTimeout(() => {
+          if (pendingContextRef.current) {
+            conversation.sendContextualUpdate(pendingContextRef.current);
+            console.log('[AudioInterface] Resume context sent successfully');
+            pendingContextRef.current = null;
+          }
+        }, 100);
+      }
 
-       // Force an immediate agent response on resume so Sarah never waits silently.
-       if (pendingResumeKickoffRef.current) {
-         const kickoff = pendingResumeKickoffRef.current;
-         setTimeout(() => {
-           try {
-             conversation.sendUserMessage(kickoff);
-             console.log('[AudioInterface] Resume kickoff message sent');
-           } catch (e) {
-             console.warn('[AudioInterface] Failed to send resume kickoff message:', e);
-           } finally {
-             pendingResumeKickoffRef.current = null;
-           }
-         }, 175);
-       }
-     },
+      if (pendingResumeKickoffRef.current) {
+        const kickoff = pendingResumeKickoffRef.current;
+        setTimeout(() => {
+          try {
+            conversation.sendUserMessage(kickoff);
+            console.log('[AudioInterface] Resume kickoff message sent');
+          } catch (e) {
+            console.warn('[AudioInterface] Failed to send resume kickoff message:', e);
+          } finally {
+            pendingResumeKickoffRef.current = null;
+          }
+        }, 175);
+      }
+    },
     onDisconnect: (details) => {
       console.log('[AudioInterface] Disconnected from ElevenLabs agent', details);
       setIsConnecting(false);
@@ -510,24 +513,28 @@ export function AudioInterface({
       setShowSilenceWarning(false);
 
       try {
-        const type = (message as any)?.type;
+        const msg = message as any;
+        
+        // ElevenLabs sends messages with { source, role, message } structure
+        const source = msg?.source;
+        const role = msg?.role;
+        const messageText = msg?.message;
+        const type = msg?.type;
+        
+        console.log('[AudioInterface] Parsed message - source:', source, 'role:', role, 'type:', type, 'hasText:', !!messageText);
 
-        if (type === 'user_transcript') {
-          const text =
-            (message as any)?.user_transcription_event?.user_transcript ??
-            (message as any)?.user_transcript ??
-            (message as any)?.text;
-          appendTranscriptTurn('user', text);
+        // Handle ElevenLabs format: { source: 'user', role: 'user', message: '...' }
+        if (source === 'user' && messageText) {
+          console.log('[AudioInterface] USER message detected, saving to DB...');
+          appendTranscriptTurn('user', messageText);
         }
+        
+        // Handle ElevenLabs format: { source: 'ai', role: 'agent', message: '...' }
+        if (source === 'ai' && messageText) {
+          console.log('[AudioInterface] AI message detected, saving to DB...');
+          appendTranscriptTurn('assistant', messageText);
 
-        if (type === 'agent_response') {
-          const text =
-            (message as any)?.agent_response_event?.agent_response ??
-            (message as any)?.agent_response ??
-            (message as any)?.text;
-          appendTranscriptTurn('assistant', text);
-
-          const clean = typeof text === 'string' ? text.trim() : '';
+          const clean = typeof messageText === 'string' ? messageText.trim() : '';
           if (clean) {
             lastAssistantTurnRef.current = clean;
             if (clean.includes('?')) {
@@ -536,10 +543,26 @@ export function AudioInterface({
           }
         }
 
+        // Legacy format fallback
+        if (type === 'user_transcript') {
+          const text = msg?.user_transcription_event?.user_transcript ?? msg?.user_transcript ?? msg?.text;
+          if (text) appendTranscriptTurn('user', text);
+        }
+
+        if (type === 'agent_response') {
+          const text = msg?.agent_response_event?.agent_response ?? msg?.agent_response ?? msg?.text;
+          if (text) {
+            appendTranscriptTurn('assistant', text);
+            const clean = typeof text === 'string' ? text.trim() : '';
+            if (clean) {
+              lastAssistantTurnRef.current = clean;
+              if (clean.includes('?')) questionCountRef.current += 1;
+            }
+          }
+        }
+
         if (type === 'agent_response_correction') {
-          const correctedText =
-            (message as any)?.agent_response_correction_event?.corrected_agent_response ??
-            (message as any)?.corrected_agent_response;
+          const correctedText = msg?.agent_response_correction_event?.corrected_agent_response ?? msg?.corrected_agent_response;
           if (correctedText) {
             const lastIdx = transcriptRef.current.length - 1;
             if (lastIdx >= 0 && transcriptRef.current[lastIdx].role === 'assistant') {
@@ -574,7 +597,7 @@ export function AudioInterface({
             errorType = errObj.error_type ? String(errObj.error_type) : null;
           }
         }
-        
+
         logEvent({
           eventType: 'elevenlabs_error',
           message: errorMessage,
@@ -650,7 +673,6 @@ export function AudioInterface({
     await conversation.endSession();
   }, [conversation, toast]);
 
-  // *** FIXED RECONNECT FUNCTION ***
   const reconnect = useCallback(
     async (options?: { mode?: 'initial' | 'resume' }) => {
       const mode: 'initial' | 'resume' = options?.mode === 'initial' ? 'initial' : 'resume';
@@ -675,6 +697,7 @@ export function AudioInterface({
         setIsReconnecting(false);
         isResumingRef.current = false;
         pendingContextRef.current = null;
+        pendingResumeKickoffRef.current = null;
       } else {
         setIsReconnecting(true);
         setConnectionDropped(false);
@@ -690,7 +713,6 @@ export function AudioInterface({
         mediaStreamRef.current = stream;
         console.log('[reconnect] Microphone ready');
 
-        // *** FIX: Fetch history BEFORE starting session for resume mode ***
         let dbHistory: Awaited<ReturnType<typeof getHistory>> = [];
         if (!isInitial) {
           console.log('[reconnect] Fetching DB history for resume...');
@@ -730,7 +752,6 @@ export function AudioInterface({
 
         const firstTimeGreeting = `Hi ${nameForGreeting}, I'm Sarah, your interview coach today. I've reviewed your materials and I'm ready to put you through a realistic mock interview. We'll cover 16 questions across different categories. Take your time with each answer, and I'll give you feedback as we go. Ready to begin?`;
 
-        // Resume behavior: Sarah must speak first and immediately ask/repeat the correct question.
         const lastSarahQuestion = transcriptRef.current
           .filter(t => t.role === 'assistant' && t.text.includes('?'))
           .pop()?.text || null;
@@ -738,7 +759,6 @@ export function AudioInterface({
         const lastTranscriptEntry = transcriptRef.current[transcriptRef.current.length - 1];
         const didUserAnswerLast = lastTranscriptEntry?.role === 'user';
 
-        // questionsSoFar = number of questions Sarah already asked (counted by "?")
         const completedQuestions = didUserAnswerLast ? questionsSoFar : Math.max(questionsSoFar - 1, 0);
         const resumeQuestionNumber = didUserAnswerLast ? completedQuestions + 1 : Math.max(questionsSoFar, 1);
 
@@ -749,28 +769,25 @@ export function AudioInterface({
               : lastSarahQuestion)
             : null;
 
-        // Keep the built-in firstMessage effectively silent on resume; we force a kickoff response immediately on connect.
         const resumeGreeting = ' ';
-
         const nameSuffix = firstName ? `, ${firstName}` : '';
 
-        // ONLY set resume kickoff for resume mode, NOT initial
+        // ONLY set resume kickoff for resume mode
         if (!isInitial) {
           pendingResumeKickoffRef.current = [
             'CRITICAL: You are Sarah, resuming a paused interview session.',
             'You MUST speak first immediately. Do not wait for the candidate.',
             'Do NOT say "I don\'t hear you", "let\'s start over", or restart the interview.',
             '',
-            'Respond in ONE message with this exact structure (replace the bracketed placeholder if present):',
+            'Respond in ONE message with this exact structure:',
             `"Welcome back${nameSuffix}! Before pausing, we completed question ${completedQuestions}. We will now resume with question ${resumeQuestionNumber}. Question ${resumeQuestionNumber} is: ${safeQuestionText ?? '[ASK THE FULL QUESTION NOW]'}"`,
             '',
             safeQuestionText
-              ? 'Use the question text exactly as provided after "Question X is:".'
-              : 'Replace [ASK THE FULL QUESTION NOW] with the full question text, then stop and wait for the answer.',
+              ? 'Use the question text exactly as provided.'
+              : 'Replace [ASK THE FULL QUESTION NOW] with the full question text.',
           ].join('\n');
         }
 
-        // *** FIX: Build context BEFORE starting session ***
         const contextParts: string[] = [];
 
         if (documents?.resume) contextParts.push(`Candidate Resume:\n${documents.resume}`);
@@ -778,27 +795,20 @@ export function AudioInterface({
         if (documents?.companyUrl) contextParts.push(`Company URL: ${documents.companyUrl}`);
 
         if (!isInitial && transcriptRef.current.length > 0) {
-          const lastSarahMessage = lastAssistantTurnRef.current;
-
           const fullTranscriptText = transcriptRef.current
             .map((t, idx) => `[Turn ${idx + 1}] ${t.role === 'user' ? 'CANDIDATE' : 'SARAH'}: ${t.text}`)
             .join('\n\n');
 
-          // *** FIX: More forceful resume instructions ***
-          // Find what the last unanswered question was
           const lastQuestionFromSarah = transcriptRef.current
             .filter(t => t.role === 'assistant' && t.text.includes('?'))
             .pop()?.text || null;
           
-          // Check if user answered the last question
           const transcriptLength = transcriptRef.current.length;
           const lastEntry = transcriptRef.current[transcriptLength - 1];
           const userAnsweredLastQuestion = lastEntry?.role === 'user';
           
           const resumeInstructions = `
 === CRITICAL: THIS IS A RESUMED INTERVIEW SESSION ===
-
-YOU MUST FOLLOW THESE INSTRUCTIONS EXACTLY:
 
 STATUS:
 - Questions already asked: ${questionsSoFar}
@@ -809,42 +819,22 @@ ${lastQuestionFromSarah ? `THE LAST QUESTION YOU ASKED WAS:\n"${lastQuestionFrom
 
 WHAT YOU MUST DO NOW:
 ${userAnsweredLastQuestion 
-  ? `The user ANSWERED your last question before pausing. So now you must:
-1. Briefly acknowledge you're resuming
-2. Then IMMEDIATELY ask Question ${nextQuestion} - do not wait for the user to speak
-3. YOU must speak first and ask the next question`
-  : `The user did NOT answer your last question before pausing. So now you must:
-1. Say "Welcome back! Let me repeat the question for you."
-2. Then REPEAT the last question in full
-3. YOU must speak first and repeat the question - do NOT wait silently
-4. After repeating, wait for their answer`
+  ? `The user ANSWERED your last question. Ask Question ${nextQuestion} immediately.`
+  : `The user did NOT answer. Repeat the last question in full.`
 }
 
-FORBIDDEN ACTIONS:
-- Do NOT wait silently for the user to speak first - YOU must always speak first on resume
-- Do NOT say "I don't hear you" and restart from the beginning
-- Do NOT re-introduce yourself
-- Do NOT ask question 1 again
-- Do NOT say "let's start over"
+FORBIDDEN: Do NOT wait silently, say "I don't hear you", re-introduce yourself, ask question 1 again, or say "let's start over".
 
-=== COMPLETE INTERVIEW TRANSCRIPT SO FAR ===
+=== TRANSCRIPT ===
 ${fullTranscriptText}
-=== END OF TRANSCRIPT ===
-
-CRITICAL: You MUST speak first when the session resumes. Either ask the next question (if they answered) or repeat the last question (if they didn't). Never wait silently.`;
+=== END ===`;
 
           contextParts.push(resumeInstructions);
           console.log('[reconnect] Built resume context with', transcriptRef.current.length, 'turns');
         }
 
-        contextParts.push(`IMPORTANT END-OF-INTERVIEW INSTRUCTION: At the very end of the interview, after giving your verbal summary with the score and top 3 strengths and improvements, always tell the user: "Your complete prep packet with the full transcript and detailed feedback has been sent to your email. Check your inbox for everything we discussed today."`);
+        contextParts.push(`IMPORTANT: At the end of the interview, tell the user their results have been sent to their email.`);
 
-        contextParts.push(`HANDLING PAUSE REQUESTS: If the candidate says "let's pause", "I need to pause", "pause the interview", or similar:
-- Say "No problem, take all the time you need. Click the Pause button on your screen when you're ready to stop, and Resume when you want to continue."
-- Do NOT continue the interview until they explicitly say they're ready to resume
-- Wait patiently for them to indicate they want to continue`);
-
-        // *** FIX: Store context to send IMMEDIATELY after connection ***
         if (contextParts.length > 0) {
           pendingContextRef.current = contextParts.join('\n\n---\n\n');
           console.log('[reconnect] Stored pending context for post-connection send');
@@ -863,39 +853,20 @@ CRITICAL: You MUST speak first when the session resumes. Either ask the next que
           },
         });
 
-        // Context will be sent in onConnect callback
-
         if (!isInitial) {
           logEvent({
             eventType: 'session_reconnected',
-            message: `Successfully reconnected with ${transcriptRef.current.length} history turns`,
-            context: {
-              questionCount: questionsSoFar,
-              historyLength: transcriptRef.current.length,
-              dbHistoryLength: dbHistory.length,
-            },
+            message: `Reconnected with ${transcriptRef.current.length} history turns`,
+            context: { questionCount: questionsSoFar, historyLength: transcriptRef.current.length },
           });
         }
       } catch (error) {
         console.error(isInitial ? '[reconnect] Connection failed:' : '[reconnect] Reconnection failed:', error);
 
-        if (!isInitial) {
-          logEvent({
-            eventType: 'reconnect_failed',
-            message: error instanceof Error ? error.message : 'Unknown reconnection error',
-            context: { attemptNumber: reconnectAttempts + 1 },
-          });
-        }
-
         toast({
           variant: 'destructive',
           title: isInitial ? 'Connection Failed' : 'Reconnection Failed',
-          description:
-            !isInitial && reconnectAttempts >= MAX_RECONNECT_ATTEMPTS - 1
-              ? 'Maximum reconnection attempts reached. Your session will end.'
-              : isInitial
-                ? 'Could not start the interview. Please try again.'
-                : 'Could not reconnect. Please try again.',
+          description: isInitial ? 'Could not start the interview. Please try again.' : 'Could not reconnect. Please try again.',
         });
 
         if (!isInitial && reconnectAttempts >= MAX_RECONNECT_ATTEMPTS - 1) {
@@ -911,23 +882,11 @@ CRITICAL: You MUST speak first when the session resumes. Either ask the next que
         isResumingRef.current = false;
       }
     },
-    [
-      conversation,
-      documents,
-      toast,
-      reconnectAttempts,
-      handleGracefulEnd,
-      selectedInputId,
-      getHistory,
-      logEvent,
-      cleanup,
-      resumeFromPause,
-    ]
+    [conversation, documents, toast, reconnectAttempts, handleGracefulEnd, selectedInputId, getHistory, logEvent, cleanup, resumeFromPause]
   );
 
   const toggleMute = useCallback(() => {
     setIsMuted(!isMuted);
-    
     toast({
       title: isMuted ? 'Microphone Unmuted' : 'Microphone Muted',
       description: isMuted ? 'Sarah can hear you now.' : "Sarah can't hear you. Click again to unmute.",
@@ -937,11 +896,7 @@ CRITICAL: You MUST speak first when the session resumes. Either ask the next que
 
   const pauseInterview = useCallback(async () => {
     if (!sessionId || !userEmail) {
-      toast({
-        variant: 'destructive',
-        title: 'Cannot Pause',
-        description: 'Session information is missing.',
-      });
+      toast({ variant: 'destructive', title: 'Cannot Pause', description: 'Session information is missing.' });
       return;
     }
 
@@ -958,50 +913,22 @@ CRITICAL: You MUST speak first when the session resumes. Either ask the next que
     try {
       const appUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
       const { error } = await supabase.functions.invoke('audio-session', {
-        body: {
-          action: 'pause_session',
-          sessionId,
-          email: userEmail,
-          questionNumber: questionCountRef.current,
-          app_url: appUrl,
-        },
+        body: { action: 'pause_session', sessionId, email: userEmail, questionNumber: questionCountRef.current, app_url: appUrl },
       });
 
-      if (error) {
-        console.error('[pauseInterview] Failed to save pause state:', error);
-      }
+      if (error) console.error('[pauseInterview] Failed to save pause state:', error);
 
-      toast({
-        title: 'Interview Paused',
-        description: 'Your progress is saved. You can resume within 24 hours.',
-      });
-
-      logEvent({
-        eventType: 'session_paused',
-        message: `Interview paused at question ${questionCountRef.current}`,
-        context: {
-          questionCount: questionCountRef.current,
-          transcriptLength: transcriptRef.current.length,
-        },
-      });
+      toast({ title: 'Interview Paused', description: 'Your progress is saved. You can resume within 24 hours.' });
+      logEvent({ eventType: 'session_paused', message: `Paused at question ${questionCountRef.current}`, context: { questionCount: questionCountRef.current } });
     } catch (error) {
       console.error('[pauseInterview] Failed to save pause state:', error);
-      toast({
-        title: 'Interview Paused',
-        description: 'Your session is paused locally. Resume link may not be sent.',
-        variant: 'default',
-      });
+      toast({ title: 'Interview Paused', description: 'Your session is paused locally.', variant: 'default' });
     }
   }, [sessionId, userEmail, conversation, toast, logEvent]);
 
-  // *** FIXED RESUME FUNCTION ***
   const resumeInterview = useCallback(async () => {
     if (!sessionId || !userEmail) {
-      toast({
-        variant: 'destructive',
-        title: 'Cannot Resume',
-        description: 'Session information is missing.',
-      });
+      toast({ variant: 'destructive', title: 'Cannot Resume', description: 'Session information is missing.' });
       return;
     }
 
@@ -1012,30 +939,19 @@ CRITICAL: You MUST speak first when the session resumes. Either ask the next que
       console.log('[resumeInterview] Calling resume_session endpoint...');
       
       const { data, error } = await supabase.functions.invoke('audio-session', {
-        body: {
-          action: 'resume_session',
-          sessionId,
-          email: userEmail,
-        },
+        body: { action: 'resume_session', sessionId, email: userEmail },
       });
 
-      if (error) {
-        throw new Error(error.message || 'Failed to resume session');
-      }
+      if (error) throw new Error(error.message || 'Failed to resume session');
 
       if (data?.expired) {
-        toast({
-          variant: 'destructive',
-          title: 'Session Expired',
-          description: 'This session was paused more than 24 hours ago and has expired. Please start a new session.',
-        });
+        toast({ variant: 'destructive', title: 'Session Expired', description: 'This session has expired. Please start a new session.' });
         setIsPaused(false);
         setIsReconnecting(false);
         isResumingRef.current = false;
         return;
       }
 
-      // *** FIX: Restore transcript from database BEFORE reconnect ***
       const messages = data?.messages || [];
       console.log('[resumeInterview] Got', messages.length, 'messages from DB');
       
@@ -1050,23 +966,16 @@ CRITICAL: You MUST speak first when the session resumes. Either ask the next que
         if (assistantMessages.length > 0) {
           lastAssistantTurnRef.current = assistantMessages[assistantMessages.length - 1].content;
           questionCountRef.current = assistantMessages.filter((m: any) => m.content.includes('?')).length;
-          console.log('[resumeInterview] Restored question count:', questionCountRef.current);
         }
       }
 
       setIsPaused(false);
       isPausedRef.current = false;
-      
-      // *** FIX: Call reconnect in resume mode - it will use the transcript we just restored ***
       await reconnect({ mode: 'resume' });
       
     } catch (error) {
-      console.error('[resumeInterview] Failed to resume interview:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Resume Failed',
-        description: error instanceof Error ? error.message : 'Could not resume the interview.',
-      });
+      console.error('[resumeInterview] Failed:', error);
+      toast({ variant: 'destructive', title: 'Resume Failed', description: error instanceof Error ? error.message : 'Could not resume.' });
       setIsReconnecting(false);
       isResumingRef.current = false;
     }
@@ -1075,11 +984,7 @@ CRITICAL: You MUST speak first when the session resumes. Either ask the next que
   const signalActivity = useCallback(() => {
     setLastActivityTime(Date.now());
     setShowSilenceWarning(false);
-    try {
-      conversation.sendUserActivity();
-    } catch (e) {
-      console.warn('[signalActivity] Failed to send user activity:', e);
-    }
+    try { conversation.sendUserActivity(); } catch (e) { /* ignore */ }
   }, [conversation]);
 
   useEffect(() => {
@@ -1098,7 +1003,6 @@ CRITICAL: You MUST speak first when the session resumes. Either ask the next que
         setInputVolume(vol);
 
         const shouldCheck = !conversation.isSpeaking && !isMuted;
-
         if (!shouldCheck) {
           lowSince = Date.now();
           setShowMicInputWarning(false);
@@ -1107,7 +1011,6 @@ CRITICAL: You MUST speak first when the session resumes. Either ask the next que
         }
 
         const looksLikeNoAudio = vol < 0.02 && vadScore < VAD_LOW_THRESHOLD;
-
         if (!looksLikeNoAudio) {
           lowSince = Date.now();
           setShowMicInputWarning(false);
@@ -1119,17 +1022,10 @@ CRITICAL: You MUST speak first when the session resumes. Either ask the next que
           setShowMicInputWarning(true);
           if (!micWarningShownRef.current) {
             micWarningShownRef.current = true;
-            toast({
-              variant: 'destructive',
-              title: "Sarah can't hear your microphone",
-              description: 'Your mic input looks near-silent. Select the right microphone and try again.',
-              duration: 7000,
-            });
+            toast({ variant: 'destructive', title: "Sarah can't hear your microphone", description: 'Select the right microphone.', duration: 7000 });
           }
         }
-      } catch {
-        // ignore
-      }
+      } catch { /* ignore */ }
     }, 250);
 
     return () => window.clearInterval(id);
@@ -1141,52 +1037,15 @@ CRITICAL: You MUST speak first when the session resumes. Either ask the next que
   const isSpeaking = conversation.isSpeaking;
   const canStartInterview = isDocumentsSaved;
 
-  // *** FIX: Connection indicator only shows when actually connected or in specific states ***
   const ConnectionIndicator = () => {
-    if (isPaused && !isConnected) {
-      return (
-        <div className="flex items-center gap-2 text-sm text-amber-600">
-          <Pause className="w-4 h-4" />
-          Paused
-        </div>
-      );
-    }
-    
-    if (isReconnecting) {
-      return (
-        <div className="flex items-center gap-2 text-sm text-blue-600">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          Reconnecting...
-        </div>
-      );
-    }
-    
-    // *** FIX: Only show connection status when actually connected ***
-    if (!isConnected) {
-      return null;
-    }
-    
+    if (isPaused && !isConnected) return <div className="flex items-center gap-2 text-sm text-amber-600"><Pause className="w-4 h-4" />Paused</div>;
+    if (isReconnecting) return <div className="flex items-center gap-2 text-sm text-blue-600"><Loader2 className="w-4 h-4 animate-spin" />Reconnecting...</div>;
+    if (!isConnected) return null;
     return (
       <div className="flex items-center gap-2 text-sm">
-        <div
-          className={cn(
-            'w-2 h-2 rounded-full',
-            connectionQuality === 'excellent' && 'bg-green-500',
-            connectionQuality === 'good' && 'bg-yellow-500',
-            connectionQuality === 'poor' && 'bg-red-500'
-          )}
-        />
-        <span className="text-gray-600">
-          {connectionQuality === 'excellent' && 'Excellent connection'}
-          {connectionQuality === 'good' && 'Good connection'}
-          {connectionQuality === 'poor' && 'Poor connection'}
-        </span>
-        {showVadWarning && (
-          <span className="text-amber-600 flex items-center gap-1">
-            <AlertTriangle className="w-3 h-3" />
-            Mic issue
-          </span>
-        )}
+        <div className={cn('w-2 h-2 rounded-full', connectionQuality === 'excellent' && 'bg-green-500', connectionQuality === 'good' && 'bg-yellow-500', connectionQuality === 'poor' && 'bg-red-500')} />
+        <span className="text-gray-600">{connectionQuality === 'excellent' ? 'Excellent' : connectionQuality === 'good' ? 'Good' : 'Poor'} connection</span>
+        {showVadWarning && <span className="text-amber-600 flex items-center gap-1"><AlertTriangle className="w-3 h-3" />Mic issue</span>}
       </div>
     );
   };
@@ -1196,32 +1055,16 @@ CRITICAL: You MUST speak first when the session resumes. Either ask the next que
       <div className="flex flex-col items-center justify-center min-h-[400px] p-8">
         <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full">
           <div className="flex items-center gap-4 mb-6">
-            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-              <span className="text-2xl">📊</span>
-            </div>
+            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center"><span className="text-2xl">📊</span></div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                Wrapping Up Your Interview
-              </h3>
-              <p className="text-sm text-gray-500">
-                Preparing your results...
-              </p>
+              <h3 className="text-lg font-semibold text-gray-900">Wrapping Up Your Interview</h3>
+              <p className="text-sm text-gray-500">Preparing your results...</p>
             </div>
           </div>
-
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-green-600">
-              <CheckCircle2 className="w-5 h-5" />
-              Interview transcript captured
-            </div>
-            <div className="flex items-center gap-2 text-green-600">
-              <CheckCircle2 className="w-5 h-5" />
-              Performance analysis complete
-            </div>
-            <div className="flex items-center gap-2 text-blue-600">
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Sending results to your email...
-            </div>
+            <div className="flex items-center gap-2 text-green-600"><CheckCircle2 className="w-5 h-5" />Interview transcript captured</div>
+            <div className="flex items-center gap-2 text-green-600"><CheckCircle2 className="w-5 h-5" />Performance analysis complete</div>
+            <div className="flex items-center gap-2 text-blue-600"><Loader2 className="w-5 h-5 animate-spin" />Sending results to your email...</div>
           </div>
         </div>
       </div>
@@ -1232,41 +1075,14 @@ CRITICAL: You MUST speak first when the session resumes. Either ask the next que
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] p-8">
         <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
-          <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
-            <Pause className="w-8 h-8 text-amber-600" />
-          </div>
-
+          <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4"><Pause className="w-8 h-8 text-amber-600" /></div>
           <h3 className="text-xl font-semibold text-gray-900 mb-2">Interview Paused</h3>
-          <p className="text-gray-500 mb-2">Your progress is saved. Click below to continue where you left off.</p>
-          
-          {/* Clear instruction for users coming from email */}
-          <p className="text-sm text-blue-600 font-medium mb-4">
-            👆 Click "Resume Interview" to reconnect with Sarah
-          </p>
-          
-          <div className="bg-gray-50 rounded-lg p-3 mb-6">
-            <p className="text-sm text-gray-600">
-              Questions completed: {questionCountRef.current} of 16
-            </p>
-          </div>
-
+          <p className="text-gray-500 mb-2">Your progress is saved. Click below to continue.</p>
+          <p className="text-sm text-blue-600 font-medium mb-4">👆 Click "Resume Interview" to reconnect with Sarah</p>
+          <div className="bg-gray-50 rounded-lg p-3 mb-6"><p className="text-sm text-gray-600">Questions completed: {questionCountRef.current} of 16</p></div>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button
-              onClick={resumeInterview}
-              disabled={isReconnecting}
-              className="gap-2 w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
-            >
-              <Play className="w-4 h-4" />
-              Resume Interview
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleGracefulEnd('user_ended')}
-              className="gap-2 w-full sm:w-auto"
-            >
-              <PhoneOff className="w-4 h-4" />
-              End & Get Results
-            </Button>
+            <Button onClick={resumeInterview} disabled={isReconnecting} className="gap-2 w-full sm:w-auto bg-blue-600 hover:bg-blue-700"><Play className="w-4 h-4" />Resume Interview</Button>
+            <Button variant="outline" onClick={() => handleGracefulEnd('user_ended')} className="gap-2 w-full sm:w-auto"><PhoneOff className="w-4 h-4" />End & Get Results</Button>
           </div>
         </div>
       </div>
@@ -1277,45 +1093,13 @@ CRITICAL: You MUST speak first when the session resumes. Either ask the next que
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] p-8">
         <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
-          <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-            <WifiOff className="w-8 h-8 text-red-600" />
-          </div>
-
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            Connection Lost
-          </h3>
-          <p className="text-gray-500 mb-2">
-            Sarah got disconnected unexpectedly. Don't worry — your transcript is saved and you can reconnect to continue.
-          </p>
-          
-          <p className="text-sm text-gray-400 mb-6">
-            {MAX_RECONNECT_ATTEMPTS - reconnectAttempts} reconnection {MAX_RECONNECT_ATTEMPTS - reconnectAttempts === 1 ? 'attempt' : 'attempts'} remaining
-          </p>
-
+          <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4"><WifiOff className="w-8 h-8 text-red-600" /></div>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Connection Lost</h3>
+          <p className="text-gray-500 mb-2">Sarah got disconnected. Your transcript is saved.</p>
+          <p className="text-sm text-gray-400 mb-6">{MAX_RECONNECT_ATTEMPTS - reconnectAttempts} attempts remaining</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button
-              onClick={() => reconnect()}
-              disabled={isReconnecting}
-              className="gap-2"
-            >
-              {isReconnecting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Reconnecting...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="w-4 h-4" />
-                  Reconnect
-                </>
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleGracefulEnd('connection_lost')}
-            >
-              End & Get Results
-            </Button>
+            <Button onClick={() => reconnect()} disabled={isReconnecting} className="gap-2">{isReconnecting ? <><Loader2 className="w-4 h-4 animate-spin" />Reconnecting...</> : <><RefreshCw className="w-4 h-4" />Reconnect</>}</Button>
+            <Button variant="outline" onClick={() => handleGracefulEnd('connection_lost')}>End & Get Results</Button>
           </div>
         </div>
       </div>
@@ -1327,40 +1111,19 @@ CRITICAL: You MUST speak first when the session resumes. Either ask the next que
       <div className="flex flex-col items-center justify-center min-h-[400px] p-8">
         <div className="bg-white rounded-2xl shadow-lg p-8 max-w-lg w-full">
           <div className="text-center mb-6">
-            <div className="flex items-center justify-center gap-2 text-2xl font-semibold text-gray-900 mb-2">
-              <span>🎙️</span>
-              <span>Premium Audio Mock Interview</span>
-            </div>
+            <div className="flex items-center justify-center gap-2 text-2xl font-semibold text-gray-900 mb-2"><span>🎙️</span><span>Premium Audio Mock Interview</span></div>
           </div>
-
           <div className="flex justify-center mb-6">
             <div className="relative">
-              <img
-                src={sarahHeadshot}
-                alt="Sarah - AI Interview Coach"
-                className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
-              />
-              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-white px-3 py-1 rounded-full shadow text-sm font-medium">
-                Sarah
-              </div>
+              <img src={sarahHeadshot} alt="Sarah" className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg" />
+              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-white px-3 py-1 rounded-full shadow text-sm font-medium">Sarah</div>
             </div>
           </div>
-
           <div className="mb-6">
-            <AudioDeviceSelect
-              devices={micInputs}
-              value={selectedInputId}
-              onValueChange={setSelectedInputId}
-              onRefresh={ensurePermissionThenEnumerate}
-              isRefreshing={isEnumerating}
-            />
+            <AudioDeviceSelect devices={micInputs} value={selectedInputId} onValueChange={setSelectedInputId} onRefresh={ensurePermissionThenEnumerate} isRefreshing={isEnumerating} />
           </div>
-
           <div className="bg-blue-50 rounded-lg p-4 mb-6">
-            <div className="flex items-center gap-2 text-blue-700 font-medium mb-2">
-              <Lightbulb className="w-4 h-4" />
-              Tips for a great interview:
-            </div>
+            <div className="flex items-center gap-2 text-blue-700 font-medium mb-2"><Lightbulb className="w-4 h-4" />Tips for a great interview:</div>
             <ul className="text-sm text-blue-600 space-y-1">
               <li>• Use headphones for best audio quality</li>
               <li>• Speak clearly and at a natural pace</li>
@@ -1370,14 +1133,8 @@ CRITICAL: You MUST speak first when the session resumes. Either ask the next que
               <li>• Ask Sarah to repeat or clarify anytime</li>
             </ul>
           </div>
-
           <div className="flex justify-center">
-            <Button
-              size="lg"
-              onClick={() => (resumeFromPause ? reconnect() : reconnect({ mode: 'initial' }))}
-              disabled={!canStartInterview || isConnecting || isReconnecting}
-              className="gap-2 text-lg px-8 py-6"
-            >
+            <Button size="lg" onClick={() => reconnect({ mode: 'initial' })} disabled={!canStartInterview || isConnecting || isReconnecting} className="gap-2 text-lg px-8 py-6">
               {resumeFromPause ? 'Resume Interview' : 'Begin Interview'}
             </Button>
           </div>
@@ -1390,150 +1147,34 @@ CRITICAL: You MUST speak first when the session resumes. Either ask the next que
     <div className="flex flex-col items-center justify-center min-h-[400px] p-8">
       <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
         <div className="relative w-32 h-32 mx-auto mb-6">
-          <div
-            className={cn(
-              'w-full h-full rounded-full flex items-center justify-center transition-all duration-300',
-              isConnecting && 'bg-blue-100',
-              isConnected && !isSpeaking && 'bg-green-100',
-              isConnected && isSpeaking && 'bg-blue-100 scale-110'
-            )}
-          >
-            {isConnecting ? (
-              <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
-            ) : isConnected ? (
-              <img
-                src={sarahHeadshot}
-                alt="Sarah"
-                className={cn(
-                  'w-24 h-24 rounded-full object-cover transition-transform duration-300',
-                  isSpeaking && 'scale-110'
-                )}
-              />
-            ) : (
-              <Volume2 className="w-12 h-12 text-gray-400" />
-            )}
+          <div className={cn('w-full h-full rounded-full flex items-center justify-center transition-all duration-300', isConnecting && 'bg-blue-100', isConnected && !isSpeaking && 'bg-green-100', isConnected && isSpeaking && 'bg-blue-100 scale-110')}>
+            {isConnecting ? <Loader2 className="w-12 h-12 text-blue-500 animate-spin" /> : isConnected ? <img src={sarahHeadshot} alt="Sarah" className={cn('w-24 h-24 rounded-full object-cover transition-transform duration-300', isSpeaking && 'scale-110')} /> : <Volume2 className="w-12 h-12 text-gray-400" />}
           </div>
-          
-          {isConnected && isSpeaking && (
-            <>
-              <div className="absolute inset-0 rounded-full border-4 border-blue-400 animate-ping opacity-20" />
-              <div className="absolute inset-0 rounded-full border-2 border-blue-300 animate-pulse opacity-40" />
-            </>
-          )}
-          
-          {isConnected && !isSpeaking && (
-            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2">
-              <div
-                className="h-2 rounded-full bg-green-500 transition-all duration-100"
-                style={{ width: `${Math.max(vadScore * 100, 10)}px` }}
-              />
-            </div>
-          )}
+          {isConnected && isSpeaking && <><div className="absolute inset-0 rounded-full border-4 border-blue-400 animate-ping opacity-20" /><div className="absolute inset-0 rounded-full border-2 border-blue-300 animate-pulse opacity-40" /></>}
+          {isConnected && !isSpeaking && <div className="absolute -bottom-2 left-1/2 -translate-x-1/2"><div className="h-2 rounded-full bg-green-500 transition-all duration-100" style={{ width: `${Math.max(vadScore * 100, 10)}px` }} /></div>}
         </div>
 
-        <h3 className="text-lg font-semibold text-gray-900 mb-1">
-          {isConnecting 
-            ? 'Connecting to Sarah...' 
-            : isSpeaking
-              ? 'Sarah is speaking...'
-              : isSendingResults
-                ? 'Sending your results...'
-                : showVadWarning
-                  ? 'Having trouble hearing you...'
-                  : 'Listening to your response...'}
-        </h3>
-        
-        <p className="text-sm text-gray-500 mb-6">
-          {isConnecting
-            ? 'Setting up your voice connection...'
-            : isSpeaking
-              ? 'Listen carefully to the question'
-              : isSendingResults
-                ? 'Please wait while we email your results'
-                : showVadWarning
-                  ? 'Check your microphone or speak louder'
-                  : "Speak naturally when you're ready to respond"}
-        </p>
+        <h3 className="text-lg font-semibold text-gray-900 mb-1">{isConnecting ? 'Connecting to Sarah...' : isSpeaking ? 'Sarah is speaking...' : isSendingResults ? 'Sending your results...' : showVadWarning ? 'Having trouble hearing you...' : 'Listening to your response...'}</h3>
+        <p className="text-sm text-gray-500 mb-6">{isConnecting ? 'Setting up your voice connection...' : isSpeaking ? 'Listen carefully to the question' : isSendingResults ? 'Please wait while we email your results' : showVadWarning ? 'Check your microphone or speak louder' : "Speak naturally when you're ready to respond"}</p>
 
-        {showSilenceWarning && isConnected && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-            <div className="flex items-center justify-center gap-2 text-amber-700">
-              <AlertTriangle className="w-4 h-4" />
-              Sarah hasn't heard from you in a while.
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={signalActivity}
-                className="ml-2"
-              >
-                I'm still here
-              </Button>
-            </div>
-          </div>
-        )}
+        {showSilenceWarning && isConnected && <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4"><div className="flex items-center justify-center gap-2 text-amber-700"><AlertTriangle className="w-4 h-4" />Sarah hasn't heard from you.<Button size="sm" variant="outline" onClick={signalActivity} className="ml-2">I'm still here</Button></div></div>}
 
         {isConnected && (
           <div className="flex items-center justify-center gap-4">
-            <Button
-              size="lg"
-              variant={isMuted ? 'destructive' : 'outline'}
-              onClick={toggleMute}
-              className="w-14 h-14 rounded-full p-0"
-            >
-              {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
-            </Button>
-            
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={pauseInterview}
-              className="w-14 h-14 rounded-full p-0"
-              title="Pause Interview"
-            >
-              <Pause className="w-6 h-6" />
-            </Button>
-            
-            <Button
-              size="lg"
-              variant="destructive"
-              onClick={stopConversation}
-              disabled={isSendingResults}
-              className="w-14 h-14 rounded-full p-0"
-            >
-              {isSendingResults ? (
-                <Loader2 className="w-6 h-6 animate-spin" />
-              ) : (
-                <PhoneOff className="w-6 h-6" />
-              )}
-            </Button>
+            <Button size="lg" variant={isMuted ? 'destructive' : 'outline'} onClick={toggleMute} className="w-14 h-14 rounded-full p-0">{isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}</Button>
+            <Button size="lg" variant="outline" onClick={pauseInterview} className="w-14 h-14 rounded-full p-0" title="Pause"><Pause className="w-6 h-6" /></Button>
+            <Button size="lg" variant="destructive" onClick={stopConversation} disabled={isSendingResults} className="w-14 h-14 rounded-full p-0">{isSendingResults ? <Loader2 className="w-6 h-6 animate-spin" /> : <PhoneOff className="w-6 h-6" />}</Button>
           </div>
         )}
         
         {isPaused && !isConnected && !isReconnecting && (
           <div className="mt-4">
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
-              <div className="flex items-center justify-center gap-2 text-amber-700">
-                <Pause className="w-4 h-4" />
-                Interview Paused — Your progress is saved
-              </div>
-            </div>
-            <Button
-              onClick={resumeInterview}
-              disabled={isReconnecting}
-              className="gap-2"
-            >
-              <Play className="w-4 h-4" />
-              Resume Interview
-            </Button>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3"><div className="flex items-center justify-center gap-2 text-amber-700"><Pause className="w-4 h-4" />Interview Paused</div></div>
+            <Button onClick={resumeInterview} disabled={isReconnecting} className="gap-2"><Play className="w-4 h-4" />Resume Interview</Button>
           </div>
         )}
 
-        {/* *** FIX: Only show connection indicator when connected *** */}
-        {isConnected && (
-          <div className="mt-4 flex justify-center">
-            <ConnectionIndicator />
-          </div>
-        )}
+        {isConnected && <div className="mt-4 flex justify-center"><ConnectionIndicator /></div>}
       </div>
     </div>
   );
