@@ -597,7 +597,7 @@ export function AudioInterface({
             errorType = errObj.error_type ? String(errObj.error_type) : null;
           }
         }
-
+        
         logEvent({
           eventType: 'elevenlabs_error',
           message: errorMessage,
@@ -912,14 +912,23 @@ ${fullTranscriptText}
 
     try {
       const appUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
+      
+      // Calculate COMPLETED questions (questions the user actually answered)
+      // If last transcript entry is from Sarah, user hasn't answered yet
+      const lastEntry = transcriptRef.current[transcriptRef.current.length - 1];
+      const userAnsweredLast = lastEntry?.role === 'user';
+      const completedQuestions = userAnsweredLast ? questionCountRef.current : Math.max(questionCountRef.current - 1, 0);
+      
+      console.log('[pauseInterview] Questions asked:', questionCountRef.current, 'Completed:', completedQuestions, 'User answered last:', userAnsweredLast);
+      
       const { error } = await supabase.functions.invoke('audio-session', {
-        body: { action: 'pause_session', sessionId, email: userEmail, questionNumber: questionCountRef.current, app_url: appUrl },
+        body: { action: 'pause_session', sessionId, email: userEmail, questionNumber: completedQuestions, app_url: appUrl },
       });
 
       if (error) console.error('[pauseInterview] Failed to save pause state:', error);
 
       toast({ title: 'Interview Paused', description: 'Your progress is saved. You can resume within 24 hours.' });
-      logEvent({ eventType: 'session_paused', message: `Paused at question ${questionCountRef.current}`, context: { questionCount: questionCountRef.current } });
+      logEvent({ eventType: 'session_paused', message: `Paused at question ${completedQuestions} (asked: ${questionCountRef.current})`, context: { questionCount: completedQuestions, questionsAsked: questionCountRef.current } });
     } catch (error) {
       console.error('[pauseInterview] Failed to save pause state:', error);
       toast({ title: 'Interview Paused', description: 'Your session is paused locally.', variant: 'default' });
@@ -1134,7 +1143,7 @@ ${fullTranscriptText}
             </ul>
           </div>
           <div className="flex justify-center">
-            <Button size="lg" onClick={() => reconnect({ mode: 'initial' })} disabled={!canStartInterview || isConnecting || isReconnecting} className="gap-2 text-lg px-8 py-6">
+            <Button size="lg" onClick={() => reconnect({ mode: resumeFromPause ? 'resume' : 'initial' })} disabled={!canStartInterview || isConnecting || isReconnecting} className="gap-2 text-lg px-8 py-6">
               {resumeFromPause ? 'Resume Interview' : 'Begin Interview'}
             </Button>
           </div>
