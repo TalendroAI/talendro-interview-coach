@@ -34,12 +34,7 @@ export function useAudioSessionPersistence(sessionId?: string, userEmail?: strin
    * Deduplicates by checking content against recent entries.
    */
   const appendTurn = useCallback(async (turn: Turn) => {
-    console.log('[appendTurn] Called with:', {
-      sessionId,
-      userEmail,
-      role: turn.role,
-      textLength: turn.text?.length,
-    });
+    console.log('[appendTurn] Called with:', { sessionId, userEmail, role: turn.role, textLength: turn.text?.length });
 
     if (!sessionId || !userEmail) {
       console.warn('[appendTurn] BLOCKED - Missing sessionId or email:', { sessionId, userEmail });
