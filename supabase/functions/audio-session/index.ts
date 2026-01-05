@@ -291,6 +291,40 @@ serve(async (req) => {
 
       // Send pause confirmation email (best-effort; do not fail pause if email fails)
       try {
+        // Extract job title and company name from job description
+        // Common patterns: "Title at Company", "Title - Company", "Title, Company"
+        const jobDesc = session.job_description || '';
+        let jobTitle = '';
+        let companyName = '';
+        
+        // Try to extract from first line of job description (often contains the title/company)
+        const firstLine = jobDesc.split('\n')[0]?.trim() || '';
+        const atMatch = firstLine.match(/^(.+?)\s+at\s+(.+?)(?:\s*[-–—]|$)/i);
+        const dashMatch = firstLine.match(/^(.+?)\s*[-–—]\s*(.+?)(?:\s*[-–—]|$)/i);
+        
+        if (atMatch) {
+          jobTitle = atMatch[1].trim();
+          companyName = atMatch[2].trim();
+        } else if (dashMatch) {
+          jobTitle = dashMatch[1].trim();
+          companyName = dashMatch[2].trim();
+        } else if (firstLine) {
+          // Use first line as job title if no pattern matches
+          jobTitle = firstLine.substring(0, 100); // Limit length
+        }
+
+        // Try to extract company from company_url if not found
+        if (!companyName && session.company_url) {
+          try {
+            const urlObj = new URL(session.company_url);
+            companyName = urlObj.hostname.replace(/^www\./, '').split('.')[0];
+            // Capitalize first letter
+            companyName = companyName.charAt(0).toUpperCase() + companyName.slice(1);
+          } catch {
+            // Invalid URL, ignore
+          }
+        }
+
         const emailPayload = {
           session_id: sessionId,
           email: email,
@@ -299,6 +333,8 @@ serve(async (req) => {
           paused_at: pausedAt,
           is_reminder: false,
           app_url,
+          job_title: jobTitle,
+          company_name: companyName,
         };
 
         console.log("[audio-session] Sending pause email:", emailPayload);

@@ -58,6 +58,8 @@ serve(async (req) => {
       paused_at,
       is_reminder,
       app_url,
+      job_title,
+      company_name,
     } = await req.json();
 
     if (!session_id || !email) {
@@ -107,11 +109,16 @@ serve(async (req) => {
 
     const totalQuestions = sessionQuestionCounts[session_type] || 10;
 
+    // Get position info from passed data or session
+    const positionTitle = job_title || session.job_title || '';
+    const positionCompany = company_name || session.company_name || '';
+    const positionDisplay = positionTitle && positionCompany 
+      ? `${positionTitle} at ${positionCompany}`
+      : positionTitle || positionCompany || 'Not specified';
+
     const emailHtml = generatePauseEmail({
       sessionLabel,
-      questionsCompleted: questions_completed || session.current_question_number || 0,
-      totalQuestions,
-      pausedAt: pausedDate,
+      positionDisplay,
       expirationDate,
       hoursRemaining,
       resumeUrl,
@@ -180,9 +187,7 @@ serve(async (req) => {
 
 interface PauseEmailParams {
   sessionLabel: string;
-  questionsCompleted: number;
-  totalQuestions: number;
-  pausedAt: Date;
+  positionDisplay: string;
   expirationDate: Date;
   hoursRemaining: number;
   resumeUrl: string;
@@ -192,9 +197,7 @@ interface PauseEmailParams {
 function generatePauseEmail(params: PauseEmailParams): string {
   const {
     sessionLabel,
-    questionsCompleted,
-    totalQuestions,
-    pausedAt,
+    positionDisplay,
     expirationDate,
     hoursRemaining,
     resumeUrl,
@@ -331,12 +334,8 @@ function generatePauseEmail(params: PauseEmailParams): string {
                         <td style="padding: 8px 0; color: #2C2F38; font-size: 15px; font-weight: 600;">${sessionLabel}</td>
                       </tr>
                       <tr>
-                        <td style="padding: 8px 0; color: #6B7280; font-size: 15px;">Questions Completed:</td>
-                        <td style="padding: 8px 0; color: #2C2F38; font-size: 15px; font-weight: 600;">${questionsCompleted} of ${totalQuestions}</td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 8px 0; color: #6B7280; font-size: 15px;">Paused At:</td>
-                        <td style="padding: 8px 0; color: #2C2F38; font-size: 15px; font-weight: 600;">${formatDate(pausedAt)} (UTC)</td>
+                        <td style="padding: 8px 0; color: #6B7280; font-size: 15px;">Position:</td>
+                        <td style="padding: 8px 0; color: #2C2F38; font-size: 15px; font-weight: 600;">${positionDisplay}</td>
                       </tr>
                       <tr>
                         <td style="padding: 8px 0; color: #6B7280; font-size: 15px;">Expires At:</td>
@@ -364,7 +363,7 @@ function generatePauseEmail(params: PauseEmailParams): string {
                   <td style="background-color: #E8F4FE; border: 1px solid #2F6DF6; border-radius: 12px; padding: 24px;">
                     <p style="margin: 0 0 12px 0; color: #2F6DF6; font-size: 17px; font-weight: 700;">✨ When You Resume</p>
                     <p style="margin: 8px 0; color: #2C2F38; font-size: 15px;">✓ Your coach will remember everything from before</p>
-                    <p style="margin: 8px 0; color: #2C2F38; font-size: 15px;">✓ You'll continue from question ${questionsCompleted + 1}</p>
+                    <p style="margin: 8px 0; color: #2C2F38; font-size: 15px;">✓ You'll pick up right where you left off</p>
                     <p style="margin: 8px 0; color: #2C2F38; font-size: 15px;">✓ No need to re-enter your documents</p>
                   </td>
                 </tr>
