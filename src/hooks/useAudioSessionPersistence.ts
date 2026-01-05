@@ -34,8 +34,15 @@ export function useAudioSessionPersistence(sessionId?: string, userEmail?: strin
    * Deduplicates by checking content against recent entries.
    */
   const appendTurn = useCallback(async (turn: Turn) => {
+    console.log('[appendTurn] Called with:', {
+      sessionId,
+      userEmail,
+      role: turn.role,
+      textLength: turn.text?.length,
+    });
+
     if (!sessionId || !userEmail) {
-      console.warn('[audio-session] Missing sessionId or email for appendTurn');
+      console.warn('[appendTurn] BLOCKED - Missing sessionId or email:', { sessionId, userEmail });
       return;
     }
 
@@ -43,7 +50,9 @@ export function useAudioSessionPersistence(sessionId?: string, userEmail?: strin
     const prev = pendingRef.current ?? Promise.resolve();
     const task = prev.then(async () => {
       try {
-        const { error } = await supabase.functions.invoke('audio-session', {
+        console.log('[appendTurn] Invoking audio-session with append_turn...');
+
+        const { data, error } = await supabase.functions.invoke('audio-session', {
           body: {
             action: 'append_turn',
             sessionId,
@@ -54,11 +63,13 @@ export function useAudioSessionPersistence(sessionId?: string, userEmail?: strin
           },
         });
 
+        console.log('[appendTurn] Response:', { data, error });
+
         if (error) {
-          console.error('[audio-session] appendTurn error:', error);
+          console.error('[appendTurn] ERROR:', error);
         }
       } catch (err) {
-        console.error('[audio-session] appendTurn exception:', err);
+        console.error('[appendTurn] EXCEPTION:', err);
       }
     });
 
