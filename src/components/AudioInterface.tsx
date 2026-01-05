@@ -752,18 +752,22 @@ export function AudioInterface({
         const resumeGreeting = ' ';
 
         const nameSuffix = firstName ? `, ${firstName}` : '';
-        pendingResumeKickoffRef.current = [
-          'CRITICAL: You are Sarah, resuming a paused interview session.',
-          'You MUST speak first immediately. Do not wait for the candidate.',
-          'Do NOT say "I don\'t hear you", "let\'s start over", or restart the interview.',
-          '',
-          'Respond in ONE message with this exact structure (replace the bracketed placeholder if present):',
-          `"Welcome back${nameSuffix}! Before pausing, we completed question ${completedQuestions}. We will now resume with question ${resumeQuestionNumber}. Question ${resumeQuestionNumber} is: ${safeQuestionText ?? '[ASK THE FULL QUESTION NOW]'}"`,
-          '',
-          safeQuestionText
-            ? 'Use the question text exactly as provided after "Question X is:".'
-            : 'Replace [ASK THE FULL QUESTION NOW] with the full question text, then stop and wait for the answer.',
-        ].join('\n');
+
+        // ONLY set resume kickoff for resume mode, NOT initial
+        if (!isInitial) {
+          pendingResumeKickoffRef.current = [
+            'CRITICAL: You are Sarah, resuming a paused interview session.',
+            'You MUST speak first immediately. Do not wait for the candidate.',
+            'Do NOT say "I don\'t hear you", "let\'s start over", or restart the interview.',
+            '',
+            'Respond in ONE message with this exact structure (replace the bracketed placeholder if present):',
+            `"Welcome back${nameSuffix}! Before pausing, we completed question ${completedQuestions}. We will now resume with question ${resumeQuestionNumber}. Question ${resumeQuestionNumber} is: ${safeQuestionText ?? '[ASK THE FULL QUESTION NOW]'}"`,
+            '',
+            safeQuestionText
+              ? 'Use the question text exactly as provided after "Question X is:".'
+              : 'Replace [ASK THE FULL QUESTION NOW] with the full question text, then stop and wait for the answer.',
+          ].join('\n');
+        }
 
         // *** FIX: Build context BEFORE starting session ***
         const contextParts: string[] = [];
