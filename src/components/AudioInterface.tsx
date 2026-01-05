@@ -854,16 +854,12 @@ export function AudioInterface({
               : lastSarahQuestion)
             : null;
 
-        const resumeGreeting = ' ';
         const nameSuffix = firstName ? `, ${firstName}` : '';
+        const resumeGreeting = `Welcome back${nameSuffix}! We completed ${completedQuestions} questions before pausing. Now continuing with question ${resumeQuestionNumber}: ${safeQuestionText || 'the next question'}`;
 
         // ONLY set resume kickoff for resume mode - SIMPLIFIED for faster response
         if (!isInitial) {
-          const questionToAsk = safeQuestionText 
-            ? safeQuestionText 
-            : `Question ${resumeQuestionNumber}`;
-          
-          pendingResumeKickoffRef.current = `RESUME: Welcome back${nameSuffix}. You completed ${completedQuestions} questions. Now ask question ${resumeQuestionNumber}: ${questionToAsk}`;
+          pendingResumeKickoffRef.current = `RESUME: ${resumeGreeting}`;
         }
 
         const contextParts: string[] = [];
