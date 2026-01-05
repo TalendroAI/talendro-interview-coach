@@ -155,6 +155,7 @@ export function AudioInterface({
   const pendingResumeKickoffRef = useRef<string | null>(null);
 
   const appendTranscriptTurn = useCallback((role: 'user' | 'assistant', text: unknown) => {
+    console.log('[appendTranscriptTurn] Called with role:', role, 'text length:', typeof text);
     const clean = typeof text === 'string' ? text.trim() : '';
     if (!clean) return;
 
