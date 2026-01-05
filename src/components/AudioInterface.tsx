@@ -89,6 +89,38 @@ const isInterviewQuestion = (text: string): boolean => {
   return false;
 };
 
+// Helper function to extract just the question portion from a message
+// Sarah often gives feedback first, then asks a question at the end
+const extractQuestionOnly = (text: string): string | null => {
+  if (!text) return null;
+  
+  // Look for common question lead-ins and extract from there
+  const questionLeadIns = [
+    /(?:let's move to our next question:|next question:|question \d+:|here's (?:the|our) (?:next |first )?question:)\s*(.+\?)/i,
+    /(?:can you tell me|tell me about|what|why|how|describe|walk me through|explain|share|have you)[\s\S]*\?/i,
+  ];
+  
+  // Try to find a question lead-in first
+  for (const pattern of questionLeadIns) {
+    const match = text.match(pattern);
+    if (match) {
+      // Get the captured group if it exists, otherwise the whole match
+      const questionPart = match[1] || match[0];
+      return questionPart.trim();
+    }
+  }
+  
+  // Fallback: find the last sentence that ends with ?
+  const sentences = text.split(/(?<=[.!?])\s+/);
+  for (let i = sentences.length - 1; i >= 0; i--) {
+    if (sentences[i].trim().endsWith('?')) {
+      return sentences[i].trim();
+    }
+  }
+  
+  return null;
+};
+
 export function AudioInterface({
   isActive,
   sessionId,
@@ -802,9 +834,12 @@ export function AudioInterface({
 
         const firstTimeGreeting = `Hi ${nameForGreeting}, I'm Sarah, your interview coach today. I've reviewed your materials and I'm ready to put you through a realistic mock interview. We'll cover 16 questions across different categories. Take your time with each answer, and I'll give you feedback as we go. Ready to begin?`;
 
-        const lastSarahQuestion = transcriptRef.current
+        const lastSarahMessage = transcriptRef.current
           .filter(t => t.role === 'assistant' && isInterviewQuestion(t.text))
           .pop()?.text || null;
+        
+        // Extract ONLY the question part, not the feedback
+        const lastSarahQuestion = lastSarahMessage ? extractQuestionOnly(lastSarahMessage) : null;
 
         const lastTranscriptEntry = transcriptRef.current[transcriptRef.current.length - 1];
         const didUserAnswerLast = lastTranscriptEntry?.role === 'user';
@@ -814,80 +849,68 @@ export function AudioInterface({
 
         const safeQuestionText =
           !didUserAnswerLast && lastSarahQuestion
-            ? (lastSarahQuestion.length > 500
-              ? lastSarahQuestion.substring(0, 500) + '...'
+            ? (lastSarahQuestion.length > 300
+              ? lastSarahQuestion.substring(0, 300) + '...'
               : lastSarahQuestion)
             : null;
 
         const resumeGreeting = ' ';
         const nameSuffix = firstName ? `, ${firstName}` : '';
 
-        // ONLY set resume kickoff for resume mode
+        // ONLY set resume kickoff for resume mode - SIMPLIFIED for faster response
         if (!isInitial) {
-          pendingResumeKickoffRef.current = [
-            'CRITICAL: You are Sarah, resuming a paused interview session.',
-            'You MUST speak first immediately. Do not wait for the candidate.',
-            'Do NOT say "I don\'t hear you", "let\'s start over", or restart the interview.',
-            '',
-            'Respond in ONE message with this exact structure:',
-            `"Welcome back${nameSuffix}! Before pausing, we completed question ${completedQuestions}. We will now resume with question ${resumeQuestionNumber}. Question ${resumeQuestionNumber} is: ${safeQuestionText ?? '[ASK THE FULL QUESTION NOW]'}"`,
-            '',
-            safeQuestionText
-              ? 'Use the question text exactly as provided.'
-              : 'Replace [ASK THE FULL QUESTION NOW] with the full question text.',
-          ].join('\n');
+          const questionToAsk = safeQuestionText 
+            ? safeQuestionText 
+            : `Question ${resumeQuestionNumber}`;
+          
+          pendingResumeKickoffRef.current = `RESUME: Welcome back${nameSuffix}. You completed ${completedQuestions} questions. Now ask question ${resumeQuestionNumber}: ${questionToAsk}`;
         }
 
         const contextParts: string[] = [];
 
-        if (documents?.resume) contextParts.push(`Candidate Resume:\n${documents.resume}`);
-        if (documents?.jobDescription) contextParts.push(`Job Description:\n${documents.jobDescription}`);
-        if (documents?.companyUrl) contextParts.push(`Company URL: ${documents.companyUrl}`);
+        // TRUNCATE documents to reduce processing time
+        if (documents?.resume) {
+          const truncatedResume = documents.resume.length > 1500 
+            ? documents.resume.substring(0, 1500) + '...[truncated]'
+            : documents.resume;
+          contextParts.push(`Resume:\n${truncatedResume}`);
+        }
+        if (documents?.jobDescription) {
+          const truncatedJD = documents.jobDescription.length > 1000
+            ? documents.jobDescription.substring(0, 1000) + '...[truncated]'
+            : documents.jobDescription;
+          contextParts.push(`Job:\n${truncatedJD}`);
+        }
+        if (documents?.companyUrl) contextParts.push(`Company: ${documents.companyUrl}`);
 
+        // For resume: only send last 4 turns + simple status (not full transcript)
         if (!isInitial && transcriptRef.current.length > 0) {
-          const fullTranscriptText = transcriptRef.current
-            .map((t, idx) => `[Turn ${idx + 1}] ${t.role === 'user' ? 'CANDIDATE' : 'SARAH'}: ${t.text}`)
-            .join('\n\n');
+          const lastFewTurns = transcriptRef.current.slice(-4);
+          const recentContext = lastFewTurns
+            .map(t => `${t.role === 'user' ? 'USER' : 'SARAH'}: ${t.text.substring(0, 200)}`)
+            .join('\n');
 
-          const lastQuestionFromSarah = transcriptRef.current
+          const lastQuestionMessage = transcriptRef.current
             .filter(t => t.role === 'assistant' && isInterviewQuestion(t.text))
             .pop()?.text || null;
           
-          const transcriptLength = transcriptRef.current.length;
-          const lastEntry = transcriptRef.current[transcriptLength - 1];
-          const userAnsweredLastQuestion = lastEntry?.role === 'user';
+          // Extract ONLY the question, not the feedback
+          const lastQuestion = lastQuestionMessage ? extractQuestionOnly(lastQuestionMessage) : null;
           
-          const resumeInstructions = `
-=== CRITICAL: THIS IS A RESUMED INTERVIEW SESSION ===
+          const lastEntry = transcriptRef.current[transcriptRef.current.length - 1];
+          const userAnsweredLast = lastEntry?.role === 'user';
+          
+          const resumeContext = `RESUMED SESSION - Question ${questionsSoFar} asked. ${userAnsweredLast ? 'User answered. Ask next question.' : 'User did NOT answer. Repeat question.'}\n\nLast question: "${lastQuestion?.substring(0, 300) || 'N/A'}"\n\nRecent:\n${recentContext}`;
 
-STATUS:
-- Questions already asked: ${questionsSoFar}
-- Transcript turns restored: ${transcriptRef.current.length}
-- Did user answer the last question before pausing? ${userAnsweredLastQuestion ? 'YES' : 'NO'}
-
-${lastQuestionFromSarah ? `THE LAST QUESTION YOU ASKED WAS:\n"${lastQuestionFromSarah.substring(0, 500)}"` : ''}
-
-WHAT YOU MUST DO NOW:
-${userAnsweredLastQuestion 
-  ? `The user ANSWERED your last question. Ask Question ${nextQuestion} immediately.`
-  : `The user did NOT answer. Repeat the last question in full.`
-}
-
-FORBIDDEN: Do NOT wait silently, say "I don't hear you", re-introduce yourself, ask question 1 again, or say "let's start over".
-
-=== TRANSCRIPT ===
-${fullTranscriptText}
-=== END ===`;
-
-          contextParts.push(resumeInstructions);
-          console.log('[reconnect] Built resume context with', transcriptRef.current.length, 'turns');
+          contextParts.push(resumeContext);
+          console.log('[reconnect] Built SLIM resume context');
         }
 
-        contextParts.push(`IMPORTANT: At the end of the interview, tell the user their results have been sent to their email.`);
+        contextParts.push(`End of interview: tell user results sent to email.`);
 
         if (contextParts.length > 0) {
-          pendingContextRef.current = contextParts.join('\n\n---\n\n');
-          console.log('[reconnect] Stored pending context for post-connection send');
+          pendingContextRef.current = contextParts.join('\n---\n');
+          console.log('[reconnect] Context size:', pendingContextRef.current.length, 'chars');
         }
 
         console.log('[reconnect] Starting ElevenLabs session with greeting:', isInitial ? 'initial' : 'resume');
@@ -984,7 +1007,6 @@ ${fullTranscriptText}
       toast({ title: 'Interview Paused', description: 'Your session is paused locally.', variant: 'default' });
     }
   }, [sessionId, userEmail, conversation, toast, logEvent]);
-
   const resumeInterview = useCallback(async () => {
     if (!sessionId || !userEmail) {
       toast({ variant: 'destructive', title: 'Cannot Resume', description: 'Session information is missing.' });
