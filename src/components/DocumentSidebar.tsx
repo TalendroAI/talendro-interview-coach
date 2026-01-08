@@ -74,11 +74,11 @@ export function DocumentSidebar({
   const handleSaveDocuments = () => {
     if (onSaveDocuments) {
       onSaveDocuments();
-      // Scroll the main container to top so user sees the interview start
+      // Scroll the chat messages container to top so user sees the interview start
       setTimeout(() => {
-        const mainContainer = document.getElementById('main-scroll-container');
-        if (mainContainer) {
-          mainContainer.scrollTo({ top: 0, behavior: 'smooth' });
+        const messagesContainer = document.getElementById('chat-messages-container');
+        if (messagesContainer) {
+          messagesContainer.scrollTo({ top: 0, behavior: 'smooth' });
         }
       }, 100);
     }
