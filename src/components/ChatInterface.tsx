@@ -451,7 +451,9 @@ export function ChatInterface({
       )}
 
       {/* Messages */}
-      <div className={cn(
+      <div 
+        id="chat-messages-container"
+        className={cn(
         "flex-1 min-h-0 overflow-y-auto px-4 py-2 space-y-3",
         isPaused && "opacity-75"
       )}>
