@@ -65,6 +65,7 @@ export function ChatInterface({
   const [isPaused, setIsPaused] = useState(false);
   const [isPausing, setIsPausing] = useState(false);
   const [isResuming, setIsResuming] = useState(false);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const config = SESSION_CONFIGS[sessionType];
   const { toast } = useToast();
@@ -78,13 +79,26 @@ export function ChatInterface({
     return completionMarkers.some(marker => content.toUpperCase().includes(marker.toUpperCase()));
   };
 
-  const scrollToBottom = () => {
+  const scrollToTop = useCallback(() => {
+    messagesContainerRef.current?.scrollTo({ top: 0, behavior: 'auto' });
+  }, []);
+
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, []);
 
   useEffect(() => {
+    if (messages.length === 0) return;
+
+    // For the very first (often long) Sarah greeting, show the start of the message,
+    // not the bottom of it.
+    if (messages.length === 1 && messages[0].role === 'assistant') {
+      scrollToTop();
+      return;
+    }
+
     scrollToBottom();
-  }, [messages]);
+  }, [messages, scrollToTop, scrollToBottom]);
 
   // Handle resume from pause
   useEffect(() => {
@@ -453,6 +467,7 @@ export function ChatInterface({
       {/* Messages */}
       <div 
         id="chat-messages-container"
+        ref={messagesContainerRef}
         className={cn(
         "flex-1 min-h-0 overflow-y-auto px-4 py-2 space-y-3",
         isPaused && "opacity-75"
