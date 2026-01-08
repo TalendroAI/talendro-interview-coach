@@ -147,15 +147,16 @@ export function ChatInterface({
       
       // Restore messages from database
       if (result.messages.length > 0) {
-        // Count how many questions have been asked
-        const assistantMessages = result.messages.filter(m => m.role === 'assistant');
-        const questionCount = assistantMessages.filter(m => m.content.includes('Question') && m.content.includes('of 10')).length;
+        // Count how many questions the USER has answered (user messages after the initial greeting)
+        // The next question number = answered count + 1
+        const userAnswerCount = result.messages.filter(m => m.role === 'user').length;
+        const nextQuestionNumber = userAnswerCount + 1;
         
         // Create a welcome back message from Sarah
         const welcomeBackMessage: Message = {
           id: `resume-${Date.now()}`,
           role: 'assistant',
-          content: `Welcome back! I have your previous answers saved. We were on Question ${questionCount} of 10. Let's continue where we left off.`,
+          content: `Welcome back! I have your previous answers saved. We were on Question ${nextQuestionNumber} of 10. Let's continue where we left off.`,
           timestamp: new Date(),
         };
         
@@ -279,15 +280,15 @@ export function ChatInterface({
       // Use messages from database if available, otherwise use current state
       const historyMessages = result.messages.length > 0 ? result.messages : messages;
       
-      // Count how many questions have been asked
-      const assistantMessages = historyMessages.filter(m => m.role === 'assistant');
-      const questionCount = assistantMessages.filter(m => m.content.includes('Question') && m.content.includes('of 10')).length;
+      // Count how many questions the USER has answered - next question = answered + 1
+      const userAnswerCount = historyMessages.filter(m => m.role === 'user').length;
+      const nextQuestionNumber = userAnswerCount + 1;
       
       // Create a welcome back message from Sarah
       const welcomeBackMessage: Message = {
         id: `resume-${Date.now()}`,
         role: 'assistant',
-        content: `Welcome back! We were on Question ${questionCount} of 10. Let's continue where we left off.`,
+        content: `Welcome back! We were on Question ${nextQuestionNumber} of 10. Let's continue where we left off.`,
         timestamp: new Date(),
       };
 
