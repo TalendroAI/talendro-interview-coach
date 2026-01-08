@@ -312,8 +312,8 @@ export function ChatInterface({
     setInput('');
     setIsLoading(true);
 
-    // Persist user message immediately
-    await appendMessage(userMessage);
+    // NOTE: User message is persisted by the ai-coach backend, not here
+    // This avoids duplicate saves to the database
 
     try {
       const response = await sendAIMessage(
@@ -329,16 +329,20 @@ export function ChatInterface({
         timestamp: new Date(),
       };
 
-      const updatedMessages = [...messages, userMessage, assistantMessage];
-      setMessages(updatedMessages);
+      // Only add assistant message to UI - user message was already added above
+      setMessages((prev) => [...prev, assistantMessage]);
 
-      // Persist assistant message
-      await appendMessage(assistantMessage);
+      // NOTE: Assistant message is persisted by the ai-coach backend, not here
+      // This avoids duplicate saves to the database
 
       // Check if interview is complete
       if (checkInterviewComplete(response) && !isInterviewComplete) {
         setIsInterviewComplete(true);
-        onInterviewComplete?.(updatedMessages);
+        // Get current messages for the callback
+        setMessages((currentMessages) => {
+          onInterviewComplete?.(currentMessages);
+          return currentMessages;
+        });
         toast({
           title: 'Interview Complete!',
           description: 'Click "Complete Session & Get Results" to receive your detailed report.',
