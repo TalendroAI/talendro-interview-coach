@@ -74,11 +74,14 @@ export function DocumentSidebar({
   const handleSaveDocuments = () => {
     if (onSaveDocuments) {
       onSaveDocuments();
-      // Scroll to top of page so user sees the interview start
-      // Try multiple methods to ensure it works across different layouts
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
+      // Scroll to the chat session header so user sees the interview start
+      // Use setTimeout to ensure the chat component has rendered
+      setTimeout(() => {
+        const chatTop = document.getElementById('chat-session-top');
+        if (chatTop) {
+          chatTop.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
     }
   };
 
