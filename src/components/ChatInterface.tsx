@@ -131,7 +131,20 @@ export function ChatInterface({
 
       // Restore messages from database
       if (result.messages.length > 0) {
-        setMessages(result.messages);
+        // Count how many questions have been asked
+        const assistantMessages = result.messages.filter(m => m.role === 'assistant');
+        const questionCount = assistantMessages.filter(m => m.content.includes('Question') && m.content.includes('of 10')).length;
+        
+        // Create a welcome back message from Sarah
+        const welcomeBackMessage: Message = {
+          id: `resume-${Date.now()}`,
+          role: 'assistant',
+          content: `Welcome back! I have your previous answers saved. We were on Question ${questionCount} of 10. Let's continue where we left off.`,
+          timestamp: new Date(),
+        };
+        
+        // Add welcome back message to the restored messages
+        setMessages([...result.messages, welcomeBackMessage]);
         setIsInitialized(true);
 
         // Check if interview was already complete
@@ -140,8 +153,6 @@ export function ChatInterface({
           setIsInterviewComplete(true);
           onInterviewComplete?.(result.messages);
         }
-        // Messages restored - user can continue naturally
-        // Toast notification already provides the welcome back message
 
         toast({
           title: 'Session Resumed',
@@ -253,13 +264,24 @@ export function ChatInterface({
       // Use messages from database if available, otherwise use current state
       const historyMessages = result.messages.length > 0 ? result.messages : messages;
 
-      // Update local state with database messages if we got them
-      if (result.messages.length > 0) {
-        setMessages(result.messages);
-      }
+      // Count how many questions have been asked
+      const assistantMessages = historyMessages.filter(m => m.role === 'assistant');
+      const questionCount = assistantMessages.filter(m => m.content.includes('Question') && m.content.includes('of 10')).length;
+      
+      // Create a welcome back message from Sarah
+      const welcomeBackMessage: Message = {
+        id: `resume-${Date.now()}`,
+        role: 'assistant',
+        content: `Welcome back! We were on Question ${questionCount} of 10. Let's continue where we left off.`,
+        timestamp: new Date(),
+      };
 
-      // Messages restored - user can continue naturally
-      // No AI resume call needed - the toast provides the welcome message
+      // Update local state with database messages plus welcome back
+      if (result.messages.length > 0) {
+        setMessages([...result.messages, welcomeBackMessage]);
+      } else {
+        setMessages([...messages, welcomeBackMessage]);
+      }
 
       toast({
         title: 'Interview Resumed',
