@@ -74,13 +74,13 @@ export function DocumentSidebar({
   const handleSaveDocuments = () => {
     if (onSaveDocuments) {
       onSaveDocuments();
-      // Scroll the chat messages container to top so user sees the interview start
+      // Scroll the main container to show the chat header where Sarah's greeting begins
       setTimeout(() => {
-        const messagesContainer = document.getElementById('chat-messages-container');
-        if (messagesContainer) {
-          messagesContainer.scrollTo({ top: 0, behavior: 'smooth' });
+        const chatSessionTop = document.getElementById('chat-session-top');
+        if (chatSessionTop) {
+          chatSessionTop.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
-      }, 100);
+      }, 150);
     }
   };
 
