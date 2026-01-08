@@ -1077,7 +1077,7 @@ export default function InterviewCoach() {
         }}
       />
       
-      <div className="flex-1 flex flex-col lg:flex-row">
+      <div id="main-scroll-container" className="flex-1 flex flex-col lg:flex-row overflow-y-auto">
         {/* Sidebar - hide when showing completed state */}
         {!showCompletedDialog && !isSessionCompleted && (
           <DocumentSidebar
