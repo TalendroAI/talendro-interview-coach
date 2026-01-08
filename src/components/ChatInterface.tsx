@@ -471,7 +471,7 @@ export function ChatInterface({
         id="chat-messages-container"
         ref={messagesContainerRef}
         className={cn(
-        "flex-1 min-h-0 overflow-y-auto px-4 py-2 space-y-3",
+        "overflow-y-auto px-4 py-2 space-y-3",
         isPaused && "opacity-75"
       )}>
         {!isInitialized && isLoading && !isResuming && (
