@@ -74,6 +74,8 @@ export function DocumentSidebar({
   const handleSaveDocuments = () => {
     if (onSaveDocuments) {
       onSaveDocuments();
+      // Scroll to top of page so user sees the interview start
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
