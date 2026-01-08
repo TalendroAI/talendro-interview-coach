@@ -159,6 +159,12 @@ export default function InterviewCoach() {
 
   const scheduleScrollToChatStart = () => {
     const doScroll = () => {
+      // Some views use the page scroller, others use nested containers.
+      // Scroll everything we might be using.
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      document.documentElement.scrollTo({ top: 0, behavior: 'smooth' });
+      document.body.scrollTo({ top: 0, behavior: 'smooth' });
+
       const mainScroll = document.getElementById('main-scroll-container');
       mainScroll?.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -171,6 +177,8 @@ export default function InterviewCoach() {
 
     requestAnimationFrame(doScroll);
     setTimeout(doScroll, 250);
+    // Audio mode mounts after state flips; give it a little extra time.
+    setTimeout(doScroll, 700);
   };
 
   const handleSaveDocuments = async () => {

@@ -827,8 +827,19 @@ export function AudioInterface({
         const completedQuestions = didUserAnswerLast ? questionsSoFar : Math.max(questionsSoFar - 1, 0);
 
         const nameSuffix = firstName ? `, ${firstName}` : '';
-        // SIMPLIFIED: Short greeting only - context will tell Sarah what to do next
-        const resumeGreeting = `Welcome back${nameSuffix}! Let's continue where we left off.`;
+
+        // On resume, explicitly repeat the last unanswered question in the greeting so the user
+        // doesn't have to wait for a silence-reprompt.
+        const lastQuestionMessage = transcriptRef.current
+          .filter(t => t.role === 'assistant' && isInterviewQuestion(t.text))
+          .pop()?.text || null;
+        const lastQuestionOnly = lastQuestionMessage ? extractQuestionOnly(lastQuestionMessage) : null;
+
+        const shouldRepeatQuestionOnResume = !isInitial && !didUserAnswerLast && !!lastQuestionOnly;
+
+        const resumeGreeting = shouldRepeatQuestionOnResume
+          ? `Welcome back${nameSuffix}! Let's continue where we left off. The last question I asked was: ${lastQuestionOnly!.substring(0, 400)}`
+          : `Welcome back${nameSuffix}! Let's continue where we left off.`;
 
         // REMOVED: pendingResumeKickoffRef assignment
         // The firstMessage (resumeGreeting) handles the greeting - no duplicate needed
