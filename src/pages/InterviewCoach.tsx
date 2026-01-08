@@ -157,6 +157,22 @@ export default function InterviewCoach() {
     }
   };
 
+  const scheduleScrollToChatStart = () => {
+    const doScroll = () => {
+      const mainScroll = document.getElementById('main-scroll-container');
+      mainScroll?.scrollTo({ top: 0, behavior: 'smooth' });
+
+      const chatMessages = document.getElementById('chat-messages-container');
+      chatMessages?.scrollTo({ top: 0, behavior: 'auto' });
+
+      const chatTop = document.getElementById('chat-session-top');
+      chatTop?.scrollIntoView({ block: 'start' });
+    };
+
+    requestAnimationFrame(doScroll);
+    setTimeout(doScroll, 250);
+  };
+
   const handleSaveDocuments = async () => {
     if (isResumeComplete && isJobComplete) {
       // CRITICAL: Never check for paused sessions if this is a NEW PURCHASE.
@@ -179,6 +195,9 @@ export default function InterviewCoach() {
       }
 
       proceedWithSaveDocuments();
+      // Immediately request a scroll-to-top. Chat may mount slightly later,
+      // so scheduleScrollToChatStart retries once.
+      scheduleScrollToChatStart();
     }
   };
 
@@ -225,6 +244,7 @@ export default function InterviewCoach() {
       setIsGeneratingContent(true);
       setContentError(null);
       setIsSessionStarted(true);
+      scheduleScrollToChatStart();
       
       try {
         const { data, error } = await supabase.functions.invoke('ai-coach', {
@@ -256,6 +276,7 @@ export default function InterviewCoach() {
     } else if (isPaymentVerified && activeSessionType) {
       // For other session types, transition to session view
       setIsSessionStarted(true);
+      scheduleScrollToChatStart();
       toast({
         title: 'Documents saved!',
         description: activeSessionType === 'premium_audio' 

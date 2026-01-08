@@ -80,6 +80,8 @@ export function ChatInterface({
   };
 
   const scrollToTop = useCallback(() => {
+    // Support both the inner chat scroller and the outer page scroller.
+    document.getElementById('main-scroll-container')?.scrollTo({ top: 0, behavior: 'auto' });
     messagesContainerRef.current?.scrollTo({ top: 0, behavior: 'auto' });
   }, []);
 

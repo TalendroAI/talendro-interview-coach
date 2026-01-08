@@ -74,13 +74,17 @@ export function DocumentSidebar({
   const handleSaveDocuments = () => {
     if (onSaveDocuments) {
       onSaveDocuments();
-      // Scroll the main container to show the chat header where Sarah's greeting begins
+
+      // The app uses nested scroll containers. Depending on viewport size,
+      // either the main container or the chat messages container may be the one scrolling.
+      // Reset both so Sarah’s greeting starts at the top.
       setTimeout(() => {
-        const chatSessionTop = document.getElementById('chat-session-top');
-        if (chatSessionTop) {
-          chatSessionTop.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }, 150);
+        const mainScroll = document.getElementById('main-scroll-container');
+        mainScroll?.scrollTo({ top: 0, behavior: 'smooth' });
+
+        const chatMessages = document.getElementById('chat-messages-container');
+        chatMessages?.scrollTo({ top: 0, behavior: 'auto' });
+      }, 0);
     }
   };
 
