@@ -41,15 +41,15 @@ interface ChatInterfaceProps {
   onRegisterPauseHandlers?: (handlers: { onPause?: () => void; onResume?: () => void; onEnd?: () => void }) => void;
 }
 
-export function ChatInterface({
-  sessionType,
-  isActive,
-  sessionId,
-  documents,
-  onInterviewComplete,
-  onCompleteSession,
-  isCompletingSession,
-  isSessionCompleted,
+export function ChatInterface({ 
+  sessionType, 
+  isActive, 
+  sessionId, 
+  documents, 
+  onInterviewComplete, 
+  onCompleteSession, 
+  isCompletingSession, 
+  isSessionCompleted, 
   isContentReady,
   userEmail,
   resumeFromPause = false,
@@ -68,7 +68,7 @@ export function ChatInterface({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const config = SESSION_CONFIGS[sessionType];
   const { toast } = useToast();
-
+  
   // Real-time persistence hook
   const { appendMessage, pauseSession, resumeSession, getHistory } = useChatSessionPersistence(sessionId, userEmail);
 
@@ -115,11 +115,11 @@ export function ChatInterface({
     setIsResuming(true);
     try {
       const result = await resumeSession();
-
+      
       if (!result) {
         throw new Error('Failed to resume session');
       }
-
+      
       if (result.expired) {
         toast({
           variant: 'destructive',
@@ -128,7 +128,7 @@ export function ChatInterface({
         });
         return;
       }
-
+      
       // Restore messages from database
       if (result.messages.length > 0) {
         // Count how many questions have been asked
@@ -146,14 +146,14 @@ export function ChatInterface({
         // Add welcome back message to the restored messages
         setMessages([...result.messages, welcomeBackMessage]);
         setIsInitialized(true);
-
+        
         // Check if interview was already complete
         const lastAssistant = result.messages.filter(m => m.role === 'assistant').pop();
         if (lastAssistant && checkInterviewComplete(lastAssistant.content)) {
           setIsInterviewComplete(true);
           onInterviewComplete?.(result.messages);
         }
-
+        
         toast({
           title: 'Session Resumed',
           description: 'Welcome back! Continuing from where you left off.',
@@ -197,9 +197,8 @@ export function ChatInterface({
       };
       setMessages([initialMessage]);
       setIsInitialized(true);
-
-      // Persist initial message
-      await appendMessage(initialMessage);
+      
+      // NOTE: Initial message is persisted by the ai-coach backend, not here
     } catch (error) {
       console.error('Error initializing session:', error);
       const msg = error instanceof Error ? error.message : 'Failed to start the coaching session. Please try again.';
@@ -217,7 +216,7 @@ export function ChatInterface({
     setIsPausing(true);
     try {
       const success = await pauseSession();
-
+      
       if (success) {
         setIsPaused(true);
         onPauseStateChange?.(true);
@@ -244,11 +243,11 @@ export function ChatInterface({
     setIsResuming(true);
     try {
       const result = await resumeSession();
-
+      
       if (!result) {
         throw new Error('Failed to resume session');
       }
-
+      
       if (result.expired) {
         toast({
           variant: 'destructive',
@@ -257,13 +256,13 @@ export function ChatInterface({
         });
         return;
       }
-
+      
       setIsPaused(false);
       onPauseStateChange?.(false);
-
+      
       // Use messages from database if available, otherwise use current state
       const historyMessages = result.messages.length > 0 ? result.messages : messages;
-
+      
       // Count how many questions have been asked
       const assistantMessages = historyMessages.filter(m => m.role === 'assistant');
       const questionCount = assistantMessages.filter(m => m.content.includes('Question') && m.content.includes('of 10')).length;
@@ -282,7 +281,7 @@ export function ChatInterface({
       } else {
         setMessages([...messages, welcomeBackMessage]);
       }
-
+      
       toast({
         title: 'Interview Resumed',
         description: 'Let\'s continue where we left off.',
@@ -333,7 +332,7 @@ export function ChatInterface({
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
-
+    
     // NOTE: User message is persisted by the ai-coach backend, not here
     // This avoids duplicate saves to the database
 
@@ -350,13 +349,13 @@ export function ChatInterface({
         content: response,
         timestamp: new Date(),
       };
-
+      
       // Only add assistant message to UI - user message was already added above
       setMessages((prev) => [...prev, assistantMessage]);
-
+      
       // NOTE: Assistant message is persisted by the ai-coach backend, not here
       // This avoids duplicate saves to the database
-
+      
       // Check if interview is complete
       if (checkInterviewComplete(response) && !isInterviewComplete) {
         setIsInterviewComplete(true);
@@ -395,7 +394,7 @@ export function ChatInterface({
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Chat Header */}
-      <div className="p-4 border-b border-border bg-card flex-shrink-0">
+      <div id="chat-session-top" className="p-4 border-b border-border bg-card flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
@@ -414,13 +413,13 @@ export function ChatInterface({
               </p>
             </div>
           </div>
-
+          
         </div>
       </div>
 
       {/* Paused Overlay */}
       {isPaused && (
-        <div className="bg-warning/10 border-b border-warning/30 p-4 text-center flex-shrink-0">
+        <div className="bg-warning/10 border-b border-warning/30 p-4 text-center">
           <p className="text-warning font-medium">
             Interview is paused. Your progress is saved for 24 hours.
           </p>
@@ -511,7 +510,7 @@ export function ChatInterface({
             </div>
           </div>
         ))}
-
+        
         {isLoading && isInitialized && (
           <div className="flex gap-3 animate-fade-in">
             <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
@@ -538,7 +537,7 @@ export function ChatInterface({
             />
           </div>
         )}
-
+        
         <div ref={messagesEndRef} />
       </div>
 
