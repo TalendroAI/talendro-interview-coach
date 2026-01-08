@@ -39,11 +39,9 @@ const ANTI_INTERRUPT_VAD_THRESHOLD = 0.3;
 
 type ConnectionQuality = 'excellent' | 'good' | 'poor' | 'disconnected';
 
-// Helper function to detect actual interview questions (not greetings or conversational)
 const isInterviewQuestion = (text: string): boolean => {
   if (!text || !text.includes('?')) return false;
   
-  // Skip common non-question patterns
   const skipPatterns = [
     /ready to begin/i,
     /shall we (start|begin|continue)/i,
@@ -60,7 +58,6 @@ const isInterviewQuestion = (text: string): boolean => {
     if (pattern.test(text)) return false;
   }
   
-  // Actual interview question patterns
   const questionPatterns = [
     /^what /i,
     /^why /i,
@@ -89,28 +86,22 @@ const isInterviewQuestion = (text: string): boolean => {
   return false;
 };
 
-// Helper function to extract just the question portion from a message
-// Sarah often gives feedback first, then asks a question at the end
 const extractQuestionOnly = (text: string): string | null => {
   if (!text) return null;
   
-  // Look for common question lead-ins and extract from there
   const questionLeadIns = [
     /(?:let's move to our next question:|next question:|question \d+:|here's (?:the|our) (?:next |first )?question:)\s*(.+\?)/i,
     /(?:can you tell me|tell me about|what|why|how|describe|walk me through|explain|share|have you)[\s\S]*\?/i,
   ];
   
-  // Try to find a question lead-in first
   for (const pattern of questionLeadIns) {
     const match = text.match(pattern);
     if (match) {
-      // Get the captured group if it exists, otherwise the whole match
       const questionPart = match[1] || match[0];
       return questionPart.trim();
     }
   }
   
-  // Fallback: find the last sentence that ends with ?
   const sentences = text.split(/(?<=[.!?])\s+/);
   for (let i = sentences.length - 1; i >= 0; i--) {
     if (sentences[i].trim().endsWith('?')) {
@@ -233,7 +224,6 @@ export function AudioInterface({
   const isResumingRef = useRef(false);
 
   const pendingContextRef = useRef<string | null>(null);
-  const pendingResumeKickoffRef = useRef<string | null>(null);
 
   const appendTranscriptTurn = useCallback((role: 'user' | 'assistant', text: unknown) => {
     console.log('[appendTranscriptTurn] Called with role:', role, 'text length:', typeof text === 'string' ? text.length : 0);
@@ -530,20 +520,6 @@ export function AudioInterface({
           }
         }, 100);
       }
-
-      if (pendingResumeKickoffRef.current) {
-        const kickoff = pendingResumeKickoffRef.current;
-        setTimeout(() => {
-          try {
-            conversation.sendUserMessage(kickoff);
-            console.log('[AudioInterface] Resume kickoff message sent');
-          } catch (e) {
-            console.warn('[AudioInterface] Failed to send resume kickoff message:', e);
-          } finally {
-            pendingResumeKickoffRef.current = null;
-          }
-        }, 175);
-      }
     },
     onDisconnect: (details) => {
       console.log('[AudioInterface] Disconnected from ElevenLabs agent', details);
@@ -597,7 +573,6 @@ export function AudioInterface({
       try {
         const msg = message as any;
         
-        // ElevenLabs sends messages with { source, role, message } structure
         const source = msg?.source;
         const role = msg?.role;
         const messageText = msg?.message;
@@ -605,13 +580,11 @@ export function AudioInterface({
         
         console.log('[AudioInterface] Parsed message - source:', source, 'role:', role, 'type:', type, 'hasText:', !!messageText);
 
-        // Handle ElevenLabs format: { source: 'user', role: 'user', message: '...' }
         if (source === 'user' && messageText) {
           console.log('[AudioInterface] USER message detected, saving to DB...');
           appendTranscriptTurn('user', messageText);
         }
         
-        // Handle ElevenLabs format: { source: 'ai', role: 'agent', message: '...' }
         if (source === 'ai' && messageText) {
           console.log('[AudioInterface] AI message detected, saving to DB...');
           appendTranscriptTurn('assistant', messageText);
@@ -625,7 +598,6 @@ export function AudioInterface({
           }
         }
 
-        // Legacy format fallback
         if (type === 'user_transcript') {
           const text = msg?.user_transcription_event?.user_transcript ?? msg?.user_transcript ?? msg?.text;
           if (text) appendTranscriptTurn('user', text);
@@ -779,7 +751,6 @@ export function AudioInterface({
         setIsReconnecting(false);
         isResumingRef.current = false;
         pendingContextRef.current = null;
-        pendingResumeKickoffRef.current = null;
       } else {
         setIsReconnecting(true);
         setConnectionDropped(false);
@@ -830,7 +801,6 @@ export function AudioInterface({
         const firstName = documents?.firstName?.trim();
         const nameForGreeting = firstName || 'there';
         const questionsSoFar = questionCountRef.current;
-        const nextQuestion = questionsSoFar + 1;
 
         const firstTimeGreeting = `Hi ${nameForGreeting}, I'm Sarah, your interview coach today. I've reviewed your materials and I'm ready to put you through a realistic mock interview. We'll cover 16 questions across different categories. Take your time with each answer, and I'll give you feedback as we go. Ready to begin?`;
 
@@ -838,7 +808,6 @@ export function AudioInterface({
           .filter(t => t.role === 'assistant' && isInterviewQuestion(t.text))
           .pop()?.text || null;
         
-        // Extract ONLY the question part, not the feedback
         const lastSarahQuestion = lastSarahMessage ? extractQuestionOnly(lastSarahMessage) : null;
 
         const lastTranscriptEntry = transcriptRef.current[transcriptRef.current.length - 1];
@@ -857,14 +826,8 @@ export function AudioInterface({
         const nameSuffix = firstName ? `, ${firstName}` : '';
         const resumeGreeting = `Welcome back${nameSuffix}! We completed ${completedQuestions} questions before pausing. Now continuing with question ${resumeQuestionNumber}: ${safeQuestionText || 'the next question'}`;
 
-        // ONLY set resume kickoff for resume mode - SIMPLIFIED for faster response
-        if (!isInitial) {
-          pendingResumeKickoffRef.current = `RESUME: ${resumeGreeting}`;
-        }
-
         const contextParts: string[] = [];
 
-        // TRUNCATE documents to reduce processing time
         if (documents?.resume) {
           const truncatedResume = documents.resume.length > 1500 
             ? documents.resume.substring(0, 1500) + '...[truncated]'
@@ -879,7 +842,6 @@ export function AudioInterface({
         }
         if (documents?.companyUrl) contextParts.push(`Company: ${documents.companyUrl}`);
 
-        // For resume: only send last 4 turns + simple status (not full transcript)
         if (!isInitial && transcriptRef.current.length > 0) {
           const lastFewTurns = transcriptRef.current.slice(-4);
           const recentContext = lastFewTurns
@@ -890,7 +852,6 @@ export function AudioInterface({
             .filter(t => t.role === 'assistant' && isInterviewQuestion(t.text))
             .pop()?.text || null;
           
-          // Extract ONLY the question, not the feedback
           const lastQuestion = lastQuestionMessage ? extractQuestionOnly(lastQuestionMessage) : null;
           
           const lastEntry = transcriptRef.current[transcriptRef.current.length - 1];
@@ -976,93 +937,59 @@ export function AudioInterface({
     try {
       await conversation.endSession();
     } catch (disconnectError) {
-      console.warn('[pauseInterview] ElevenLabs disconnect error (non-fatal):', disconnectError);
+      console.warn('[pauseInterview] Error ending session:', disconnectError);
     }
+    cleanup();
+
+    await supabase
+      .from('coaching_sessions')
+      .update({ paused_at: new Date().toISOString(), status: 'active' })
+      .eq('id', sessionId);
+
+    logEvent({
+      eventType: 'session_paused',
+      message: `Interview paused at question ${questionCountRef.current}`,
+      context: { questionCount: questionCountRef.current, transcriptLength: transcriptRef.current.length },
+    });
 
     try {
-      const appUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
-      
-      // Calculate COMPLETED questions (questions the user actually answered)
-      // If last transcript entry is from Sarah, user hasn't answered yet
-      const lastEntry = transcriptRef.current[transcriptRef.current.length - 1];
-      const userAnsweredLast = lastEntry?.role === 'user';
-      const completedQuestions = userAnsweredLast ? questionCountRef.current : Math.max(questionCountRef.current - 1, 0);
-      
-      console.log('[pauseInterview] Questions asked:', questionCountRef.current, 'Completed:', completedQuestions, 'User answered last:', userAnsweredLast);
-      
-      const { error } = await supabase.functions.invoke('audio-session', {
-        body: { action: 'pause_session', sessionId, email: userEmail, questionNumber: completedQuestions, app_url: appUrl },
+      const { error } = await supabase.functions.invoke('send-pause-email', {
+        body: { session_id: sessionId, email: userEmail, questionNumber: questionCountRef.current },
       });
-
-      if (error) console.error('[pauseInterview] Failed to save pause state:', error);
-
-      toast({ title: 'Interview Paused', description: 'Your progress is saved. You can resume within 24 hours.' });
-      logEvent({ eventType: 'session_paused', message: `Paused at question ${completedQuestions} (asked: ${questionCountRef.current})`, context: { questionCount: completedQuestions, questionsAsked: questionCountRef.current } });
-    } catch (error) {
-      console.error('[pauseInterview] Failed to save pause state:', error);
-      toast({ title: 'Interview Paused', description: 'Your session is paused locally.', variant: 'default' });
+      if (error) console.error('Failed to send pause email:', error);
+      else toast({ title: 'Session Paused', description: "We've sent you an email with a link to resume later." });
+    } catch (emailError) {
+      console.error('Error sending pause email:', emailError);
+      toast({ title: 'Session Paused', description: 'Your progress is saved. You can resume from the home page.' });
     }
-  }, [sessionId, userEmail, conversation, toast, logEvent]);
+  }, [sessionId, userEmail, toast, conversation, cleanup, logEvent]);
+
   const resumeInterview = useCallback(async () => {
-    if (!sessionId || !userEmail) {
-      toast({ variant: 'destructive', title: 'Cannot Resume', description: 'Session information is missing.' });
-      return;
+    console.log('[resumeInterview] Starting resume...');
+    isPausedRef.current = false;
+    setIsPaused(false);
+    setConnectionDropped(false);
+
+    if (sessionId) {
+      await supabase.from('coaching_sessions').update({ paused_at: null }).eq('id', sessionId);
     }
 
-    setIsReconnecting(true);
-    isResumingRef.current = true;
-    
-    // CRITICAL: Clear all local state before loading from database
-    transcriptRef.current = [];
-    questionCountRef.current = 0;
-    lastAssistantTurnRef.current = null;
+    logEvent({
+      eventType: 'session_resume_started',
+      message: `User initiated resume from question ${questionCountRef.current}`,
+      context: { questionCount: questionCountRef.current },
+    });
 
-    try {
-      console.log('[resumeInterview] Calling resume_session endpoint for session:', sessionId);
-      
-      const { data, error } = await supabase.functions.invoke('audio-session', {
-        body: { action: 'resume_session', sessionId, email: userEmail },
-      });
+    await reconnect({ mode: 'resume' });
+  }, [sessionId, logEvent, reconnect]);
 
-      if (error) throw new Error(error.message || 'Failed to resume session');
-
-      if (data?.expired) {
-        toast({ variant: 'destructive', title: 'Session Expired', description: 'This session has expired. Please start a new session.' });
-        setIsPaused(false);
-        setIsReconnecting(false);
-        isResumingRef.current = false;
-        return;
-      }
-
-      const messages = data?.messages || [];
-      console.log('[resumeInterview] Got', messages.length, 'messages from DB');
-      
-      if (messages.length > 0) {
-        transcriptRef.current = messages.map((m: any) => ({
-          role: m.role === 'user' ? 'user' as const : 'assistant' as const,
-          text: m.content,
-          ts: new Date(m.created_at).getTime(),
-        }));
-        
-        const assistantMessages = messages.filter((m: any) => m.role === 'assistant');
-        if (assistantMessages.length > 0) {
-          lastAssistantTurnRef.current = assistantMessages[assistantMessages.length - 1].content;
-          questionCountRef.current = assistantMessages.filter((m: any) => isInterviewQuestion(m.content)).length;
-        }
-        console.log('[resumeInterview] Loaded from DB - transcript entries:', transcriptRef.current.length, 'questionCount:', questionCountRef.current);
-      }
-
-      setIsPaused(false);
+  useEffect(() => {
+    if (resumeFromPause && isActive && sessionId && !isPaused && !isConnecting && !isReconnecting && conversation.status !== 'connected') {
+      console.log('[AudioInterface] Auto-resuming from pause prop');
       isPausedRef.current = false;
-      await reconnect({ mode: 'resume' });
-      
-    } catch (error) {
-      console.error('[resumeInterview] Failed:', error);
-      toast({ variant: 'destructive', title: 'Resume Failed', description: error instanceof Error ? error.message : 'Could not resume.' });
-      setIsReconnecting(false);
-      isResumingRef.current = false;
+      setIsPaused(false);
     }
-  }, [sessionId, userEmail, toast, reconnect]);
+  }, [resumeFromPause, isActive, sessionId, isPaused, isConnecting, isReconnecting, conversation.status]);
 
   const signalActivity = useCallback(() => {
     setLastActivityTime(Date.now());
