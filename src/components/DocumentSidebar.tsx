@@ -75,7 +75,10 @@ export function DocumentSidebar({
     if (onSaveDocuments) {
       onSaveDocuments();
       // Scroll to top of page so user sees the interview start
+      // Try multiple methods to ensure it works across different layouts
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
     }
   };
 
