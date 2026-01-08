@@ -41,15 +41,15 @@ interface ChatInterfaceProps {
   onRegisterPauseHandlers?: (handlers: { onPause?: () => void; onResume?: () => void; onEnd?: () => void }) => void;
 }
 
-export function ChatInterface({ 
-  sessionType, 
-  isActive, 
-  sessionId, 
-  documents, 
-  onInterviewComplete, 
-  onCompleteSession, 
-  isCompletingSession, 
-  isSessionCompleted, 
+export function ChatInterface({
+  sessionType,
+  isActive,
+  sessionId,
+  documents,
+  onInterviewComplete,
+  onCompleteSession,
+  isCompletingSession,
+  isSessionCompleted,
   isContentReady,
   userEmail,
   resumeFromPause = false,
@@ -68,7 +68,7 @@ export function ChatInterface({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const config = SESSION_CONFIGS[sessionType];
   const { toast } = useToast();
-  
+
   // Real-time persistence hook
   const { appendMessage, pauseSession, resumeSession, getHistory } = useChatSessionPersistence(sessionId, userEmail);
 
@@ -115,11 +115,11 @@ export function ChatInterface({
     setIsResuming(true);
     try {
       const result = await resumeSession();
-      
+
       if (!result) {
         throw new Error('Failed to resume session');
       }
-      
+
       if (result.expired) {
         toast({
           variant: 'destructive',
@@ -128,22 +128,21 @@ export function ChatInterface({
         });
         return;
       }
-      
+
       // Restore messages from database
       if (result.messages.length > 0) {
         setMessages(result.messages);
         setIsInitialized(true);
-        
+
         // Check if interview was already complete
         const lastAssistant = result.messages.filter(m => m.role === 'assistant').pop();
         if (lastAssistant && checkInterviewComplete(lastAssistant.content)) {
           setIsInterviewComplete(true);
           onInterviewComplete?.(result.messages);
-        } else {
-          // Send a resume message to Claude to continue
-          await sendResumeMessage(result.messages);
         }
-        
+        // Messages restored - user can continue naturally
+        // Toast notification already provides the welcome back message
+
         toast({
           title: 'Session Resumed',
           description: 'Welcome back! Continuing from where you left off.',
@@ -162,66 +161,6 @@ export function ChatInterface({
       initializeSession();
     } finally {
       setIsResuming(false);
-    }
-  };
-
-  const sendResumeMessage = async (previousMessages: Message[]) => {
-    setIsLoading(true);
-    try {
-      // Count how many questions have been asked (assistant messages with "?")
-      const assistantMessages = previousMessages.filter(m => m.role === 'assistant');
-      const questionsAsked = assistantMessages.filter(m => m.content.includes('?')).length;
-      const nextQuestion = questionsAsked + 1;
-      
-      // Build complete context from previous messages
-      const historyContext = previousMessages
-        .map((m, idx) => `[Turn ${idx + 1}] ${m.role === 'user' ? 'CANDIDATE' : 'INTERVIEWER'}: ${m.content}`)
-        .join('\n\n');
-      
-      const resumePrompt = `[SYSTEM CONTEXT: The candidate has RESUMED their paused interview session.
-
-=== SESSION STATUS ===
-- Questions already asked: ${questionsAsked}
-- Next question to ask: Question ${nextQuestion} of 10
-- Total transcript turns: ${previousMessages.length}
-
-=== CRITICAL INSTRUCTIONS ===
-1. Do NOT re-introduce yourself
-2. Do NOT ask the candidate to introduce themselves again  
-3. Do NOT repeat any questions from the transcript below
-4. Acknowledge their return warmly with something like "Welcome back! Great to have you back."
-5. Briefly reference where you left off (e.g., "We were making good progress on question ${questionsAsked}")
-6. Then IMMEDIATELY proceed to question ${nextQuestion} - do NOT ask if they're ready
-
-=== COMPLETE INTERVIEW TRANSCRIPT ===
-${historyContext}
-=== END OF TRANSCRIPT ===
-
-Now provide your welcome-back message and immediately continue with question ${nextQuestion}.]`;
-      
-      const response = await sendAIMessage(
-        sessionId,
-        sessionType,
-        resumePrompt,
-        documents.resume,
-        documents.jobDescription,
-        documents.companyUrl,
-        false
-      );
-
-      const resumeMessage: Message = {
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: response,
-        timestamp: new Date(),
-      };
-      
-      setMessages(prev => [...prev, resumeMessage]);
-      await appendMessage(resumeMessage);
-    } catch (error) {
-      console.error('Error sending resume message:', error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -247,7 +186,7 @@ Now provide your welcome-back message and immediately continue with question ${n
       };
       setMessages([initialMessage]);
       setIsInitialized(true);
-      
+
       // Persist initial message
       await appendMessage(initialMessage);
     } catch (error) {
@@ -267,7 +206,7 @@ Now provide your welcome-back message and immediately continue with question ${n
     setIsPausing(true);
     try {
       const success = await pauseSession();
-      
+
       if (success) {
         setIsPaused(true);
         onPauseStateChange?.(true);
@@ -294,11 +233,11 @@ Now provide your welcome-back message and immediately continue with question ${n
     setIsResuming(true);
     try {
       const result = await resumeSession();
-      
+
       if (!result) {
         throw new Error('Failed to resume session');
       }
-      
+
       if (result.expired) {
         toast({
           variant: 'destructive',
@@ -307,21 +246,21 @@ Now provide your welcome-back message and immediately continue with question ${n
         });
         return;
       }
-      
+
       setIsPaused(false);
       onPauseStateChange?.(false);
-      
+
       // Use messages from database if available, otherwise use current state
       const historyMessages = result.messages.length > 0 ? result.messages : messages;
-      
+
       // Update local state with database messages if we got them
       if (result.messages.length > 0) {
         setMessages(result.messages);
       }
-      
-      // Send a resume message with the full history context
-      await sendResumeMessage(historyMessages);
-      
+
+      // Messages restored - user can continue naturally
+      // No AI resume call needed - the toast provides the welcome message
+
       toast({
         title: 'Interview Resumed',
         description: 'Let\'s continue where we left off.',
@@ -372,7 +311,7 @@ Now provide your welcome-back message and immediately continue with question ${n
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
-    
+
     // Persist user message immediately
     await appendMessage(userMessage);
 
@@ -389,13 +328,13 @@ Now provide your welcome-back message and immediately continue with question ${n
         content: response,
         timestamp: new Date(),
       };
-      
+
       const updatedMessages = [...messages, userMessage, assistantMessage];
       setMessages(updatedMessages);
-      
+
       // Persist assistant message
       await appendMessage(assistantMessage);
-      
+
       // Check if interview is complete
       if (checkInterviewComplete(response) && !isInterviewComplete) {
         setIsInterviewComplete(true);
@@ -449,7 +388,7 @@ Now provide your welcome-back message and immediately continue with question ${n
               </p>
             </div>
           </div>
-          
+
         </div>
       </div>
 
@@ -546,7 +485,7 @@ Now provide your welcome-back message and immediately continue with question ${n
             </div>
           </div>
         ))}
-        
+
         {isLoading && isInitialized && (
           <div className="flex gap-3 animate-fade-in">
             <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
@@ -573,7 +512,7 @@ Now provide your welcome-back message and immediately continue with question ${n
             />
           </div>
         )}
-        
+
         <div ref={messagesEndRef} />
       </div>
 
