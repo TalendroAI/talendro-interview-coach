@@ -200,6 +200,7 @@ export function AudioInterface({
   const [showMicInputWarning, setShowMicInputWarning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const isPausedRef = useRef(false);
+  const [isWaitingForGreeting, setIsWaitingForGreeting] = useState(false);
   const toast = toastFn;
 
   useEffect(() => {
@@ -233,7 +234,7 @@ export function AudioInterface({
   const isResumingRef = useRef(false);
 
   const pendingContextRef = useRef<string | null>(null);
-  // REMOVED: pendingResumeKickoffRef - was causing duplicate "welcome back" speech
+  const pendingResumeKickoffRef = useRef<string | null>(null);
 
   const appendTranscriptTurn = useCallback((role: 'user' | 'assistant', text: unknown) => {
     console.log('[appendTranscriptTurn] Called with role:', role, 'text length:', typeof text === 'string' ? text.length : 0);
@@ -530,8 +531,20 @@ export function AudioInterface({
           }
         }, 100);
       }
-      // REMOVED: pendingResumeKickoffRef block - was sending duplicate "welcome back" message
-      // The firstMessage in startSession already handles the resume greeting
+
+      if (pendingResumeKickoffRef.current) {
+        const kickoff = pendingResumeKickoffRef.current;
+        setTimeout(() => {
+          try {
+            conversation.sendUserMessage(kickoff);
+            console.log('[AudioInterface] Resume kickoff message sent');
+          } catch (e) {
+            console.warn('[AudioInterface] Failed to send resume kickoff message:', e);
+          } finally {
+            pendingResumeKickoffRef.current = null;
+          }
+        }, 175);
+      }
     },
     onDisconnect: (details) => {
       console.log('[AudioInterface] Disconnected from ElevenLabs agent', details);
@@ -765,12 +778,15 @@ export function AudioInterface({
         setShowSilenceWarning(false);
         setIsConnecting(true);
         setIsReconnecting(false);
+        setIsWaitingForGreeting(true);
         isResumingRef.current = false;
         pendingContextRef.current = null;
+        pendingResumeKickoffRef.current = null;
       } else {
         setIsReconnecting(true);
         setConnectionDropped(false);
         setReconnectAttempts((prev) => prev + 1);
+        setIsWaitingForGreeting(true);
         isResumingRef.current = true;
       }
 
@@ -819,30 +835,35 @@ export function AudioInterface({
         const questionsSoFar = questionCountRef.current;
         const nextQuestion = questionsSoFar + 1;
 
-        const firstTimeGreeting = `Hi ${nameForGreeting}, I'm Sarah, your interview coach today. I've reviewed your materials and I'm ready to put you through a realistic mock interview. We'll cover 16 questions across different categories. Take your time with each answer, and I'll give you feedback as we go. Ready to begin?`;
+        const firstTimeGreeting = `Hi ${nameForGreeting}, I'm Sarah, your interview coach today. I've reviewed your materials and I'm ready to put you through a realistic mock interview. Process-wise, I'll ask one question at a time and give you a short pause to think before you answer—just like a real interview. After you respond, I'll take a quick beat to assess your answer, then I'll share feedback and a stronger version of how you could say it. We'll cover 16 questions across different categories. If you need me to repeat anything, just ask. Ready to begin?`;
+
+        const lastSarahMessage = transcriptRef.current
+          .filter(t => t.role === 'assistant' && isInterviewQuestion(t.text))
+          .pop()?.text || null;
+        
+        // Extract ONLY the question part, not the feedback
+        const lastSarahQuestion = lastSarahMessage ? extractQuestionOnly(lastSarahMessage) : null;
 
         const lastTranscriptEntry = transcriptRef.current[transcriptRef.current.length - 1];
         const didUserAnswerLast = lastTranscriptEntry?.role === 'user';
 
         const completedQuestions = didUserAnswerLast ? questionsSoFar : Math.max(questionsSoFar - 1, 0);
+        const resumeQuestionNumber = didUserAnswerLast ? completedQuestions + 1 : Math.max(questionsSoFar, 1);
+
+        const safeQuestionText =
+          !didUserAnswerLast && lastSarahQuestion
+            ? (lastSarahQuestion.length > 300
+              ? lastSarahQuestion.substring(0, 300) + '...'
+              : lastSarahQuestion)
+            : null;
 
         const nameSuffix = firstName ? `, ${firstName}` : '';
+        const resumeGreeting = `Welcome back${nameSuffix}! We completed ${completedQuestions} questions before pausing. Now continuing with question ${resumeQuestionNumber}: ${safeQuestionText || 'the next question'}`;
 
-        // On resume, explicitly repeat the last unanswered question in the greeting so the user
-        // doesn't have to wait for a silence-reprompt.
-        const lastQuestionMessage = transcriptRef.current
-          .filter(t => t.role === 'assistant' && isInterviewQuestion(t.text))
-          .pop()?.text || null;
-        const lastQuestionOnly = lastQuestionMessage ? extractQuestionOnly(lastQuestionMessage) : null;
-
-        const shouldRepeatQuestionOnResume = !isInitial && !didUserAnswerLast && !!lastQuestionOnly;
-
-        const resumeGreeting = shouldRepeatQuestionOnResume
-          ? `Welcome back${nameSuffix}! Let's continue where we left off. The last question I asked was: ${lastQuestionOnly!.substring(0, 400)}`
-          : `Welcome back${nameSuffix}! Let's continue where we left off.`;
-
-        // REMOVED: pendingResumeKickoffRef assignment
-        // The firstMessage (resumeGreeting) handles the greeting - no duplicate needed
+        // ONLY set resume kickoff for resume mode - SIMPLIFIED for faster response
+        if (!isInitial) {
+          pendingResumeKickoffRef.current = `RESUME: ${resumeGreeting}`;
+        }
 
         const contextParts: string[] = [];
 
@@ -878,18 +899,10 @@ export function AudioInterface({
           const lastEntry = transcriptRef.current[transcriptRef.current.length - 1];
           const userAnsweredLast = lastEntry?.role === 'user';
           
-          // CRITICAL: Clear instruction to wait for user response
-          let resumeInstruction: string;
-          if (userAnsweredLast) {
-            resumeInstruction = `User answered question ${questionsSoFar}. Ask question ${questionsSoFar + 1} now. Then STOP and WAIT for their answer before proceeding.`;
-          } else {
-            resumeInstruction = `User has NOT answered question ${questionsSoFar} yet. Repeat this question: "${lastQuestion?.substring(0, 300) || 'the last question'}". Then STOP and WAIT for their answer.`;
-          }
-          
-          const resumeContext = `RESUMED SESSION - ${resumeInstruction}\n\nRecent conversation:\n${recentContext}`;
+          const resumeContext = `RESUMED SESSION - Question ${questionsSoFar} asked. ${userAnsweredLast ? 'User answered. Ask next question.' : 'User did NOT answer. Repeat question.'}\n\nLast question: "${lastQuestion?.substring(0, 300) || 'N/A'}"\n\nRecent:\n${recentContext}`;
 
           contextParts.push(resumeContext);
-          console.log('[reconnect] Built resume context. userAnsweredLast:', userAnsweredLast, 'questionsSoFar:', questionsSoFar);
+          console.log('[reconnect] Built SLIM resume context');
         }
 
         contextParts.push(`End of interview: tell user results sent to email.`);
@@ -1104,6 +1117,13 @@ export function AudioInterface({
     return () => window.clearInterval(id);
   }, [conversation, conversation.status, conversation.isSpeaking, isMuted, toast, vadScore]);
 
+  // Clear the "waiting for greeting" state once Sarah starts speaking
+  useEffect(() => {
+    if (conversation.isSpeaking && isWaitingForGreeting) {
+      setIsWaitingForGreeting(false);
+    }
+  }, [conversation.isSpeaking, isWaitingForGreeting]);
+
   if (!isActive) return null;
 
   const isConnected = conversation.status === 'connected';
@@ -1227,8 +1247,8 @@ export function AudioInterface({
           {isConnected && !isSpeaking && <div className="absolute -bottom-2 left-1/2 -translate-x-1/2"><div className="h-2 rounded-full bg-green-500 transition-all duration-100" style={{ width: `${Math.max(vadScore * 100, 10)}px` }} /></div>}
         </div>
 
-        <h3 className="text-lg font-semibold text-gray-900 mb-1">{isConnecting ? 'Connecting to Sarah...' : isSpeaking ? 'Sarah is speaking...' : isSendingResults ? 'Sending your results...' : showVadWarning ? 'Having trouble hearing you...' : 'Listening to your response...'}</h3>
-        <p className="text-sm text-gray-500 mb-6">{isConnecting ? 'Setting up your voice connection...' : isSpeaking ? 'Listen carefully to the question' : isSendingResults ? 'Please wait while we email your results' : showVadWarning ? 'Check your microphone or speak louder' : "Speak naturally when you're ready to respond"}</p>
+        <h3 className="text-lg font-semibold text-gray-900 mb-1">{isConnecting ? 'Connecting to Sarah...' : isSpeaking ? 'Sarah is speaking...' : isSendingResults ? 'Sending your results...' : isWaitingForGreeting ? 'Sarah is preparing...' : showVadWarning ? 'Having trouble hearing you...' : 'Listening to your response...'}</h3>
+        <p className="text-sm text-gray-500 mb-6">{isConnecting ? 'Setting up your voice connection...' : isSpeaking ? 'Listen carefully to the question' : isSendingResults ? 'Please wait while we email your results' : isWaitingForGreeting ? 'One moment while Sarah gets ready...' : showVadWarning ? 'Check your microphone or speak louder' : "Speak naturally when you're ready to respond"}</p>
 
         {showSilenceWarning && isConnected && <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4"><div className="flex items-center justify-center gap-2 text-amber-700"><AlertTriangle className="w-4 h-4" />Sarah hasn't heard from you.<Button size="sm" variant="outline" onClick={signalActivity} className="ml-2">I'm still here</Button></div></div>}
 
