@@ -59,19 +59,21 @@ export function SessionResultsView({
   const qaPairs = hasTranscript ? parseTranscriptToQA(transcript!) : [];
 
   const handleDownload = () => {
-    // Build a plain text report
+    // Build a plain text report - Mock/Audio get ALL three sections
     let reportContent = `${sessionLabel} Results\n`;
     reportContent += `${'='.repeat(50)}\n\n`;
     reportContent += `Email: ${email}\n`;
     reportContent += `Date: ${new Date().toLocaleDateString()}\n\n`;
     
+    // Section 1: Performance Analysis (for Mock/Audio interviews)
     if (hasAnalysis && !isQuickPrep) {
-      reportContent += `PERFORMANCE SUMMARY\n${'─'.repeat(30)}\n\n`;
+      reportContent += `SECTION 1: PERFORMANCE ANALYSIS\n${'─'.repeat(40)}\n\n`;
       reportContent += analysisMarkdown + '\n\n';
     }
     
+    // Section 2: Interview Q&A (for Mock/Audio interviews)
     if (qaPairs.length > 0) {
-      reportContent += `INTERVIEW Q&A\n${'─'.repeat(30)}\n\n`;
+      reportContent += `SECTION 2: INTERVIEW Q&A\n${'─'.repeat(40)}\n\n`;
       qaPairs.forEach((qa, idx) => {
         reportContent += `Question ${idx + 1}:\n${qa.question}\n\n`;
         reportContent += `Your Answer:\n${qa.answer}\n\n`;
@@ -79,8 +81,10 @@ export function SessionResultsView({
       });
     }
     
+    // Section 3: Prep Packet (included for ALL tiers - Quick Prep and Mock/Audio)
     if (hasPrepPacket) {
-      reportContent += `PREPARATION MATERIALS\n${'─'.repeat(30)}\n\n`;
+      const sectionNum = isQuickPrep ? '1' : '3';
+      reportContent += `SECTION ${sectionNum}: ${isQuickPrep ? 'YOUR INTERVIEW PREPARATION PACKET' : 'PREPARATION MATERIALS'}\n${'─'.repeat(40)}\n\n`;
       reportContent += prepPacket + '\n';
     }
     
@@ -138,13 +142,13 @@ export function SessionResultsView({
           <ScrollArea className="h-[65vh]">
             <div className="p-6 md:p-8 space-y-8">
               
-              {/* Section 1: Performance Summary (for mock interviews) */}
+              {/* Section 1: Performance Analysis (for mock interviews - displayed first for emphasis) */}
               {!isQuickPrep && hasAnalysis && (
                 <section>
                   <h2 className="text-xl font-bold text-primary border-b-2 border-primary/20 pb-2 mb-4">
-                    📊 Performance Summary
+                    📊 Performance Analysis
                   </h2>
-                  <div className="bg-muted/30 rounded-lg p-4 border border-border/50">
+                  <div className="bg-green-50 dark:bg-green-950/30 rounded-lg p-4 border border-green-200 dark:border-green-800">
                     <MarkdownRenderer content={analysisMarkdown!} />
                   </div>
                 </section>
