@@ -89,6 +89,14 @@ const isInterviewQuestion = (text: string): boolean => {
   return false;
 };
 
+// Helper function to extract question number from "Question X of Y" pattern
+const extractQuestionNumber = (text: string): number | null => {
+  if (!text) return null;
+  // Match patterns like "Question 8 of 10", "question 3:", "Question 5 of 16:"
+  const match = text.match(/question\s+(\d+)\s*(?:of\s+\d+)?/i);
+  return match ? parseInt(match[1], 10) : null;
+};
+
 // Helper function to extract just the question portion from a message
 // Sarah often gives feedback first, then asks a question at the end
 const extractQuestionOnly = (text: string): string | null => {
@@ -96,7 +104,7 @@ const extractQuestionOnly = (text: string): string | null => {
   
   // Look for common question lead-ins and extract from there
   const questionLeadIns = [
-    /(?:let's move to our next question:|next question:|question \d+:|here's (?:the|our) (?:next |first )?question:)\s*(.+\?)/i,
+    /(?:let's move to our next question:|next question:|question \d+(?:\s*of\s*\d+)?:)\s*(.+\?)/i,
     /(?:can you tell me|tell me about|what|why|how|describe|walk me through|explain|share|have you)[\s\S]*\?/i,
   ];
   
@@ -828,18 +836,34 @@ export function AudioInterface({
 
         const nameSuffix = firstName ? `, ${firstName}` : '';
 
-        // On resume, explicitly repeat the last unanswered question in the greeting so the user
-        // doesn't have to wait for a silence-reprompt.
-        const lastQuestionMessage = transcriptRef.current
-          .filter(t => t.role === 'assistant' && isInterviewQuestion(t.text))
-          .pop()?.text || null;
-        const lastQuestionOnly = lastQuestionMessage ? extractQuestionOnly(lastQuestionMessage) : null;
+        // Find the last numbered interview question (e.g., "Question 8 of 16")
+        // This is more reliable than counting question marks
+        const numberedQuestionMessages = transcriptRef.current
+          .filter(t => t.role === 'assistant' && extractQuestionNumber(t.text) !== null);
+        
+        const lastNumberedMessage = numberedQuestionMessages[numberedQuestionMessages.length - 1];
+        const lastQuestionNumber = lastNumberedMessage ? extractQuestionNumber(lastNumberedMessage.text) : null;
+        const lastQuestionText = lastNumberedMessage ? extractQuestionOnly(lastNumberedMessage.text) : null;
 
-        const shouldRepeatQuestionOnResume = !isInitial && !didUserAnswerLast && !!lastQuestionOnly;
+        // Determine if user answered the last numbered question
+        const lastNumberedIndex = lastNumberedMessage 
+          ? transcriptRef.current.findIndex(t => t === lastNumberedMessage)
+          : -1;
+        const userAnsweredLastQuestion = lastNumberedIndex >= 0 && 
+          transcriptRef.current.slice(lastNumberedIndex + 1).some(t => t.role === 'user');
 
-        const resumeGreeting = shouldRepeatQuestionOnResume
-          ? `Welcome back${nameSuffix}! Let's continue where we left off. The last question I asked was: ${lastQuestionOnly!.substring(0, 400)}`
-          : `Welcome back${nameSuffix}! Let's continue where we left off.`;
+        // Build the resume greeting based on question number
+        let resumeGreeting: string;
+        if (!isInitial && lastQuestionNumber && lastQuestionText && !userAnsweredLastQuestion) {
+          // User paused before answering - repeat the exact question with its number
+          resumeGreeting = `Welcome back${nameSuffix}! I really appreciate you jumping back in — let's pick up where we paused. Question ${lastQuestionNumber}: ${lastQuestionText.substring(0, 350)} Take your time — whenever you're ready.`;
+        } else if (!isInitial && lastQuestionNumber && userAnsweredLastQuestion) {
+          // User answered last question - Sarah will ask the next one
+          resumeGreeting = `Welcome back${nameSuffix}! Great to have you back. You finished Question ${lastQuestionNumber}, so let's continue with the next one.`;
+        } else {
+          // Fallback for edge cases
+          resumeGreeting = `Welcome back${nameSuffix}! Let's continue where we left off.`;
+        }
 
         // REMOVED: pendingResumeKickoffRef assignment
         // The firstMessage (resumeGreeting) handles the greeting - no duplicate needed
@@ -868,28 +892,24 @@ export function AudioInterface({
             .map(t => `${t.role === 'user' ? 'USER' : 'SARAH'}: ${t.text.substring(0, 200)}`)
             .join('\n');
 
-          const lastQuestionMessage = transcriptRef.current
-            .filter(t => t.role === 'assistant' && isInterviewQuestion(t.text))
-            .pop()?.text || null;
+          // Use the question number we already extracted above
+          const lastQuestion = lastQuestionText;
           
-          // Extract ONLY the question, not the feedback
-          const lastQuestion = lastQuestionMessage ? extractQuestionOnly(lastQuestionMessage) : null;
-          
-          const lastEntry = transcriptRef.current[transcriptRef.current.length - 1];
-          const userAnsweredLast = lastEntry?.role === 'user';
-          
-          // CRITICAL: Clear instruction to wait for user response
+          // CRITICAL: Clear instruction based on actual question number
           let resumeInstruction: string;
-          if (userAnsweredLast) {
-            resumeInstruction = `User answered question ${questionsSoFar}. Ask question ${questionsSoFar + 1} now. Then STOP and WAIT for their answer before proceeding.`;
+          if (userAnsweredLastQuestion && lastQuestionNumber) {
+            resumeInstruction = `User answered Question ${lastQuestionNumber}. Ask Question ${lastQuestionNumber + 1} now. Then STOP and WAIT for their answer before proceeding.`;
+          } else if (lastQuestionNumber && lastQuestion) {
+            resumeInstruction = `User has NOT answered Question ${lastQuestionNumber} yet. You already repeated it in your greeting. WAIT for their answer.`;
           } else {
-            resumeInstruction = `User has NOT answered question ${questionsSoFar} yet. Repeat this question: "${lastQuestion?.substring(0, 300) || 'the last question'}". Then STOP and WAIT for their answer.`;
+            // Fallback if no question number found
+            resumeInstruction = `Resume the interview. Ask the next question and WAIT for their answer.`;
           }
           
           const resumeContext = `RESUMED SESSION - ${resumeInstruction}\n\nRecent conversation:\n${recentContext}`;
 
           contextParts.push(resumeContext);
-          console.log('[reconnect] Built resume context. userAnsweredLast:', userAnsweredLast, 'questionsSoFar:', questionsSoFar);
+          console.log('[reconnect] Built resume context. userAnsweredLastQuestion:', userAnsweredLastQuestion, 'lastQuestionNumber:', lastQuestionNumber);
         }
 
         contextParts.push(`End of interview: tell user results sent to email.`);
