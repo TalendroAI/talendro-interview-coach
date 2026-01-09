@@ -595,8 +595,11 @@ export function AudioInterface({
           const clean = typeof messageText === 'string' ? messageText.trim() : '';
           if (clean) {
             lastAssistantTurnRef.current = clean;
-            if (isInterviewQuestion(clean)) {
-              questionCountRef.current += 1;
+            // Use actual question number from message instead of incrementing
+            const questionNum = extractQuestionNumber(clean);
+            if (questionNum && questionNum > questionCountRef.current) {
+              questionCountRef.current = questionNum;
+              console.log('[AudioInterface] Updated question count to:', questionNum);
             }
           }
         }
@@ -614,7 +617,11 @@ export function AudioInterface({
             const clean = typeof text === 'string' ? text.trim() : '';
             if (clean) {
               lastAssistantTurnRef.current = clean;
-              if (isInterviewQuestion(clean)) questionCountRef.current += 1;
+              // Use actual question number from message instead of incrementing
+              const questionNum = extractQuestionNumber(clean);
+              if (questionNum && questionNum > questionCountRef.current) {
+                questionCountRef.current = questionNum;
+              }
             }
           }
         }
@@ -1141,6 +1148,11 @@ export function AudioInterface({
   }
 
   if (isPaused && !isConnected && !isConnecting && !isReconnecting) {
+    // Calculate completed questions for display
+    const lastEntry = transcriptRef.current[transcriptRef.current.length - 1];
+    const userAnsweredLast = lastEntry?.role === 'user';
+    const displayCompletedQuestions = userAnsweredLast ? questionCountRef.current : Math.max(questionCountRef.current - 1, 0);
+    
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] p-8">
         <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
@@ -1148,7 +1160,7 @@ export function AudioInterface({
           <h3 className="text-xl font-semibold text-gray-900 mb-2">Interview Paused</h3>
           <p className="text-gray-500 mb-2">Your progress is saved. Click below to continue.</p>
           <p className="text-sm text-blue-600 font-medium mb-4">👆 Click "Resume Interview" to reconnect with Sarah</p>
-          <div className="bg-gray-50 rounded-lg p-3 mb-6"><p className="text-sm text-gray-600">Questions completed: {questionCountRef.current} of 16</p></div>
+          <div className="bg-gray-50 rounded-lg p-3 mb-6"><p className="text-sm text-gray-600">Questions completed: {displayCompletedQuestions} of 16</p></div>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button onClick={resumeInterview} disabled={isReconnecting} className="gap-2 w-full sm:w-auto bg-blue-600 hover:bg-blue-700"><Play className="w-4 h-4" />Resume Interview</Button>
             <Button variant="outline" onClick={() => handleGracefulEnd('user_ended')} className="gap-2 w-full sm:w-auto"><PhoneOff className="w-4 h-4" />End & Get Results</Button>
