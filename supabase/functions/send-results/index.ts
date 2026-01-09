@@ -15,6 +15,39 @@ const logStep = (step: string, details?: any) => {
   console.log(`[SEND-RESULTS] ${step}${detailsStr}`);
 };
 
+// Performance Analysis Prompt for Mock Interview / Audio Mock
+const PERFORMANCE_ANALYSIS_PROMPT = `You are an expert interview coach analyzing a candidate's interview performance. Review the complete transcript of their mock interview and provide a comprehensive, actionable performance analysis.
+
+## Your Analysis Must Include:
+
+### 1. Overall Performance Assessment
+- Provide an overall score out of 100
+- Give a 2-3 sentence executive summary of their performance
+
+### 2. Top 3 Strengths Demonstrated
+For each strength:
+- Name the strength
+- Quote a specific example from their answers (use exact words)
+- Explain why this is effective in interviews
+
+### 3. Top 3 Areas for Improvement
+For each area:
+- Name the improvement area
+- Quote where this showed up in their answers
+- Provide a specific, actionable fix
+- Give a stronger example answer (3-5 sentences)
+
+### 4. 3 Specific, Actionable Recommendations
+- Practical steps they can take before their next interview
+- Include timing and specific exercises where applicable
+
+### 5. Best Answer Highlight
+- Identify their single best answer
+- Quote the key part
+- Explain exactly why it worked well
+
+## Format your response in clear markdown with headers. Be specific, use their actual words, and provide genuinely helpful feedback. This analysis should make them measurably better at interviewing.`;
+
 type Role = "user" | "assistant";
 
 type ChatMessageRow = {
@@ -251,7 +284,7 @@ function generateResultsEmailHtml(opts: {
   ` : "";
 
   const section3Html = !isQuickPrep ? `
-    <h2 style="color:#2F6DF6;font-size:20px;margin:0 0 16px 0;padding-bottom:10px;border-bottom:2px solid #00C4CC;">📊 SECTION 3 — Final Summary</h2>
+    <h2 style="color:#2F6DF6;font-size:20px;margin:0 0 16px 0;padding-bottom:10px;border-bottom:2px solid #00C4CC;">📊 SECTION 3 — Performance Analysis</h2>
     <div style="margin:14px 0 36px 0;padding:20px;background:#F0FDF4;border-radius:12px;border:1px solid #BBF7D0;">${formatMarkdownToHtml(opts.analysisMarkdown)}</div>
   ` : "";
 
@@ -380,6 +413,77 @@ serve(async (req) => {
       return null;
     };
 
+    // Generate comprehensive performance analysis using Claude
+    const generatePerformanceAnalysis = async (transcript: string, prepPacket: string | null): Promise<string> => {
+      const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+      if (!ANTHROPIC_API_KEY) {
+        logStep("No Anthropic API key available for performance analysis");
+        return "# Performance Analysis\n\nUnable to generate automated analysis. Please review your transcript and coach feedback above.";
+      }
+
+      try {
+        logStep("Generating performance analysis with Claude", { transcriptLength: transcript.length });
+
+        const userMessage = `Here is the complete interview transcript to analyze:\n\n${transcript}\n\n${prepPacket ? `For additional context, here is the candidate's prep packet (the job and resume they were interviewing for):\n\n${prepPacket.substring(0, 3000)}` : ""}\n\nPlease provide your comprehensive performance analysis.`;
+
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": ANTHROPIC_API_KEY,
+            "anthropic-version": "2023-06-01",
+          },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 2500,
+            system: PERFORMANCE_ANALYSIS_PROMPT,
+            messages: [{ role: "user", content: userMessage }],
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          logStep("Claude API error for analysis", { status: response.status, error: errorText });
+          return "# Performance Analysis\n\nAutomated analysis temporarily unavailable. Please review Sarah's feedback in the transcript above.";
+        }
+
+        const data = await response.json();
+        const analysis = data.content[0]?.text || "";
+
+        if (analysis) {
+          logStep("Performance analysis generated", { analysisLength: analysis.length });
+          return analysis;
+        }
+
+        return "# Performance Analysis\n\nAnalysis could not be generated. Please review the transcript for Sarah's feedback.";
+      } catch (err) {
+        logStep("Error generating performance analysis", { error: err instanceof Error ? err.message : String(err) });
+        return "# Performance Analysis\n\nAnalysis generation failed. Please review Sarah's feedback in the transcript.";
+      }
+    };
+
+    // Clean and deduplicate transcript for better readability
+    const cleanTranscript = (rawTranscript: string): string => {
+      const parts = rawTranscript.split(/\n---\n/).filter(p => p.trim());
+      const cleaned: string[] = [];
+      const seen = new Set<string>();
+
+      for (const part of parts) {
+        const trimmed = part.trim();
+        if (!trimmed) continue;
+
+        // Create a normalized key for deduplication (lowercase, no extra whitespace)
+        const normalizedKey = trimmed.toLowerCase().replace(/\s+/g, " ").substring(0, 200);
+        
+        if (!seen.has(normalizedKey)) {
+          seen.add(normalizedKey);
+          cleaned.push(trimmed);
+        }
+      }
+
+      return cleaned.join("\n\n---\n\n");
+    };
+
     if (test_email && email) {
       const testSessionType = session_type || "full_mock";
       const testLabel = testSessionType === "quick_prep" ? "Quick Prep Packet" : 
@@ -489,6 +593,9 @@ serve(async (req) => {
     let transcript: string;
     let analysisMarkdown: string;
     
+    // Determine if this is a mock/audio interview that needs enhanced analysis
+    const needsEnhancedAnalysis = effectiveSessionType === "full_mock" || effectiveSessionType === "premium_audio";
+    
     if (effectiveSessionType === "premium_audio" && clientProvidedContent) {
       // Parse client-provided content which contains prep packet + transcript
       // Format: "prep packet content\n\n---\n\n# Audio Interview Transcript\n\ntranscript content"
@@ -496,27 +603,43 @@ serve(async (req) => {
       const markerIndex = clientProvidedContent.indexOf(transcriptMarker);
       
       if (markerIndex !== -1) {
-        transcript = clientProvidedContent.substring(markerIndex).trim();
+        const rawTranscript = clientProvidedContent.substring(markerIndex).trim();
+        transcript = cleanTranscript(rawTranscript);
       } else {
         // Fallback: treat entire content as transcript
-        transcript = clientProvidedContent;
+        transcript = cleanTranscript(clientProvidedContent);
       }
-      
-      // For audio, we don't have Sarah's final summary from chat - use a placeholder
-      analysisMarkdown = "# Interview Complete\n\nYour full interview transcript and prep materials are included above. Review Sarah's verbal feedback during the session for your personalized score and recommendations.";
       
       logStep("Using client-provided audio content", {
         contentLength: clientProvidedContent.length,
         transcriptLength: transcript.length,
       });
-    } else {
-      // Standard flow for text-based sessions (full_mock, quick_prep)
-      transcript = buildTranscriptMarkdown(chatMessages);
       
-      analysisMarkdown =
-        effectiveSessionType === "quick_prep"
-          ? prepPacket ?? "No prep packet was saved for this session."
-          : extractFinalSummaryMarkdown(chatMessages) ?? "# Final Summary\n\nYour full transcript is included above.";
+      // Generate comprehensive performance analysis for Audio Mock
+      analysisMarkdown = await generatePerformanceAnalysis(transcript, prepPacket);
+      
+    } else if (effectiveSessionType === "full_mock") {
+      // Standard flow for text-based mock interviews
+      const rawTranscript = buildTranscriptMarkdown(chatMessages);
+      transcript = cleanTranscript(rawTranscript);
+      
+      // Try to extract Sarah's final summary from the conversation first
+      const sarahSummary = extractFinalSummaryMarkdown(chatMessages);
+      
+      // Generate comprehensive performance analysis (combines Sarah's summary + deeper analysis)
+      const claudeAnalysis = await generatePerformanceAnalysis(transcript, prepPacket);
+      
+      // If Sarah provided a summary, combine it with Claude's analysis
+      if (sarahSummary && sarahSummary.length > 100) {
+        analysisMarkdown = sarahSummary + "\n\n---\n\n## 📊 Detailed Performance Analysis\n\n" + claudeAnalysis;
+      } else {
+        analysisMarkdown = claudeAnalysis;
+      }
+      
+    } else {
+      // Quick Prep flow - no transcript, just the prep packet
+      transcript = "";
+      analysisMarkdown = prepPacket ?? "No prep packet was saved for this session.";
     }
 
     logStep("Building email", {
