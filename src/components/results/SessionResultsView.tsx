@@ -2,7 +2,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Mail, RotateCcw, Download } from "lucide-react";
+import { Mail, Download } from "lucide-react";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 
 export interface SessionResultsViewProps {
@@ -11,7 +11,6 @@ export interface SessionResultsViewProps {
   prepPacket?: string | null;
   transcript?: string | null;
   analysisMarkdown?: string | null;
-  onStartOver?: () => void;
 }
 
 // Parse transcript into Q&A pairs for clean display
@@ -48,7 +47,6 @@ export function SessionResultsView({
   prepPacket,
   transcript,
   analysisMarkdown,
-  onStartOver,
 }: SessionResultsViewProps) {
   const isQuickPrep = sessionLabel.toLowerCase().includes('quick prep');
   const hasPrepPacket = Boolean(prepPacket && prepPacket.length > 50);
@@ -122,18 +120,10 @@ export function SessionResultsView({
               <Mail className="h-4 w-4 text-primary" />
               Full results sent to <span className="font-medium text-foreground">{email}</span>
             </p>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={handleDownload} className="gap-2">
-                <Download className="h-4 w-4" />
-                Download
-              </Button>
-              {onStartOver && (
-                <Button variant="outline" onClick={onStartOver} className="gap-2">
-                  <RotateCcw className="h-4 w-4" />
-                  Start Over
-                </Button>
-              )}
-            </div>
+            <Button variant="outline" onClick={handleDownload} className="gap-2">
+              <Download className="h-4 w-4" />
+              Download
+            </Button>
           </div>
         </header>
 
