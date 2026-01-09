@@ -41,52 +41,39 @@ type ConnectionQuality = 'excellent' | 'good' | 'poor' | 'disconnected';
 
 // Helper function to detect actual interview questions (not greetings or conversational)
 const isInterviewQuestion = (text: string): boolean => {
-  if (!text || !text.includes('?')) return false;
+  if (!text) return false;
   
-  // Skip common non-question patterns
-  const skipPatterns = [
-    /ready to begin/i,
-    /shall we (start|begin|continue)/i,
-    /are you ready/i,
-    /can you hear me/i,
-    /is that clear/i,
-    /does that make sense/i,
-    /any questions before we/i,
-    /sound good/i,
-    /welcome back/i,
-  ];
+  // Simply look for numbered question patterns that Sarah uses
+  // e.g., "Question 1:", "Question 2 of 16:", "question 3:", etc.
+  const numberedQuestionPattern = /question\s*\d+/i;
   
-  for (const pattern of skipPatterns) {
-    if (pattern.test(text)) return false;
+  return numberedQuestionPattern.test(text);
+};
+
+// Helper function to extract the question NUMBER from Sarah's message
+// e.g., "Question 2:" returns 2, "Question 5 of 16:" returns 5
+const extractQuestionNumber = (text: string): number | null => {
+  if (!text) return null;
+  
+  const match = text.match(/question\s*(\d+)/i);
+  if (match && match[1]) {
+    return parseInt(match[1], 10);
   }
-  
-  // Actual interview question patterns
-  const questionPatterns = [
-    /^what /i,
-    /^why /i,
-    /^how /i,
-    /^tell me/i,
-    /^describe/i,
-    /^can you (tell|describe|explain|walk|share|give)/i,
-    /^walk me/i,
-    /^explain/i,
-    /^give me/i,
-    /^share /i,
-    /^have you (ever )?/i,
-    /^when /i,
-    /^where /i,
-    /question \d+/i,
-    /let's start with/i,
-    /first question/i,
-    /next question/i,
-  ];
-  
-  const trimmed = text.trim();
-  for (const pattern of questionPatterns) {
-    if (pattern.test(trimmed)) return true;
+  return null;
+};
+
+// Helper function to get the highest question number from transcript
+const getHighestQuestionNumber = (transcript: Array<{ role: string; text: string }>): number => {
+  let highest = 0;
+  for (const entry of transcript) {
+    if (entry.role === 'assistant') {
+      const num = extractQuestionNumber(entry.text);
+      if (num && num > highest) {
+        highest = num;
+      }
+    }
   }
-  
-  return false;
+  return highest;
 };
 
 // Helper function to extract just the question portion from a message
@@ -803,8 +790,9 @@ export function AudioInterface({
             if (assistantMessages.length > 0) {
               const lastAssistant = assistantMessages[assistantMessages.length - 1];
               lastAssistantTurnRef.current = lastAssistant.content;
-              questionCountRef.current = assistantMessages.filter((m) => isInterviewQuestion(m.content)).length;
-              console.log('[reconnect] Restored question count:', questionCountRef.current);
+              // Use actual question numbers from Sarah's messages instead of counting
+              questionCountRef.current = getHighestQuestionNumber(transcriptRef.current);
+              console.log('[reconnect] Restored question count from actual numbers:', questionCountRef.current);
             }
           }
         }
@@ -1037,7 +1025,8 @@ export function AudioInterface({
         const assistantMessages = messages.filter((m: any) => m.role === 'assistant');
         if (assistantMessages.length > 0) {
           lastAssistantTurnRef.current = assistantMessages[assistantMessages.length - 1].content;
-          questionCountRef.current = assistantMessages.filter((m: any) => isInterviewQuestion(m.content)).length;
+          // Use actual question numbers from Sarah's messages instead of counting
+          questionCountRef.current = getHighestQuestionNumber(transcriptRef.current);
         }
         console.log('[resumeInterview] Loaded from DB - transcript entries:', transcriptRef.current.length, 'questionCount:', questionCountRef.current);
       }
