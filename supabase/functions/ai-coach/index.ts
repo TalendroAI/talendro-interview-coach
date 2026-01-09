@@ -237,7 +237,8 @@ serve(async (req) => {
       job_description, 
       company_url,
       is_initial,
-      first_name
+      first_name,
+      generate_prep_only // Flag for Audio Mock to generate prep packet synchronously before interview
     } = await req.json();
 
     if (!session_type) {
@@ -403,6 +404,93 @@ serve(async (req) => {
     } else if (!is_initial) {
       // Non-initial calls must have a session_id
       throw new Error("session_id is required for ongoing conversations");
+    }
+
+    // GENERATE_PREP_ONLY: For Audio Mock, generate prep packet synchronously BEFORE interview starts
+    // This ensures Audio Mock customers get the same prep packet value as Quick Prep customers
+    if (generate_prep_only && session_id) {
+      logStep("Generating prep packet synchronously for Audio Mock");
+      
+      // Build context for prep packet generation
+      let prepDocumentContext = "";
+      if (resume) {
+        prepDocumentContext += `\n\n## CANDIDATE'S RESUME:\n${resume}`;
+      }
+      if (job_description) {
+        prepDocumentContext += `\n\n## TARGET JOB DESCRIPTION:\n${job_description}`;
+      }
+      if (normalizedCompanyUrl) {
+        prepDocumentContext += `\n\n## TARGET COMPANY URL:\n${normalizedCompanyUrl}`;
+      }
+
+      const prepSystemPrompt = PREP_PACKET_PROMPT + prepDocumentContext;
+
+      try {
+        const prepResponse = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": ANTHROPIC_API_KEY,
+            "anthropic-version": "2023-06-01",
+          },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 4096,
+            system: prepSystemPrompt,
+            messages: [
+              {
+                role: "user",
+                content: "Please generate my comprehensive interview preparation packet based on my documents.",
+              },
+            ],
+          }),
+        });
+
+        if (prepResponse.ok) {
+          const prepData = await prepResponse.json();
+          const prepPacketContent = prepData.content[0]?.text || "";
+
+          if (prepPacketContent) {
+            // Save prep packet to session
+            await supabaseClient
+              .from("coaching_sessions")
+              .update({ prep_packet: { content: prepPacketContent } })
+              .eq("id", session_id);
+
+            logStep("Prep packet generated and saved for Audio Mock", { length: prepPacketContent.length });
+
+            return new Response(
+              JSON.stringify({ 
+                success: true, 
+                message: "Prep packet generated successfully",
+                prep_packet_length: prepPacketContent.length
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+            );
+          }
+        } else {
+          const errorText = await prepResponse.text();
+          logStep("Failed to generate prep packet", { status: prepResponse.status, error: errorText });
+          throw new Error(`Claude API error: ${prepResponse.status}`);
+        }
+      } catch (e) {
+        logStep("Prep packet generation failed", { message: e instanceof Error ? e.message : String(e) });
+        // Return success anyway - don't block the interview
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            message: "Prep packet generation failed but interview can continue",
+            error: e instanceof Error ? e.message : String(e)
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+        );
+      }
+
+      // Fallback return
+      return new Response(
+        JSON.stringify({ success: false, message: "No prep packet content generated" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
     }
 
     // Build context from documents
