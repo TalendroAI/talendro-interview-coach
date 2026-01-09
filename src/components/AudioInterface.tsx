@@ -531,20 +531,8 @@ export function AudioInterface({
           }
         }, 100);
       }
-
-      if (pendingResumeKickoffRef.current) {
-        const kickoff = pendingResumeKickoffRef.current;
-        setTimeout(() => {
-          try {
-            conversation.sendUserMessage(kickoff);
-            console.log('[AudioInterface] Resume kickoff message sent');
-          } catch (e) {
-            console.warn('[AudioInterface] Failed to send resume kickoff message:', e);
-          } finally {
-            pendingResumeKickoffRef.current = null;
-          }
-        }, 175);
-      }
+      // REMOVED: pendingResumeKickoffRef block - was causing duplicate instructions to Sarah
+      // The firstMessage (resumeGreeting) already handles the welcome back
     },
     onDisconnect: (details) => {
       console.log('[AudioInterface] Disconnected from ElevenLabs agent', details);
@@ -860,10 +848,7 @@ export function AudioInterface({
         const nameSuffix = firstName ? `, ${firstName}` : '';
         const resumeGreeting = `Welcome back${nameSuffix}! We completed ${completedQuestions} questions before pausing. Now continuing with question ${resumeQuestionNumber}: ${safeQuestionText || 'the next question'}`;
 
-        // ONLY set resume kickoff for resume mode - SIMPLIFIED for faster response
-        if (!isInitial) {
-          pendingResumeKickoffRef.current = `RESUME: ${resumeGreeting}`;
-        }
+        // NOTE: resumeGreeting is used as firstMessage - no need for separate kickoff
 
         const contextParts: string[] = [];
 
@@ -1012,6 +997,8 @@ export function AudioInterface({
       return;
     }
 
+    // IMMEDIATELY set waiting state so UI shows "Sarah is preparing..." right away
+    setIsWaitingForGreeting(true);
     setIsReconnecting(true);
     isResumingRef.current = true;
     
