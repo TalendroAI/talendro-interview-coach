@@ -267,6 +267,7 @@ function generateResultsEmailHtml(opts: {
   prepPacket: string | null;
   transcript: string;
   analysisMarkdown: string;
+  isProSubscriber: boolean;
 }): string {
   const prepHtml = opts.prepPacket ? formatMarkdownToHtml(opts.prepPacket) : null;
   const isQuickPrep = opts.sessionType === "quick_prep";
@@ -329,6 +330,7 @@ function generateResultsEmailHtml(opts: {
               ${section2Html}
               ${section3Html}
 
+              ${opts.isProSubscriber ? `
               <table width="100%" cellpadding="0" cellspacing="0" style="margin:40px 0;">
                 <tr>
                   <td align="center">
@@ -336,6 +338,7 @@ function generateResultsEmailHtml(opts: {
                   </td>
                 </tr>
               </table>
+              ` : ''}
 
               <p style="margin:28px 0 0 0;font-size:15px;color:#2C2F38;line-height:1.6;">Questions? Reply to this email — we'll help.</p>
 
@@ -496,6 +499,7 @@ serve(async (req) => {
         prepPacket: "## Company Overview\nAcme Corp is a leading technology company.\n\n### Key Products\n- Product A\n- Product B\n\n### Interview Tips\n**Be specific** about your experience.",
         transcript: "Sarah (Coach):\nLet's start with your first question. Tell me about a time you led a challenging project.\n\n---\n\nYou:\nAt my previous company, I led a team of 5 engineers to rebuild our payment system. We faced tight deadlines and legacy code challenges.\n\n---\n\nSarah (Coach):\n**Great structure!** You clearly identified the situation and challenge. Next question: How did you handle a conflict with a team member?",
         analysisMarkdown: "# 🎯 INTERVIEW COMPLETE\n\n## Overall Performance Score: 85/100\n\n### Score Breakdown\n- Communication: 82/100\n- Technical Depth: 88/100\n- Problem Solving: 85/100\n\n---\n\n## ✅ Top 3 Strengths\n\n**1. Clear Communication**\nYou articulated complex ideas simply and effectively.\n\n**2. Strong Examples**\nYour STAR responses were well-structured with specific metrics.\n\n**3. Technical Knowledge**\nDemonstrated deep understanding of system architecture.\n\n---\n\n## 📈 Top 3 Areas for Improvement\n\n**1. Time Management**\nSome answers ran long. Practice 2-minute responses.\n\n**2. Quantify Results**\nAdd more specific numbers and percentages.\n\n**3. Ask Clarifying Questions**\nDon't assume - ask before answering.\n\n---\n\n## 🎯 Personalized Action Items\n\n1. Practice STAR responses with a timer\n2. Prepare 5 quantified achievements\n3. Record yourself and review",
+        isProSubscriber: false, // Test emails default to non-Pro
       });
 
       const html = sanitizeEmailHtml(htmlRaw);
@@ -525,9 +529,24 @@ serve(async (req) => {
 
     const { data: session, error: sessionError } = await supabaseClient
       .from("coaching_sessions")
-      .select("id, email, status, session_type, prep_packet, chat_messages(role, content, created_at)")
+      .select("id, email, status, session_type, prep_packet, profile_id, chat_messages(role, content, created_at)")
       .eq("id", session_id)
       .single();
+
+    // Check if user is a Pro subscriber
+    let isProSubscriber = false;
+    if (session?.profile_id) {
+      const { data: profile } = await supabaseClient
+        .from("profiles")
+        .select("is_pro_subscriber")
+        .eq("id", session.profile_id)
+        .single();
+      
+      isProSubscriber = profile?.is_pro_subscriber === true;
+    }
+    
+    // Also check if this session itself was a Pro session type
+    const isProSession = session?.session_type === "pro";
 
     if (sessionError || !session) {
       logStep("Invalid session", { hasSession: false });
@@ -650,7 +669,7 @@ serve(async (req) => {
     });
 
     const emailHtml = sanitizeEmailHtml(
-      generateResultsEmailHtml({ sessionLabel, sessionType: effectiveSessionType, email, messageCount, prepPacket, transcript, analysisMarkdown }),
+      generateResultsEmailHtml({ sessionLabel, sessionType: effectiveSessionType, email, messageCount, prepPacket, transcript, analysisMarkdown, isProSubscriber: isProSubscriber || isProSession }),
     );
 
     // Optional: server-side preview for debugging (does not send or write to DB)

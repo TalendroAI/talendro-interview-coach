@@ -281,15 +281,52 @@ export default function InterviewCoach() {
       } finally {
         setIsGeneratingContent(false);
       }
-    } else if (isPaymentVerified && activeSessionType) {
-      // For other session types, transition to session view
+    } else if (isPaymentVerified && activeSessionType === 'premium_audio' && sessionId) {
+      // For Audio Mock: Generate prep packet FIRST (same as Quick Prep), then transition
+      setIsGeneratingContent(true);
+      setContentError(null);
+      
+      try {
+        // Generate prep packet using the Quick Prep prompt (same value as Quick Prep customers get)
+        const { data, error } = await supabase.functions.invoke('ai-coach', {
+          body: {
+            session_id: sessionId,
+            session_type: 'quick_prep', // Use quick_prep to get the prep packet format
+            resume: documents.resume,
+            job_description: documents.jobDescription,
+            company_url: documents.companyUrl,
+            is_initial: true,
+            generate_prep_only: true // Flag to indicate we just want the prep packet saved
+          }
+        });
+        
+        if (error) {
+          console.error('Failed to generate prep packet for Audio Mock:', error);
+          // Don't block - continue to interview even if prep packet fails
+        } else {
+          console.log('Prep packet generated for Audio Mock session');
+        }
+      } catch (err) {
+        console.error('Error generating prep packet for Audio Mock:', err);
+        // Don't block the interview - prep packet is a bonus, not a blocker
+      } finally {
+        setIsGeneratingContent(false);
+      }
+      
+      // Now transition to the audio interview
       setIsSessionStarted(true);
       scheduleScrollToChatStart();
       toast({
         title: 'Documents saved!',
-        description: activeSessionType === 'premium_audio' 
-          ? 'Click "Begin Interview" when you\'re ready to start.'
-          : 'Your personalized coaching session has begun.',
+        description: 'Click "Begin Interview" when you\'re ready to start.',
+      });
+    } else if (isPaymentVerified && activeSessionType) {
+      // For other session types (full_mock, pro), transition to session view
+      setIsSessionStarted(true);
+      scheduleScrollToChatStart();
+      toast({
+        title: 'Documents saved!',
+        description: 'Your personalized coaching session has begun.',
       });
     }
   };
