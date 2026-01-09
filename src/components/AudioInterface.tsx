@@ -92,37 +92,40 @@ const isInterviewQuestion = (text: string): boolean => {
 // Helper function to extract question number from "Question X of Y" pattern
 const extractQuestionNumber = (text: string): number | null => {
   if (!text) return null;
-  // Match patterns like "Question 8 of 10", "question 3:", "Question 5 of 16:"
-  const match = text.match(/question\s+(\d+)\s*(?:of\s+\d+)?/i);
+  // Match patterns like "Question 8 of 10", "question 3:", "Question 5 of 16:", "Question 1"
+  const match = text.match(/question\s+(\d+)(?:\s*of\s*\d+)?/i);
   return match ? parseInt(match[1], 10) : null;
 };
 
-// Helper function to extract just the question portion from a message
-// Sarah often gives feedback first, then asks a question at the end
-const extractQuestionOnly = (text: string): string | null => {
+// Helper function to extract the full question text after "Question N:" or "Question N of Y:"
+// This is more reliable than looking for question marks
+const extractQuestionText = (text: string): string | null => {
   if (!text) return null;
   
-  // Look for common question lead-ins and extract from there
-  const questionLeadIns = [
-    /(?:let's move to our next question:|next question:|question \d+(?:\s*of\s*\d+)?:)\s*(.+\?)/i,
-    /(?:can you tell me|tell me about|what|why|how|describe|walk me through|explain|share|have you)[\s\S]*\?/i,
+  // Match "Question N:" or "Question N of Y:" and capture everything after it
+  // This captures the actual interview question regardless of punctuation
+  const patterns = [
+    // "Question 8 of 16: Tell me about a time..." - captures everything after the colon
+    /question\s+\d+\s*(?:of\s*\d+)?\s*[:\-–—]\s*(.+)/is,
+    // "Question 8: Tell me about..." 
+    /question\s+\d+\s*[:\-–—]\s*(.+)/is,
   ];
   
-  // Try to find a question lead-in first
-  for (const pattern of questionLeadIns) {
+  for (const pattern of patterns) {
     const match = text.match(pattern);
-    if (match) {
-      // Get the captured group if it exists, otherwise the whole match
-      const questionPart = match[1] || match[0];
-      return questionPart.trim();
-    }
-  }
-  
-  // Fallback: find the last sentence that ends with ?
-  const sentences = text.split(/(?<=[.!?])\s+/);
-  for (let i = sentences.length - 1; i >= 0; i--) {
-    if (sentences[i].trim().endsWith('?')) {
-      return sentences[i].trim();
+    if (match && match[1]) {
+      // Clean up the captured text - remove trailing feedback if present
+      let questionText = match[1].trim();
+      
+      // If there's a sentence ending with ?, extract up to and including that
+      const questionEndMatch = questionText.match(/^(.+?\?)/s);
+      if (questionEndMatch) {
+        return questionEndMatch[1].trim();
+      }
+      
+      // Otherwise return the first sentence or up to 300 chars
+      const firstSentence = questionText.split(/(?<=[.!?])\s+/)[0];
+      return firstSentence ? firstSentence.trim().substring(0, 300) : questionText.substring(0, 300);
     }
   }
   
@@ -843,7 +846,9 @@ export function AudioInterface({
         
         const lastNumberedMessage = numberedQuestionMessages[numberedQuestionMessages.length - 1];
         const lastQuestionNumber = lastNumberedMessage ? extractQuestionNumber(lastNumberedMessage.text) : null;
-        const lastQuestionText = lastNumberedMessage ? extractQuestionOnly(lastNumberedMessage.text) : null;
+        const lastQuestionText = lastNumberedMessage ? extractQuestionText(lastNumberedMessage.text) : null;
+        
+        console.log('[reconnect] Question detection - lastQuestionNumber:', lastQuestionNumber, 'lastQuestionText:', lastQuestionText?.substring(0, 50));
 
         // Determine if user answered the last numbered question
         const lastNumberedIndex = lastNumberedMessage 
@@ -892,14 +897,11 @@ export function AudioInterface({
             .map(t => `${t.role === 'user' ? 'USER' : 'SARAH'}: ${t.text.substring(0, 200)}`)
             .join('\n');
 
-          // Use the question number we already extracted above
-          const lastQuestion = lastQuestionText;
-          
           // CRITICAL: Clear instruction based on actual question number
           let resumeInstruction: string;
           if (userAnsweredLastQuestion && lastQuestionNumber) {
             resumeInstruction = `User answered Question ${lastQuestionNumber}. Ask Question ${lastQuestionNumber + 1} now. Then STOP and WAIT for their answer before proceeding.`;
-          } else if (lastQuestionNumber && lastQuestion) {
+          } else if (lastQuestionNumber && lastQuestionText) {
             resumeInstruction = `User has NOT answered Question ${lastQuestionNumber} yet. You already repeated it in your greeting. WAIT for their answer.`;
           } else {
             // Fallback if no question number found
