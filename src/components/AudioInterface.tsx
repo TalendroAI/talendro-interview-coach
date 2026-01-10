@@ -41,13 +41,47 @@ type ConnectionQuality = 'excellent' | 'good' | 'poor' | 'disconnected';
 
 // Helper function to detect actual interview questions (not greetings or conversational)
 const isInterviewQuestion = (text: string): boolean => {
-  if (!text) return false;
+  if (!text || !text.includes('?')) return false;
   
-  // Simply look for numbered question patterns that Sarah uses
-  // e.g., "Question 1:", "Question 2 of 16:", "question 3:", etc.
-  const numberedQuestionPattern = /question\s*\d+/i;
+  // Skip greeting/conversational patterns
+  const skipPatterns = [
+    /ready to begin/i,
+    /shall we (start|begin|continue)/i,
+    /are you ready/i,
+    /can you hear me/i,
+    /is that clear/i,
+    /does that make sense/i,
+    /any questions before we/i,
+    /sound good/i,
+    /welcome back/i,
+    /would you like me to repeat/i,
+    /do you need me to/i,
+  ];
   
-  return numberedQuestionPattern.test(text);
+  for (const pattern of skipPatterns) {
+    if (pattern.test(text)) return false;
+  }
+  
+  // Look for numbered question patterns first (most reliable)
+  if (/question\s*\d+/i.test(text)) return true;
+  
+  // Look for question lead-ins that indicate a real interview question
+  const questionIndicators = [
+    /let's begin|let's start|first question|next question/i,
+    /tell me about a time/i,
+    /can you (tell|describe|explain|walk|share)/i,
+    /what excites you/i,
+    /how would you/i,
+    /why (do you|did you|are you)/i,
+    /describe a situation/i,
+    /give me an example/i,
+  ];
+  
+  for (const pattern of questionIndicators) {
+    if (pattern.test(text)) return true;
+  }
+  
+  return false;
 };
 
 // Helper function to extract the question NUMBER from Sarah's message
@@ -63,17 +97,27 @@ const extractQuestionNumber = (text: string): number | null => {
 };
 
 // Helper function to get the highest question number from transcript
+// Falls back to counting interview questions if no numbered questions found
 const getHighestQuestionNumber = (transcript: Array<{ role: string; text: string }>): number => {
-  let highest = 0;
+  let highestNumbered = 0;
+  let questionCount = 0;
+  
   for (const entry of transcript) {
     if (entry.role === 'assistant') {
+      // First try to find explicit question numbers
       const num = extractQuestionNumber(entry.text);
-      if (num && num > highest) {
-        highest = num;
+      if (num && num > highestNumbered) {
+        highestNumbered = num;
+      }
+      // Also count interview questions
+      if (isInterviewQuestion(entry.text)) {
+        questionCount++;
       }
     }
   }
-  return highest;
+  
+  // Use numbered questions if found, otherwise use count
+  return highestNumbered > 0 ? highestNumbered : questionCount;
 };
 
 // Helper function to extract just the question portion from a message
@@ -595,11 +639,15 @@ export function AudioInterface({
           const clean = typeof messageText === 'string' ? messageText.trim() : '';
           if (clean) {
             lastAssistantTurnRef.current = clean;
-            // Use actual question number from message instead of incrementing
+            // First try to extract explicit question number
             const questionNum = extractQuestionNumber(clean);
             if (questionNum && questionNum > questionCountRef.current) {
               questionCountRef.current = questionNum;
-              console.log('[AudioInterface] Updated question count to:', questionNum);
+              console.log('[AudioInterface] Updated question count from number to:', questionNum);
+            } else if (isInterviewQuestion(clean)) {
+              // Fall back to counting interview questions
+              questionCountRef.current += 1;
+              console.log('[AudioInterface] Updated question count by increment to:', questionCountRef.current);
             }
           }
         }
@@ -617,10 +665,13 @@ export function AudioInterface({
             const clean = typeof text === 'string' ? text.trim() : '';
             if (clean) {
               lastAssistantTurnRef.current = clean;
-              // Use actual question number from message instead of incrementing
+              // First try to extract explicit question number
               const questionNum = extractQuestionNumber(clean);
               if (questionNum && questionNum > questionCountRef.current) {
                 questionCountRef.current = questionNum;
+              } else if (isInterviewQuestion(clean)) {
+                // Fall back to counting interview questions
+                questionCountRef.current += 1;
               }
             }
           }
