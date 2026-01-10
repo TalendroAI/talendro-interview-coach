@@ -116,7 +116,7 @@ export function Header({
             </>
           )}
           
-          {/* End Interview Button - For Mock Interview */}
+          {/* End Interview Button - For Audio Mock Interview */}
           {showEndButton && !isPaused && (
             <Button
               size="sm"
