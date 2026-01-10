@@ -158,7 +158,7 @@ export function DocumentSidebar({
               {isResumeComplete ? <Check className="h-3.5 w-3.5" /> : (requiresFirstName ? "2" : "1")}
             </span>
             <Label htmlFor="resume" className="font-semibold text-foreground">
-              Résumé
+              Résumé <span className="text-destructive">*</span>
             </Label>
           </div>
           <Textarea
@@ -192,7 +192,7 @@ export function DocumentSidebar({
               {isJobComplete ? <Check className="h-3.5 w-3.5" /> : (requiresFirstName ? "3" : "2")}
             </span>
             <Label htmlFor="jobDescription" className="font-semibold text-foreground">
-              Job Description
+              Job Description <span className="text-destructive">*</span>
             </Label>
           </div>
           <Textarea
@@ -226,7 +226,7 @@ export function DocumentSidebar({
               {isCompanyComplete ? <Check className="h-3.5 w-3.5" /> : (requiresFirstName ? "4" : "3")}
             </span>
             <Label htmlFor="companyUrl" className="font-semibold text-foreground">
-              Company Website URL
+              Company Website URL <span className="text-destructive">*</span>
             </Label>
           </div>
           <Input
