@@ -305,7 +305,7 @@ export function DocumentSidebar({
               ? "bg-secondary text-secondary-foreground scale-110 shadow-sm"
               : isContentReady 
                 ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
-                : "bg-muted text-muted-foreground"
+                : "bg-primary text-primary-foreground"
           )}>
             {isSessionCompleted ? <Check className="h-3.5 w-3.5" /> : isContentReady ? <Check className="h-3.5 w-3.5" /> : (isPro ? "7" : (requiresFirstName ? "6" : "5"))}
           </span>
