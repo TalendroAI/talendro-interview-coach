@@ -10,6 +10,7 @@ import { SessionCompletedDialog } from '@/components/SessionCompletedDialog';
 import { SessionResultsView } from '@/components/results/SessionResultsView';
 import { PausedSessionNotification } from '@/components/PausedSessionNotification';
 import { PausedSessionConflictDialog } from '@/components/PausedSessionConflictDialog';
+import { PrepPacketGeneratingOverlay } from '@/components/PrepPacketGeneratingOverlay';
 import { useSessionParams } from '@/hooks/useSessionParams';
 import { DocumentInputs, SessionType } from '@/types/session';
 import { useToast } from '@/hooks/use-toast';
@@ -65,6 +66,7 @@ export default function InterviewCoach() {
   // Audio interview state
   const [isAudioInterviewStarted, setIsAudioInterviewStarted] = useState(false);
   const [isAudioInterviewComplete, setIsAudioInterviewComplete] = useState(false);
+  const [isGeneratingPrepPacket, setIsGeneratingPrepPacket] = useState(false);
   
   // Completed session dialog state
   const [showCompletedDialog, setShowCompletedDialog] = useState(false);
@@ -282,8 +284,8 @@ export default function InterviewCoach() {
         setIsGeneratingContent(false);
       }
     } else if (isPaymentVerified && activeSessionType === 'premium_audio' && sessionId) {
-      // For Audio Mock: Generate prep packet FIRST (same as Quick Prep), then transition
-      setIsGeneratingContent(true);
+      // For Audio Mock: Show full-screen overlay while generating prep packet
+      setIsGeneratingPrepPacket(true);
       setContentError(null);
       
       try {
@@ -310,15 +312,15 @@ export default function InterviewCoach() {
         console.error('Error generating prep packet for Audio Mock:', err);
         // Don't block the interview - prep packet is a bonus, not a blocker
       } finally {
-        setIsGeneratingContent(false);
+        setIsGeneratingPrepPacket(false);
       }
       
       // Now transition to the audio interview
       setIsSessionStarted(true);
       scheduleScrollToChatStart();
       toast({
-        title: 'Documents saved!',
-        description: 'Click "Begin Interview" when you\'re ready to start.',
+        title: 'Prep packet ready!',
+        description: 'Click "Begin Interview" when you\'re ready to start with Sarah.',
       });
     } else if (isPaymentVerified && activeSessionType) {
       // For other session types (full_mock, pro), transition to session view
@@ -1178,6 +1180,12 @@ export default function InterviewCoach() {
           {renderMainContent()}
         </main>
       </div>
+
+      {/* Prep Packet Generation Overlay for Audio Mock */}
+      <PrepPacketGeneratingOverlay 
+        isActive={isGeneratingPrepPacket}
+        companyUrl={documents.companyUrl}
+      />
 
       {/* Paused Session Conflict Dialog */}
       <PausedSessionConflictDialog
