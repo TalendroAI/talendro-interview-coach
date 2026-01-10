@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useConversation } from '@elevenlabs/react';
-import { MicOff, Mic, Volume2, PhoneOff, Loader2, Lightbulb, RefreshCw, WifiOff, AlertTriangle, CheckCircle2, Pause, Play } from 'lucide-react';
+import { MicOff, Mic, Volume2, PhoneOff, Loader2, Lightbulb, RefreshCw, WifiOff, AlertTriangle, CheckCircle2, Pause, Play, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -227,6 +227,7 @@ export function AudioInterface({
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [showSilenceWarning, setShowSilenceWarning] = useState(false);
   const [isSessionEnding, setIsSessionEnding] = useState(false);
+  const [isResultsSent, setIsResultsSent] = useState(false);
   const [inputVolume, setInputVolume] = useState(0);
   const [showMicInputWarning, setShowMicInputWarning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -437,6 +438,7 @@ export function AudioInterface({
     }
 
     setIsSessionEnding(false);
+    setIsResultsSent(true);
     interviewStarted.current = false;
     onInterviewComplete?.();
   }, [cleanup, toast, onInterviewComplete, onSessionComplete]);
@@ -1210,6 +1212,24 @@ export function AudioInterface({
             <div className="flex items-center gap-2 text-green-600"><CheckCircle2 className="w-5 h-5" />Interview transcript captured</div>
             <div className="flex items-center gap-2 text-green-600"><CheckCircle2 className="w-5 h-5" />Performance analysis complete</div>
             <div className="flex items-center gap-2 text-blue-600"><Loader2 className="w-5 h-5 animate-spin" />Sending results to your email...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isResultsSent) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] p-8">
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+          <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+            <CheckCircle2 className="w-8 h-8 text-green-600" />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Results Sent!</h3>
+          <p className="text-gray-500 mb-4">Check your email for your interview results.</p>
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
+            <Mail className="w-4 h-4" />
+            <span>Results have been emailed to you</span>
           </div>
         </div>
       </div>
