@@ -1021,17 +1021,25 @@ export function AudioInterface({
       const lastEntry = transcriptRef.current[transcriptRef.current.length - 1];
       const userAnsweredLast = lastEntry?.role === 'user';
       const completedQuestions = userAnsweredLast ? questionCountRef.current : Math.max(questionCountRef.current - 1, 0);
+      const questionsAsked = questionCountRef.current;
       
-      console.log('[pauseInterview] Questions asked:', questionCountRef.current, 'Completed:', completedQuestions, 'User answered last:', userAnsweredLast);
+      console.log('[pauseInterview] Questions asked:', questionsAsked, 'Completed:', completedQuestions, 'User answered last:', userAnsweredLast);
       
       const { error } = await supabase.functions.invoke('audio-session', {
-        body: { action: 'pause_session', sessionId, email: userEmail, questionNumber: completedQuestions, app_url: appUrl },
+        body: { 
+          action: 'pause_session', 
+          sessionId, 
+          email: userEmail, 
+          questionNumber: completedQuestions,
+          questionsAsked: questionsAsked, // Save this so we can restore it on resume
+          app_url: appUrl 
+        },
       });
 
       if (error) console.error('[pauseInterview] Failed to save pause state:', error);
 
       toast({ title: 'Interview Paused', description: 'Your progress is saved. You can resume within 24 hours.' });
-      logEvent({ eventType: 'session_paused', message: `Paused at question ${completedQuestions} (asked: ${questionCountRef.current})`, context: { questionCount: completedQuestions, questionsAsked: questionCountRef.current } });
+      logEvent({ eventType: 'session_paused', message: `Paused at question ${completedQuestions} (asked: ${questionsAsked})`, context: { questionCount: completedQuestions, questionsAsked: questionsAsked } });
     } catch (error) {
       console.error('[pauseInterview] Failed to save pause state:', error);
       toast({ title: 'Interview Paused', description: 'Your session is paused locally.', variant: 'default' });
@@ -1071,7 +1079,8 @@ export function AudioInterface({
       }
 
       const messages = data?.messages || [];
-      console.log('[resumeInterview] Got', messages.length, 'messages from DB');
+      const savedQuestionsAsked = data?.questionsAsked || data?.question_number || 0;
+      console.log('[resumeInterview] Got', messages.length, 'messages from DB, savedQuestionsAsked:', savedQuestionsAsked);
       
       if (messages.length > 0) {
         transcriptRef.current = messages.map((m: any) => ({
@@ -1083,10 +1092,19 @@ export function AudioInterface({
         const assistantMessages = messages.filter((m: any) => m.role === 'assistant');
         if (assistantMessages.length > 0) {
           lastAssistantTurnRef.current = assistantMessages[assistantMessages.length - 1].content;
-          // Use actual question numbers from Sarah's messages instead of counting
-          questionCountRef.current = getHighestQuestionNumber(transcriptRef.current);
         }
-        console.log('[resumeInterview] Loaded from DB - transcript entries:', transcriptRef.current.length, 'questionCount:', questionCountRef.current);
+        
+        // Use saved questionsAsked if available, otherwise fall back to counting
+        if (savedQuestionsAsked > 0) {
+          questionCountRef.current = savedQuestionsAsked;
+          console.log('[resumeInterview] Restored question count from saved value:', savedQuestionsAsked);
+        } else {
+          // Fallback: count assistant messages that look like questions
+          questionCountRef.current = getHighestQuestionNumber(transcriptRef.current);
+          console.log('[resumeInterview] Restored question count from counting:', questionCountRef.current);
+        }
+        
+        console.log('[resumeInterview] Final state - transcript entries:', transcriptRef.current.length, 'questionCount:', questionCountRef.current);
       }
 
       setIsPaused(false);
