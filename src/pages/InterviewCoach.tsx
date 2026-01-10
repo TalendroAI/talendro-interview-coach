@@ -1089,7 +1089,56 @@ export default function InterviewCoach() {
     }
 
     if (activeType === 'premium_audio') {
-      console.log('[InterviewCoach] Rendering AudioInterface with resumeFromPause:', resumeFromPause, 'sessionId:', sessionId);
+      console.log('[InterviewCoach] Rendering AudioInterface with resumeFromPause:', resumeFromPause, 'sessionId:', sessionId, 'isAudioInterviewComplete:', isAudioInterviewComplete);
+
+      // If the audio interview is complete, show a completion state instead of AudioInterface
+      // This prevents returning to the "Begin Interview" screen after ending the call
+      if (isAudioInterviewComplete) {
+        // Show "Processing results" while waiting, or error state if something went wrong
+        if (isLoading) {
+          return (
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+                <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
+                  <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Preparing Your Results</h3>
+                <p className="text-gray-500 mb-4">Generating your performance analysis...</p>
+                <div className="space-y-2 text-left bg-gray-50 rounded-lg p-4">
+                  <div className="flex items-center gap-2 text-green-600">
+                    <CheckCircle className="w-5 h-5" />
+                    <span className="text-sm">Interview transcript captured</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-blue-600">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span className="text-sm">Analyzing your responses...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        // If not loading but no results yet, show a "Results Sent" state
+        return (
+          <div className="flex-1 flex items-center justify-center p-8">
+            <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+              <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-8 h-8 text-green-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Interview Complete!</h3>
+              <p className="text-gray-500 mb-4">Your results have been emailed to <span className="font-medium text-gray-900">{userEmail}</span></p>
+              <p className="text-sm text-gray-400">Check your inbox for your full performance analysis and interview transcript.</p>
+              <Button
+                onClick={() => navigate('/')}
+                className="mt-6 w-full"
+              >
+                Return to Home
+              </Button>
+            </div>
+          </div>
+        );
+      }
 
       return (
         <AudioInterface 
