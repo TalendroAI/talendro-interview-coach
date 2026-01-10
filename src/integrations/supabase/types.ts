@@ -270,8 +270,12 @@ export type Database = {
           full_name: string | null
           id: string
           is_pro_subscriber: boolean | null
+          pro_audio_sessions_used: number
+          pro_mock_sessions_used: number
+          pro_session_reset_date: string | null
           pro_subscription_end: string | null
           stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           updated_at: string
           user_id: string | null
         }
@@ -281,8 +285,12 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_pro_subscriber?: boolean | null
+          pro_audio_sessions_used?: number
+          pro_mock_sessions_used?: number
+          pro_session_reset_date?: string | null
           pro_subscription_end?: string | null
           stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -292,8 +300,12 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_pro_subscriber?: boolean | null
+          pro_audio_sessions_used?: number
+          pro_mock_sessions_used?: number
+          pro_session_reset_date?: string | null
           pro_subscription_end?: string | null
           stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
