@@ -748,6 +748,43 @@ serve(async (req) => {
       }).eq("id", session_id);
     }
 
+    // Increment Pro session usage count if this is a Pro subscriber completing a mock/audio session
+    const shouldIncrementProUsage = (isProSubscriber || isProSession) && 
+      (effectiveSessionType === "full_mock" || effectiveSessionType === "premium_audio");
+    
+    if (shouldIncrementProUsage) {
+      // Find profile by email to increment usage
+      const { data: profileToUpdate } = await supabaseClient
+        .from("profiles")
+        .select("id, pro_mock_sessions_used, pro_audio_sessions_used")
+        .eq("email", email)
+        .maybeSingle();
+      
+      if (profileToUpdate) {
+        const updateField = effectiveSessionType === "full_mock" 
+          ? "pro_mock_sessions_used" 
+          : "pro_audio_sessions_used";
+        
+        const currentCount = effectiveSessionType === "full_mock"
+          ? profileToUpdate.pro_mock_sessions_used || 0
+          : profileToUpdate.pro_audio_sessions_used || 0;
+        
+        await supabaseClient
+          .from("profiles")
+          .update({
+            [updateField]: currentCount + 1,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", profileToUpdate.id);
+        
+        logStep("Pro session count incremented", { 
+          email, 
+          sessionType: effectiveSessionType, 
+          newCount: currentCount + 1 
+        });
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

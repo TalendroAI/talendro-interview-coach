@@ -718,12 +718,82 @@ serve(async (req) => {
       });
 
       if (subscriptions.data.length > 0) {
+        // Check session limits for Pro subscriber before creating session
+        const effectiveSessionType = session_type || "quick_prep";
+        
+        // For non-quick_prep sessions, check usage limits
+        if (effectiveSessionType !== "quick_prep") {
+          const { data: profile } = await supabaseClient
+            .from("profiles")
+            .select("*")
+            .eq("email", email)
+            .maybeSingle();
+          
+          if (profile) {
+            // Check if we need to reset counters (30 days from reset date)
+            let needsReset = false;
+            if (profile.pro_session_reset_date) {
+              const resetDate = new Date(profile.pro_session_reset_date);
+              const thirtyDaysAgo = new Date();
+              thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+              needsReset = resetDate < thirtyDaysAgo;
+            } else {
+              needsReset = true;
+            }
+            
+            if (needsReset) {
+              // Reset counters
+              await supabaseClient
+                .from("profiles")
+                .update({
+                  pro_mock_sessions_used: 0,
+                  pro_audio_sessions_used: 0,
+                  pro_session_reset_date: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("id", profile.id);
+            } else {
+              // Check current usage against limits
+              const PRO_LIMITS = { full_mock: 8, premium_audio: 4 };
+              const used = effectiveSessionType === 'full_mock' 
+                ? profile.pro_mock_sessions_used || 0
+                : profile.pro_audio_sessions_used || 0;
+              
+              const limit = effectiveSessionType === 'full_mock' 
+                ? PRO_LIMITS.full_mock 
+                : PRO_LIMITS.premium_audio;
+              
+              const remaining = Math.max(0, limit - used);
+              
+              if (remaining <= 0) {
+                // Calculate next reset date
+                const resetDate = new Date(profile.pro_session_reset_date);
+                const nextResetDate = new Date(resetDate);
+                nextResetDate.setDate(nextResetDate.getDate() + 30);
+                
+                const sessionTypeName = effectiveSessionType === 'full_mock' ? 'Mock Interview' : 'Audio Mock';
+                
+                return new Response(JSON.stringify({ 
+                  verified: false,
+                  is_pro: true,
+                  session_limit_reached: true,
+                  message: `You've used all ${limit} ${sessionTypeName} sessions this month. Resets on ${nextResetDate.toLocaleDateString()}.`,
+                  next_reset: nextResetDate.toISOString(),
+                }), {
+                  headers: { ...corsHeaders, "Content-Type": "application/json" },
+                  status: 200,
+                });
+              }
+            }
+          }
+        }
+        
         // Create a new session for pro subscriber
         const { data: newSession, error: createError } = await supabaseClient
           .from("coaching_sessions")
           .insert({
             email,
-            session_type: session_type || "pro",
+            session_type: effectiveSessionType,
             status: "active",
           })
           .select()
