@@ -226,22 +226,74 @@ export default function Index() {
       return;
     }
 
+    // In embedded preview/iframes, Stripe Checkout often can't redirect the current frame.
+    // Also, some browsers block popups that aren't opened synchronously from a user gesture.
+    const inIframe = (() => {
+      try {
+        return window.self !== window.top;
+      } catch {
+        return true;
+      }
+    })();
+
+    // If we're in an iframe, pre-open a blank tab *synchronously* so it won't get popup-blocked.
+    const popup = inIframe ? window.open('', '_blank', 'noopener,noreferrer') : null;
+
+    const withTimeout = async <T,>(promise: Promise<T>, ms: number): Promise<T> => {
+      let timeoutId: number | undefined;
+      try {
+        return await Promise.race([
+          promise,
+          new Promise<T>((_, reject) => {
+            timeoutId = window.setTimeout(() => {
+              reject(new Error('Checkout request timed out. Please try again.'));
+            }, ms);
+          }),
+        ]);
+      } finally {
+        if (timeoutId) window.clearTimeout(timeoutId);
+      }
+    };
+
     setIsLoading(true);
     try {
-      const checkoutUrl = await createCheckout(
-        selectedSession, 
-        email,
-        pricing?.discountCodeId,
-        pricing?.discountPercent
+      const checkoutUrl = await withTimeout(
+        createCheckout(
+          selectedSession,
+          email,
+          pricing?.discountCodeId,
+          pricing?.discountPercent
+        ),
+        20000
       );
-      // Open in new tab to avoid iframe restrictions in preview environments
-      window.open(checkoutUrl, '_blank');
+
+      if (inIframe) {
+        // Prefer the pre-opened window (avoids popup blockers)
+        if (popup && !popup.closed) {
+          popup.location.href = checkoutUrl;
+        } else {
+          window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
+        }
+
+        // Keep the toast in iframe environments since the user stays on-page.
+        toast({
+          title: 'Opening Stripe checkout',
+          description: 'Complete your purchase in the new tab.',
+        });
+      } else {
+        // Production: redirect in the same tab for the most reliable behavior.
+        window.location.assign(checkoutUrl);
+      }
+
       setIsCheckoutOpen(false);
-      toast({
-        title: 'Redirecting to checkout',
-        description: 'Complete your purchase in the next step.',
-      });
     } catch (error) {
+      // Close the pre-opened tab if we failed to produce a URL.
+      try {
+        if (popup && !popup.closed) popup.close();
+      } catch {
+        // ignore
+      }
+
       console.error('Checkout error:', error);
       toast({
         title: 'Checkout failed',
