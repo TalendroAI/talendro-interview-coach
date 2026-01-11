@@ -98,16 +98,75 @@ serve(async (req) => {
     const emailResponse = await resend.emails.send({
       from: fromEmail,
       to: [email],
-      subject: "Your login link — Interview Coach",
+      subject: "Your Talendro Login Link",
       html: `
-        <div style="font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; line-height: 1.5; color: #111827;">
-          <h1 style="margin: 0 0 12px; font-size: 20px;">Your login link</h1>
-          <p style="margin: 0 0 16px;">Click below to access your dashboard:</p>
-          <p style="margin: 0 0 20px;">
-            <a href="${magicLink}" style="display:inline-block; padding:12px 16px; background:#111827; color:#ffffff; text-decoration:none; border-radius:8px;">Open Dashboard</a>
-          </p>
-          <p style="margin: 0; font-size: 12px; color: #6b7280;">If you didn't request this email, you can ignore it.</p>
-        </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title>Your Talendro Login Link</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f4f5;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width: 480px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 32px 32px 24px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+              <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: #0f172a; letter-spacing: -0.5px;">Talendro</h1>
+              <p style="margin: 8px 0 0; font-size: 14px; color: #64748b;">Interview Coaching</p>
+            </td>
+          </tr>
+          <!-- Content -->
+          <tr>
+            <td style="padding: 32px;">
+              <h2 style="margin: 0 0 16px; font-size: 20px; font-weight: 600; color: #1e293b;">Access Your Dashboard</h2>
+              <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.6; color: #475569;">
+                Click the button below to securely log in to your Talendro account and access your interview coaching dashboard.
+              </p>
+              <!-- Button -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td align="center" style="padding: 8px 0 24px;">
+                    <a href="${magicLink}" target="_blank" style="display: inline-block; padding: 14px 32px; background-color: #0f172a; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; text-align: center;">
+                      Open Dashboard
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 0 0 8px; font-size: 14px; color: #64748b;">
+                Or copy and paste this link into your browser:
+              </p>
+              <p style="margin: 0; font-size: 12px; color: #0ea5e9; word-break: break-all;">
+                <a href="${magicLink}" style="color: #0ea5e9; text-decoration: underline;">${magicLink}</a>
+              </p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 24px 32px; background-color: #f8fafc; border-top: 1px solid #e5e7eb; border-radius: 0 0 12px 12px;">
+              <p style="margin: 0 0 8px; font-size: 12px; color: #94a3b8; text-align: center;">
+                This link expires in 1 hour for security purposes.
+              </p>
+              <p style="margin: 0; font-size: 12px; color: #94a3b8; text-align: center;">
+                If you didn't request this email, you can safely ignore it.
+              </p>
+            </td>
+          </tr>
+        </table>
+        <!-- Bottom text -->
+        <p style="margin: 24px 0 0; font-size: 12px; color: #94a3b8; text-align: center;">
+          © ${new Date().getFullYear()} Talendro. All rights reserved.
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
       `,
     });
 
