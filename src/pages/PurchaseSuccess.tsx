@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, Mail, RefreshCw, ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { sendLoginLink } from '@/services/loginLink';
 
 export default function PurchaseSuccess() {
   const { toast } = useToast();
@@ -23,30 +23,24 @@ export default function PurchaseSuccess() {
     }
 
     setIsResending(true);
-    
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
-      },
-    });
 
-    if (error) {
-      toast({
-        title: 'Failed to send link',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } else {
+    try {
+      await sendLoginLink(email.trim(), `${window.location.origin}/dashboard`);
+
       toast({
         title: 'Login link sent!',
         description: 'Check your email for the login link.',
       });
       setShowResendForm(false);
+    } catch (error: any) {
+      toast({
+        title: 'Failed to send link',
+        description: error?.message ?? 'Please try again in a moment.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsResending(false);
     }
-    
-    setIsResending(false);
-  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
