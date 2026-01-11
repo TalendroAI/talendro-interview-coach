@@ -267,7 +267,7 @@ export function DocumentSidebar({
             disabled={!canSaveDocuments}
           >
             <Save className="h-4 w-4 mr-2" />
-            Save Documents
+            {isPro ? 'Save Documents' : 'Save Documents & Proceed'}
           </Button>
         </div>
 
