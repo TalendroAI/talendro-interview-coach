@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useMemo, useState } from "react";
 import { SessionType, SESSION_CONFIGS } from "@/types/session";
 import { useToast } from "@/hooks/use-toast";
 
@@ -45,27 +45,64 @@ export function CheckoutDiagnostics(props: { defaultEmail?: string }) {
     setError(null);
     setData(null);
 
+    const backendUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+    const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+
+    if (!backendUrl || !anonKey) {
+      setError("Backend configuration missing.");
+      setIsLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 20000);
+
     try {
-      const res = await supabase.functions.invoke("create-checkout", {
-        body: { session_type: sessionType, email },
+      const res = await fetch(`${backendUrl}/functions/v1/create-checkout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: anonKey,
+          Authorization: `Bearer ${anonKey}`,
+        },
+        credentials: "omit",
+        body: JSON.stringify({ session_type: sessionType, email }),
+        signal: controller.signal,
       });
 
-      if (res.error) {
-        setError(res.error.message || "Invocation failed");
+      const requestId = res.headers.get("sb-request-id");
+
+      const text = await res.text();
+      let json: any = null;
+      try {
+        json = text ? JSON.parse(text) : null;
+      } catch {
+        json = null;
+      }
+
+      if (!res.ok) {
+        const msg = json?.error ? String(json.error) : text || `Request failed (${res.status})`;
+        setError(`${msg}${requestId ? ` (request_id: ${requestId})` : ""}`);
         return;
       }
 
-      setData(res.data);
+      setData({ ...json, request_id: requestId ?? null });
       toast({
         title: "Diagnostics complete",
         description: "Checkout response received.",
       });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+    } catch (e: any) {
+      if (e?.name === "AbortError") {
+        setError("Diagnostics timed out after 20s.");
+      } else {
+        setError(e instanceof Error ? e.message : String(e));
+      }
     } finally {
+      window.clearTimeout(timeoutId);
       setIsLoading(false);
     }
   };
+
 
   return (
     <Card className="border-dashed">

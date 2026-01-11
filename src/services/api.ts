@@ -136,28 +136,84 @@ export interface CreateCheckoutOptions {
 }
 
 export async function createCheckout(
-  sessionType: SessionType, 
+  sessionType: SessionType,
   email: string,
   discountCodeId?: string,
   discountPercent?: number
 ): Promise<string> {
-  console.log('[FRONTEND] Calling create-checkout edge function', { sessionType, hasEmail: !!email, hasDiscountCode: !!discountCodeId, discountPercent });
-
-  const { data, error } = await supabase.functions.invoke("create-checkout", {
-    body: { 
-      session_type: sessionType, 
-      email,
-      discount_code_id: discountCodeId,
-      discount_percent: discountPercent,
-    },
+  console.log('[FRONTEND] Calling create-checkout backend function', {
+    sessionType,
+    hasEmail: !!email,
+    hasDiscountCode: !!discountCodeId,
+    discountPercent,
   });
 
-  console.log('[FRONTEND] Edge function response:', { hasUrl: !!data?.url, error: error?.message });
+  // IMPORTANT: Use a direct fetch (with AbortController timeout) so checkout cannot hang indefinitely,
+  // and so it does not depend on any local auth session state.
+  const backendUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
 
-  if (error) {
-    console.error("[FRONTEND] Create checkout error:", error);
-    throw new Error(error.message || "Failed to create checkout session");
+  if (!backendUrl || !anonKey) {
+    throw new Error('Backend configuration missing. Please refresh and try again.');
   }
+
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 20000);
+
+  let data: any;
+  let requestId: string | null = null;
+
+  try {
+    const res = await fetch(`${backendUrl}/functions/v1/create-checkout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: anonKey,
+        Authorization: `Bearer ${anonKey}`,
+      },
+      credentials: 'omit',
+      body: JSON.stringify({
+        session_type: sessionType,
+        email,
+        discount_code_id: discountCodeId,
+        discount_percent: discountPercent,
+      }),
+      signal: controller.signal,
+    });
+
+    requestId = res.headers.get('sb-request-id');
+
+    const text = await res.text();
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = null;
+    }
+
+    if (!res.ok) {
+      const msg = data?.error ? String(data.error) : text || `Request failed (${res.status})`;
+      throw new Error(`${msg}${requestId ? ` (request_id: ${requestId})` : ''}`);
+    }
+  } catch (e: any) {
+    if (e?.name === 'AbortError') {
+      throw new Error('Checkout request timed out. Please try again.');
+    }
+    throw e;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+
+  console.log('[FRONTEND] create-checkout response', {
+    hasUrl: !!data?.url,
+    requestId,
+    host: (() => {
+      try {
+        return data?.url ? new URL(String(data.url)).host : null;
+      } catch {
+        return null;
+      }
+    })(),
+  });
 
   const url = data?.url as string | undefined;
   const debug = data?.debug as
@@ -169,8 +225,8 @@ export async function createCheckout(
     | undefined;
 
   if (!url) {
-    console.error("[FRONTEND] No URL in response:", data);
-    throw new Error("No checkout URL returned");
+    console.error('[FRONTEND] No URL in response:', data);
+    throw new Error(`No checkout URL returned${requestId ? ` (request_id: ${requestId})` : ''}`);
   }
 
   // Guardrail: if the browser is still being sent to a deleted test payment link, stop here and surface proof.
@@ -183,15 +239,18 @@ export async function createCheckout(
   })();
 
   if (typeof url === 'string' && (url.includes('/test_') || host === 'buy.stripe.com')) {
-    console.error('[FRONTEND] Unexpected checkout URL host/mode', { url, host, debug });
+    console.error('[FRONTEND] Unexpected checkout URL host/mode', { url, host, debug, requestId });
     throw new Error(
-      `Checkout misconfigured: received ${host ?? 'unknown host'} (${debug?.stripe_key_type ?? 'key:unknown'}, livemode=${String(debug?.stripe_account_livemode)})`
+      `Checkout misconfigured: received ${host ?? 'unknown host'} (${debug?.stripe_key_type ?? 'key:unknown'}, livemode=${String(
+        debug?.stripe_account_livemode
+      )})${requestId ? ` (request_id: ${requestId})` : ''}`
     );
   }
 
-  console.log('[FRONTEND] Checkout URL received:', { host, keyType: debug?.stripe_key_type });
+  console.log('[FRONTEND] Checkout URL received:', { host, keyType: debug?.stripe_key_type, requestId });
   return url;
 }
+
 
 export async function verifyPayment(
   checkoutSessionId?: string,

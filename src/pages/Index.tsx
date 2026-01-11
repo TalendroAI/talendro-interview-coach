@@ -239,33 +239,15 @@ export default function Index() {
     // If we're in an iframe, pre-open a blank tab *synchronously* so it won't get popup-blocked.
     const popup = inIframe ? window.open('', '_blank', 'noopener,noreferrer') : null;
 
-    const withTimeout = async <T,>(promise: Promise<T>, ms: number): Promise<T> => {
-      let timeoutId: number | undefined;
-      try {
-        return await Promise.race([
-          promise,
-          new Promise<T>((_, reject) => {
-            timeoutId = window.setTimeout(() => {
-              reject(new Error('Checkout request timed out. Please try again.'));
-            }, ms);
-          }),
-        ]);
-      } finally {
-        if (timeoutId) window.clearTimeout(timeoutId);
-      }
-    };
-
     setIsLoading(true);
     try {
-      const checkoutUrl = await withTimeout(
-        createCheckout(
-          selectedSession,
-          email,
-          pricing?.discountCodeId,
-          pricing?.discountPercent
-        ),
-        20000
+      const checkoutUrl = await createCheckout(
+        selectedSession,
+        email,
+        pricing?.discountCodeId,
+        pricing?.discountPercent
       );
+
 
       if (inIframe) {
         // Prefer the pre-opened window (avoids popup blockers)
