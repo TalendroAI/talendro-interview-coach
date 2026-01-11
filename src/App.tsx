@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/AdminLogin";
 import { AdminLayout } from "./components/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminConversions from "./pages/admin/AdminConversions";
 import AdminErrors from "./pages/admin/AdminErrors";
 import AdminDiscounts from "./pages/admin/AdminDiscounts";
 import AdminSessions from "./pages/admin/AdminSessions";
@@ -39,9 +40,10 @@ const App = () => (
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
+            <Route path="conversions" element={<AdminConversions />} />
+            <Route path="sessions" element={<AdminSessions />} />
             <Route path="errors" element={<AdminErrors />} />
             <Route path="discounts" element={<AdminDiscounts />} />
-            <Route path="sessions" element={<AdminSessions />} />
           </Route>
           
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

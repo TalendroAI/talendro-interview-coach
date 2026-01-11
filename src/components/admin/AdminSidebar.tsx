@@ -1,4 +1,4 @@
-import { LayoutDashboard, AlertTriangle, Tag, Users, LogOut, Menu } from 'lucide-react';
+import { LayoutDashboard, AlertTriangle, Tag, Users, LogOut, Menu, TrendingUp } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,9 +17,10 @@ import {
 
 const navItems = [
   { title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
+  { title: 'Conversions', url: '/admin/conversions', icon: TrendingUp },
+  { title: 'Sessions', url: '/admin/sessions', icon: Users },
   { title: 'Error Logs', url: '/admin/errors', icon: AlertTriangle },
   { title: 'Discount Codes', url: '/admin/discounts', icon: Tag },
-  { title: 'Sessions', url: '/admin/sessions', icon: Users },
 ];
 
 interface AdminSidebarProps {
