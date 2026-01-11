@@ -21,7 +21,7 @@ export function WelcomeMessage({
 
   if (!config) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8 bg-hero">
+      <div className="flex-1 flex items-start justify-center p-8 pt-12 bg-hero">
         <div className="text-center max-w-md animate-slide-up">
           <div className="text-5xl mb-6">🎯</div>
           <h2 className="text-2xl font-extrabold text-foreground mb-3">
@@ -119,7 +119,7 @@ export function WelcomeMessage({
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-8 bg-hero">
+    <div className="flex-1 flex flex-col items-center justify-start p-8 pt-12 bg-hero">
       <div className="max-w-2xl w-full animate-slide-up">
         {/* Title */}
         <div className="text-center mb-10">
