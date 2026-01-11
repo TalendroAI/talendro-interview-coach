@@ -2,12 +2,16 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { Search, Clock, CheckCircle, XCircle, Hourglass } from 'lucide-react';
+import { Search, Clock, CheckCircle, XCircle, Hourglass, Trash2, RefreshCw } from 'lucide-react';
 
 interface Session {
   id: string;
@@ -38,8 +42,13 @@ export default function AdminSessions() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteType, setDeleteType] = useState<'selected' | 'all' | 'completed'>('selected');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchSessions = async () => {
+    setIsLoading(true);
     try {
       let query = supabase
         .from('coaching_sessions')
@@ -58,6 +67,7 @@ export default function AdminSessions() {
 
       if (error) throw error;
       setSessions((data as Session[]) || []);
+      setSelectedIds(new Set());
     } catch (error) {
       console.error('Error fetching sessions:', error);
       toast({
@@ -89,11 +99,93 @@ export default function AdminSessions() {
     );
   };
 
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredSessions.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredSessions.map(s => s.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const handleDeleteSingle = async (id: string) => {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('coaching_sessions')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({ title: 'Session deleted' });
+      fetchSessions();
+    } catch (error) {
+      console.error('Error deleting session:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Failed to delete session',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    setIsDeleting(true);
+    try {
+      let query = supabase.from('coaching_sessions').delete();
+
+      if (deleteType === 'selected') {
+        query = query.in('id', Array.from(selectedIds));
+      } else if (deleteType === 'completed') {
+        query = query.eq('status', 'completed');
+      } else {
+        // Delete all - match on non-null id
+        query = query.not('id', 'is', null);
+      }
+
+      const { error } = await query;
+
+      if (error) throw error;
+
+      const messages = {
+        selected: `${selectedIds.size} session(s) deleted`,
+        completed: 'All completed sessions deleted',
+        all: 'All sessions deleted',
+      };
+
+      toast({ title: messages[deleteType] });
+      setDeleteDialogOpen(false);
+      setSelectedIds(new Set());
+      fetchSessions();
+    } catch (error) {
+      console.error('Error deleting sessions:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Failed to delete sessions',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-heading font-bold">Sessions</h2>
-        <p className="text-muted-foreground">View all coaching sessions</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-heading font-bold">Sessions</h2>
+          <p className="text-muted-foreground">View and manage all coaching sessions</p>
+        </div>
       </div>
 
       <Card>
@@ -132,6 +224,39 @@ export default function AdminSessions() {
                 <SelectItem value="pro">Pro</SelectItem>
               </SelectContent>
             </Select>
+            <Button variant="outline" size="icon" onClick={fetchSessions} disabled={isLoading}>
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" disabled={isDeleting}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => { setDeleteType('selected'); setDeleteDialogOpen(true); }}
+                  disabled={selectedIds.size === 0}
+                  className="text-amber-600"
+                >
+                  Delete Selected ({selectedIds.size})
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => { setDeleteType('completed'); setDeleteDialogOpen(true); }}
+                  className="text-amber-600"
+                >
+                  Delete All Completed
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => { setDeleteType('all'); setDeleteDialogOpen(true); }}
+                  className="text-destructive"
+                >
+                  Delete All Sessions
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {isLoading ? (
@@ -143,16 +268,29 @@ export default function AdminSessions() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[50px]">
+                      <Checkbox
+                        checked={selectedIds.size === filteredSessions.length && filteredSessions.length > 0}
+                        onCheckedChange={toggleSelectAll}
+                      />
+                    </TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead>Completed</TableHead>
+                    <TableHead className="w-[80px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredSessions.map((session) => (
-                    <TableRow key={session.id}>
+                    <TableRow key={session.id} className={selectedIds.has(session.id) ? 'bg-muted/50' : ''}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedIds.has(session.id)}
+                          onCheckedChange={() => toggleSelect(session.id)}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">{session.email}</TableCell>
                       <TableCell>
                         <Badge variant="outline">
@@ -168,6 +306,19 @@ export default function AdminSessions() {
                           ? format(new Date(session.completed_at), 'MMM d, yyyy h:mm a')
                           : '-'}
                       </TableCell>
+                      <TableCell>
+                        <AlertDialog>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => handleDeleteSingle(session.id)}
+                            disabled={isDeleting}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialog>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -176,6 +327,32 @@ export default function AdminSessions() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {deleteType === 'selected' && `Delete ${selectedIds.size} Session(s)?`}
+              {deleteType === 'completed' && 'Delete All Completed Sessions?'}
+              {deleteType === 'all' && 'Delete All Sessions?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the selected session records.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

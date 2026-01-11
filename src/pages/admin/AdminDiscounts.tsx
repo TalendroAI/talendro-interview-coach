@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Checkbox } from '@/components/ui/checkbox';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { Plus, Pencil, Trash2, Tag } from 'lucide-react';
+import { Plus, Pencil, Trash2, Tag, RefreshCw } from 'lucide-react';
 
 interface DiscountCode {
   id: string;
@@ -39,6 +41,10 @@ export default function AdminDiscounts() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCode, setEditingCode] = useState<DiscountCode | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteType, setDeleteType] = useState<'selected' | 'all' | 'inactive'>('selected');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -52,6 +58,7 @@ export default function AdminDiscounts() {
   });
 
   const fetchCodes = async () => {
+    setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('discount_codes')
@@ -60,6 +67,7 @@ export default function AdminDiscounts() {
 
       if (error) throw error;
       setCodes((data as DiscountCode[]) || []);
+      setSelectedIds(new Set());
     } catch (error) {
       console.error('Error fetching codes:', error);
       toast({
@@ -155,9 +163,8 @@ export default function AdminDiscounts() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this code?')) return;
-
+  const handleDeleteSingle = async (id: string) => {
+    setIsDeleting(true);
     try {
       const { error } = await supabase
         .from('discount_codes')
@@ -172,7 +179,66 @@ export default function AdminDiscounts() {
         variant: 'destructive',
         title: 'Failed to delete',
       });
+    } finally {
+      setIsDeleting(false);
     }
+  };
+
+  const handleBulkDelete = async () => {
+    setIsDeleting(true);
+    try {
+      let query = supabase.from('discount_codes').delete();
+
+      if (deleteType === 'selected') {
+        query = query.in('id', Array.from(selectedIds));
+      } else if (deleteType === 'inactive') {
+        query = query.eq('is_active', false);
+      } else {
+        // Delete all
+        query = query.not('id', 'is', null);
+      }
+
+      const { error } = await query;
+
+      if (error) throw error;
+
+      const messages = {
+        selected: `${selectedIds.size} discount code(s) deleted`,
+        inactive: 'All inactive codes deleted',
+        all: 'All discount codes deleted',
+      };
+
+      toast({ title: messages[deleteType] });
+      setDeleteDialogOpen(false);
+      setSelectedIds(new Set());
+      fetchCodes();
+    } catch (error) {
+      console.error('Error deleting codes:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Failed to delete codes',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === codes.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(codes.map(c => c.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
   };
 
   const toggleProductSelection = (productId: string) => {
@@ -191,10 +257,45 @@ export default function AdminDiscounts() {
           <h2 className="text-2xl font-heading font-bold">Discount Codes</h2>
           <p className="text-muted-foreground">Create and manage promotional codes</p>
         </div>
-        <Button onClick={openCreateDialog}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Code
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="icon" onClick={fetchCodes} disabled={isLoading}>
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" disabled={isDeleting}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => { setDeleteType('selected'); setDeleteDialogOpen(true); }}
+                disabled={selectedIds.size === 0}
+                className="text-amber-600"
+              >
+                Delete Selected ({selectedIds.size})
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => { setDeleteType('inactive'); setDeleteDialogOpen(true); }}
+                className="text-amber-600"
+              >
+                Delete All Inactive
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => { setDeleteType('all'); setDeleteDialogOpen(true); }}
+                className="text-destructive"
+              >
+                Delete All Codes
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button onClick={openCreateDialog}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Code
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -214,6 +315,12 @@ export default function AdminDiscounts() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[50px]">
+                      <Checkbox
+                        checked={selectedIds.size === codes.length && codes.length > 0}
+                        onCheckedChange={toggleSelectAll}
+                      />
+                    </TableHead>
                     <TableHead>Code</TableHead>
                     <TableHead>Discount</TableHead>
                     <TableHead>Products</TableHead>
@@ -225,7 +332,13 @@ export default function AdminDiscounts() {
                 </TableHeader>
                 <TableBody>
                   {codes.map((code) => (
-                    <TableRow key={code.id}>
+                    <TableRow key={code.id} className={selectedIds.has(code.id) ? 'bg-muted/50' : ''}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedIds.has(code.id)}
+                          onCheckedChange={() => toggleSelect(code.id)}
+                        />
+                      </TableCell>
                       <TableCell className="font-mono font-bold">{code.code}</TableCell>
                       <TableCell>{code.discount_percent}%</TableCell>
                       <TableCell>
@@ -257,7 +370,12 @@ export default function AdminDiscounts() {
                           <Button variant="ghost" size="sm" onClick={() => openEditDialog(code)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(code.id)}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteSingle(code.id)}
+                            disabled={isDeleting}
+                          >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
@@ -377,6 +495,32 @@ export default function AdminDiscounts() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {deleteType === 'selected' && `Delete ${selectedIds.size} Discount Code(s)?`}
+              {deleteType === 'inactive' && 'Delete All Inactive Codes?'}
+              {deleteType === 'all' && 'Delete All Discount Codes?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the selected discount codes.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
