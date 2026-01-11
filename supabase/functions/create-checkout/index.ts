@@ -268,7 +268,9 @@ serve(async (req) => {
       ],
       mode: isSubscription ? "subscription" : "payment",
       ui_mode: "hosted", // Force standard Checkout UI
-      success_url: `${origin}/interview-coach?session_type=${session_type}&email=${encodeURIComponent(email)}&checkout_session_id={CHECKOUT_SESSION_ID}`,
+      success_url: isSubscription 
+        ? `${origin}/purchase-success` 
+        : `${origin}/interview-coach?session_type=${session_type}&email=${encodeURIComponent(email)}&checkout_session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/?canceled=true`,
       metadata: {
         session_id: sessionData.id,

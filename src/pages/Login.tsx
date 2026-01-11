@@ -6,18 +6,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Mail, CheckCircle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Login() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, isLoading, isProSubscriber, signIn, signUp } = useClientAuth();
+  const { user, isLoading, isProSubscriber } = useClientAuth();
   
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [linkSent, setLinkSent] = useState(false);
 
   // Redirect authenticated users
   useEffect(() => {
@@ -30,34 +29,29 @@ export default function Login() {
     }
   }, [isLoading, user, isProSubscriber, navigate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSendMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    if (isSignUp) {
-      const { error } = await signUp(email, password, fullName);
-      if (error) {
-        toast({
-          title: 'Sign up failed',
-          description: error.message,
-          variant: 'destructive',
-        });
-      } else {
-        toast({
-          title: 'Account created!',
-          description: 'Please check your email to confirm your account.',
-        });
-        setIsSignUp(false);
-      }
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/dashboard`,
+      },
+    });
+
+    if (error) {
+      toast({
+        title: 'Failed to send login link',
+        description: error.message,
+        variant: 'destructive',
+      });
     } else {
-      const { error } = await signIn(email, password);
-      if (error) {
-        toast({
-          title: 'Sign in failed',
-          description: error.message,
-          variant: 'destructive',
-        });
-      }
+      setLinkSent(true);
+      toast({
+        title: 'Login link sent!',
+        description: 'Check your email for the login link.',
+      });
     }
     
     setIsSubmitting(false);
@@ -87,76 +81,111 @@ export default function Login() {
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-heading">
-              {isSignUp ? 'Create Account' : 'Welcome Back'}
-            </CardTitle>
-            <CardDescription>
-              {isSignUp 
-                ? 'Sign up to access your Interview Coach Pro dashboard'
-                : 'Sign in to access your Interview Coach Pro dashboard'}
-            </CardDescription>
+            {linkSent ? (
+              <>
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                </div>
+                <CardTitle className="text-2xl font-heading">
+                  Check Your Email
+                </CardTitle>
+                <CardDescription>
+                  We've sent a login link to <strong>{email}</strong>
+                </CardDescription>
+              </>
+            ) : (
+              <>
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                  <Mail className="h-6 w-6 text-primary" />
+                </div>
+                <CardTitle className="text-2xl font-heading">
+                  Sign In
+                </CardTitle>
+                <CardDescription>
+                  Enter your email to receive a secure login link
+                </CardDescription>
+              </>
+            )}
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {isSignUp && (
+            {linkSent ? (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground text-center">
+                  Click the link in your email to sign in. The link expires in 24 hours.
+                </p>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setLinkSent(false)}
+                    className="w-full"
+                  >
+                    Send to a different email
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setIsSubmitting(true);
+                      supabase.auth.signInWithOtp({
+                        email,
+                        options: {
+                          emailRedirectTo: `${window.location.origin}/dashboard`,
+                        },
+                      }).then(() => {
+                        toast({
+                          title: 'Link resent!',
+                          description: 'Check your email for a new login link.',
+                        });
+                        setIsSubmitting(false);
+                      });
+                    }}
+                    disabled={isSubmitting}
+                    className="w-full"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        Resending...
+                      </>
+                    ) : (
+                      "Didn't receive it? Resend"
+                    )}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleSendMagicLink} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
+                  <Label htmlFor="email">Email</Label>
                   <Input
-                    id="fullName"
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="John Doe"
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    required
+                    autoFocus
                   />
                 </div>
-              )}
-              
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  minLength={6}
-                />
-              </div>
 
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    {isSignUp ? 'Creating account...' : 'Signing in...'}
-                  </>
-                ) : (
-                  isSignUp ? 'Create Account' : 'Sign In'
-                )}
-              </Button>
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Sending link...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="w-4 h-4 mr-2" />
+                      Send Login Link
+                    </>
+                  )}
+                </Button>
 
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={() => setIsSignUp(!isSignUp)}
-                  className="text-sm text-muted-foreground hover:text-primary underline"
-                >
-                  {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-                </button>
-              </div>
-            </form>
+                <p className="text-xs text-center text-muted-foreground">
+                  We'll send you a secure link to sign in. No password needed.
+                </p>
+              </form>
+            )}
           </CardContent>
         </Card>
       </main>

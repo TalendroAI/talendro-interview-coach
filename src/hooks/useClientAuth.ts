@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 
@@ -34,22 +34,50 @@ export function useClientAuth() {
     isProSubscriber: false,
   });
 
+  // Fetch profile by user_id first, then fallback to email
+  const fetchProfile = useCallback(async (user: User) => {
+    // Try to find profile by user_id first
+    let { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    // If no profile found by user_id, try by email
+    if (!profile && user.email) {
+      const { data: emailProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', user.email)
+        .maybeSingle();
+
+      if (emailProfile) {
+        profile = emailProfile;
+        
+        // Link the profile to this user_id if not already linked
+        if (!emailProfile.user_id) {
+          await supabase
+            .from('profiles')
+            .update({ user_id: user.id, updated_at: new Date().toISOString() })
+            .eq('id', emailProfile.id);
+        }
+      }
+    }
+
+    return profile as ClientProfile | null;
+  }, []);
+
   useEffect(() => {
     // Set up auth state change listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
-          // Fetch profile data
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('user_id', session.user.id)
-            .maybeSingle();
+          const profile = await fetchProfile(session.user);
 
           setState({
             user: session.user,
             session,
-            profile: profile as ClientProfile | null,
+            profile,
             isLoading: false,
             isProSubscriber: profile?.is_pro_subscriber || false,
           });
@@ -68,16 +96,12 @@ export function useClientAuth() {
     // Then check current session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .maybeSingle();
+        const profile = await fetchProfile(session.user);
 
         setState({
           user: session.user,
           session,
-          profile: profile as ClientProfile | null,
+          profile,
           isLoading: false,
           isProSubscriber: profile?.is_pro_subscriber || false,
         });
@@ -87,7 +111,7 @@ export function useClientAuth() {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [fetchProfile]);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -99,13 +123,23 @@ export function useClientAuth() {
       email,
       password,
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: `${window.location.origin}/dashboard`,
         data: {
           full_name: fullName,
         },
       },
     });
     return { data, error };
+  };
+
+  const signInWithOtp = async (email: string) => {
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/dashboard`,
+      },
+    });
+    return { error };
   };
 
   const signOut = async () => {
@@ -115,15 +149,11 @@ export function useClientAuth() {
   const refreshProfile = async () => {
     if (!state.user) return;
     
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', state.user.id)
-      .maybeSingle();
+    const profile = await fetchProfile(state.user);
 
     setState(prev => ({
       ...prev,
-      profile: profile as ClientProfile | null,
+      profile,
       isProSubscriber: profile?.is_pro_subscriber || false,
     }));
   };
@@ -132,6 +162,7 @@ export function useClientAuth() {
     ...state, 
     signIn, 
     signUp, 
+    signInWithOtp,
     signOut, 
     refreshProfile,
   };
