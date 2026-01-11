@@ -128,13 +128,21 @@ serve(async (req) => {
               <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.6; color: #475569;">
                 Click the button below to securely log in to your Talendro account and access your interview coaching dashboard.
               </p>
-              <!-- Button -->
+              <!-- Button - using VML for Outlook compatibility -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
                   <td align="center" style="padding: 8px 0 24px;">
-                    <a href="${magicLink}" target="_blank" style="display: inline-block; padding: 14px 32px; background-color: #0f172a; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; text-align: center;">
+                    <!--[if mso]>
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${magicLink}" style="height:48px;v-text-anchor:middle;width:200px;" arcsize="17%" stroke="f" fillcolor="#0f172a">
+                      <w:anchorlock/>
+                      <center style="color:#ffffff;font-family:sans-serif;font-size:16px;font-weight:bold;">Open Dashboard</center>
+                    </v:roundrect>
+                    <![endif]-->
+                    <!--[if !mso]><!-->
+                    <a href="${magicLink}" target="_blank" style="display: inline-block; mso-hide: all; padding: 14px 32px; background-color: #0f172a; color: #ffffff !important; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; text-align: center; line-height: 1.2;">
                       Open Dashboard
                     </a>
+                    <!--<![endif]-->
                   </td>
                 </tr>
               </table>
