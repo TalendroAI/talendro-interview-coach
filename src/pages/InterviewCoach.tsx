@@ -205,9 +205,12 @@ export default function InterviewCoach() {
       }
 
       proceedWithSaveDocuments();
-      // Immediately request a scroll-to-top. Chat may mount slightly later,
-      // so scheduleScrollToChatStart retries once.
-      scheduleScrollToChatStart();
+      // For Pro users who haven't selected an interview type yet, 
+      // let DocumentSidebar handle scrolling to Step 6.
+      // Only scroll to top for non-Pro sessions or when Pro has selected a type.
+      if (resolvedSessionType !== 'pro' || selectedProInterviewType) {
+        scheduleScrollToChatStart();
+      }
     }
   };
 
