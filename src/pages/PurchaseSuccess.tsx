@@ -41,6 +41,7 @@ export default function PurchaseSuccess() {
     } finally {
       setIsResending(false);
     }
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">

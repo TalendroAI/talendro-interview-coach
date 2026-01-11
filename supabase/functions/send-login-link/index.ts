@@ -59,7 +59,9 @@ serve(async (req) => {
       throw new Error(`Failed to list users: ${listError.message}`);
     }
 
-    const existingUser = existingUsers?.users?.find((u: { email: string }) => u.email === email);
+    const existingUser = existingUsers?.users?.find(
+      (u) => (u.email ?? "").toLowerCase() === email.toLowerCase(),
+    );
 
     if (!existingUser) {
       const { error: createError } = await supabase.auth.admin.createUser({
@@ -93,7 +95,7 @@ serve(async (req) => {
       throw new Error("Magic link missing from generateLink response");
     }
 
-    const resp = await resend.emails.send({
+    const emailResponse = await resend.emails.send({
       from: fromEmail,
       to: [email],
       subject: "Your login link — Interview Coach",
@@ -109,9 +111,19 @@ serve(async (req) => {
       `,
     });
 
-    logStep("Email queued", { email, id: resp?.id });
+    const resendError = (emailResponse as any)?.error;
+    if (resendError) {
+      throw new Error(
+        `Resend send failed: ${resendError?.message ?? JSON.stringify(resendError)}`,
+      );
+    }
 
-    return new Response(JSON.stringify({ ok: true, id: resp?.id }), {
+    const emailId = (emailResponse as any)?.data?.id ?? (emailResponse as any)?.id ?? null;
+
+    logStep("Email send attempted", { email, fromEmail, emailId });
+    console.log("[SEND-LOGIN-LINK] Resend raw response", emailResponse);
+
+    return new Response(JSON.stringify({ ok: true, id: emailId }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
