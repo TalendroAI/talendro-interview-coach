@@ -930,11 +930,11 @@ export default function InterviewCoach() {
     
     // If documents are saved and payment verified, start the session
     if (isDocumentsSaved && isPaymentVerified && sessionId) {
-      // Scroll to top to present the beginning of the interview
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      
-      // Use a small delay to let state update
+      // Use a small delay to let state update, then scroll to top
       setTimeout(() => {
+        // Scroll to top AFTER state updates so user sees the loading content
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
         if (type === 'quick_prep') {
           // Generate Quick Prep content
           setIsGeneratingContent(true);
