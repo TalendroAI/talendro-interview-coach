@@ -76,16 +76,20 @@ export function DocumentSidebar({
     if (onSaveDocuments) {
       onSaveDocuments();
 
-      // The app uses nested scroll containers. Depending on viewport size,
-      // either the main container or the chat messages container may be the one scrolling.
-      // Reset both so Sarah’s greeting starts at the top.
       setTimeout(() => {
-        const mainScroll = document.getElementById('main-scroll-container');
-        mainScroll?.scrollTo({ top: 0, behavior: 'smooth' });
+        if (isPro) {
+          // For Pro sessions, scroll to Step 6 (Interview Type Selector)
+          const step6Element = document.getElementById('pro-interview-type-selector');
+          step6Element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+          // For non-Pro sessions, scroll to top so Sarah's greeting is visible
+          const mainScroll = document.getElementById('main-scroll-container');
+          mainScroll?.scrollTo({ top: 0, behavior: 'smooth' });
 
-        const chatMessages = document.getElementById('chat-messages-container');
-        chatMessages?.scrollTo({ top: 0, behavior: 'auto' });
-      }, 0);
+          const chatMessages = document.getElementById('chat-messages-container');
+          chatMessages?.scrollTo({ top: 0, behavior: 'auto' });
+        }
+      }, 100);
     }
   };
 
@@ -273,7 +277,7 @@ export function DocumentSidebar({
 
         {/* Pro Interview Type Selector (Pro only - always visible) */}
         {isPro && (
-          <div className="space-y-2">
+          <div id="pro-interview-type-selector" className="space-y-2 scroll-mt-4">
             <div className="flex items-center gap-2">
               <span className={cn(
                 "flex items-center justify-center h-7 w-7 min-w-[1.75rem] min-h-[1.75rem] rounded-full text-xs font-bold transition-all duration-300",
