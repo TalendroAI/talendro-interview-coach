@@ -92,7 +92,7 @@ export function WelcomeMessage({
             { num: 6, text: 'Select your **interview type** from the dropdown: Quick Prep, Mock Interview, or Audio Mock', highlight: 'interview type' },
             { num: 7, text: 'Click "**Complete Session & Get Results**" to finish and receive your summary', highlight: 'Complete Session & Get Results' },
           ],
-          tip: 'Pro members have unlimited access to all session types. Choose whichever fits your prep needs!',
+          tip: 'Pro members have unlimited Quick Prep sessions, 6 Mock Interviews per month, and 2 Audio Mocks per month.',
         };
       default:
         return {

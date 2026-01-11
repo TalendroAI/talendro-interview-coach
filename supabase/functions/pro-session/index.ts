@@ -10,8 +10,8 @@ const corsHeaders = {
 // Pro monthly limits
 const PRO_LIMITS = {
   quick_prep: Infinity, // Unlimited
-  full_mock: 8,
-  premium_audio: 4,
+  full_mock: 6,
+  premium_audio: 2,
 };
 
 interface ProfileData {

@@ -184,7 +184,9 @@ export function ProInterviewTypeSelector({
                 </div>
                 <p className="text-xs text-muted-foreground truncate">
                   {sessionInfo.isDisabled && sessionInfo.resetDate
-                    ? `Used all ${sessionInfo.limit} this month. Resets ${formatResetDate(sessionInfo.resetDate)}`
+                    ? option.type === 'full_mock'
+                      ? `You've used all 6 Mock Interview sessions this month. Resets ${formatResetDate(sessionInfo.resetDate)}.`
+                      : `You've used both Audio Mock sessions this month. Resets ${formatResetDate(sessionInfo.resetDate)}.`
                     : option.description
                   }
                 </p>
