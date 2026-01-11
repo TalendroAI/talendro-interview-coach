@@ -47,7 +47,7 @@ serve(async (req) => {
       throw new Error("RESEND_API_KEY is not configured");
     }
 
-    const fromEmail = Deno.env.get("RESEND_FROM") ?? "Talendro <onboarding@resend.dev>";
+    const fromEmail = "Talendro <noreply@talendro.com>";
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const resend = new Resend(resendApiKey);

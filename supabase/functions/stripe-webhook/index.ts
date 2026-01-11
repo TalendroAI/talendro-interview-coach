@@ -222,7 +222,7 @@ async function getCustomerName(stripe: Stripe, customerId: string): Promise<stri
 async function ensureAuthAccount(supabaseClient: any, email: string, resend: any): Promise<string | null> {
   logStep("Ensuring auth account", { email });
 
-  const fromEmail = Deno.env.get("RESEND_FROM") ?? "Talendro <onboarding@resend.dev>";
+  const fromEmail = "Talendro <noreply@talendro.com>";
 
   // Check if user already exists
   const { data: existingUsers, error: listError } = await supabaseClient.auth.admin.listUsers();
