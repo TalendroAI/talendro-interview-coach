@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Mail, CheckCircle } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { sendLoginLink } from '@/services/loginLink';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -29,32 +29,39 @@ export default function Login() {
     }
   }, [isLoading, user, isProSubscriber, navigate]);
 
+  const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+
   const handleSendMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
-      },
-    });
-
-    if (error) {
+    const cleanedEmail = email.trim();
+    if (!isValidEmail(cleanedEmail)) {
       toast({
-        title: 'Failed to send login link',
-        description: error.message,
+        title: 'Enter a valid email',
+        description: 'Please use a deliverable email address (e.g. name@domain.com).',
         variant: 'destructive',
       });
-    } else {
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      await sendLoginLink(cleanedEmail, `${window.location.origin}/dashboard`);
       setLinkSent(true);
       toast({
         title: 'Login link sent!',
         description: 'Check your email for the login link.',
       });
+    } catch (err: any) {
+      toast({
+        title: 'Failed to send login link',
+        description: err?.message ?? 'Please try again in a moment.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    setIsSubmitting(false);
   };
 
   if (isLoading) {
@@ -123,20 +130,23 @@ export default function Login() {
                   </Button>
                   <Button
                     variant="ghost"
-                    onClick={() => {
-                      setIsSubmitting(true);
-                      supabase.auth.signInWithOtp({
-                        email,
-                        options: {
-                          emailRedirectTo: `${window.location.origin}/dashboard`,
-                        },
-                      }).then(() => {
+                    onClick={async () => {
+                      try {
+                        setIsSubmitting(true);
+                        await sendLoginLink(email.trim(), `${window.location.origin}/dashboard`);
                         toast({
                           title: 'Link resent!',
                           description: 'Check your email for a new login link.',
                         });
+                      } catch (err: any) {
+                        toast({
+                          title: 'Failed to resend link',
+                          description: err?.message ?? 'Please try again in a moment.',
+                          variant: 'destructive',
+                        });
+                      } finally {
                         setIsSubmitting(false);
-                      });
+                      }
                     }}
                     disabled={isSubmitting}
                     className="w-full"

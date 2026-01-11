@@ -126,9 +126,17 @@ serve(async (req) => {
 
     let event: Stripe.Event;
 
-    if (stripeWebhookSecret && signature) {
+    if (stripeWebhookSecret) {
+      if (!signature) {
+        logStep("Missing Stripe signature header");
+        return new Response(JSON.stringify({ error: "Missing Stripe signature" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       try {
-        event = stripe.webhooks.constructEvent(body, signature, stripeWebhookSecret);
+        event = await stripe.webhooks.constructEventAsync(body, signature, stripeWebhookSecret);
         logStep("Webhook signature verified", { eventType: event.type });
       } catch (err) {
         logStep("Webhook signature verification failed", { error: String(err) });
@@ -166,8 +174,8 @@ serve(async (req) => {
       }
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        if (session.mode === "subscription" && session.customer_email) {
-          await handleCheckoutCompleted(supabaseClient, session, resend);
+        if (session.mode === "subscription") {
+          await handleCheckoutCompleted(supabaseClient, stripe, session, resend);
         }
         break;
       }
@@ -212,76 +220,95 @@ async function getCustomerName(stripe: Stripe, customerId: string): Promise<stri
 
 // deno-lint-ignore no-explicit-any
 async function ensureAuthAccount(supabaseClient: any, email: string, resend: any): Promise<string | null> {
-  logStep("Checking if auth account exists", { email });
-  
+  logStep("Ensuring auth account", { email });
+
+  const fromEmail = Deno.env.get("RESEND_FROM") ?? "Talendro <onboarding@resend.dev>";
+
   // Check if user already exists
   const { data: existingUsers, error: listError } = await supabaseClient.auth.admin.listUsers();
-  
+
   if (listError) {
     logStep("Error listing users", { error: listError.message });
     return null;
   }
-  
+
   const existingUser = existingUsers?.users?.find((u: { email: string }) => u.email === email);
-  
+
+  let userId: string;
+
   if (existingUser) {
-    logStep("Auth account already exists", { email, userId: existingUser.id });
-    return existingUser.id;
+    userId = existingUser.id;
+    logStep("Auth account already exists", { email, userId });
+  } else {
+    logStep("Creating new auth account", { email });
+
+    const { data: newUser, error: createError } = await supabaseClient.auth.admin.createUser({
+      email,
+      email_confirm: true, // Auto-confirm since they just paid
+    });
+
+    if (createError) {
+      logStep("Error creating auth user", { error: createError.message });
+      return null;
+    }
+
+    userId = newUser.user.id;
+    logStep("Auth account created", { email, userId });
   }
-  
-  // Create new auth user
-  logStep("Creating new auth account", { email });
-  const { data: newUser, error: createError } = await supabaseClient.auth.admin.createUser({
-    email,
-    email_confirm: true, // Auto-confirm since they just paid
-  });
-  
-  if (createError) {
-    logStep("Error creating auth user", { error: createError.message });
-    return null;
-  }
-  
-  logStep("Auth account created", { email, userId: newUser.user.id });
-  
-  // Generate magic link
+
+  // Generate magic link (always)
   const { data: linkData, error: linkError } = await supabaseClient.auth.admin.generateLink({
-    type: 'magiclink',
+    type: "magiclink",
     email,
     options: {
       redirectTo: DASHBOARD_URL,
     },
   });
-  
+
   if (linkError) {
     logStep("Error generating magic link", { error: linkError.message });
-    return newUser.user.id;
+    return userId;
   }
-  
+
   const magicLink = linkData?.properties?.action_link;
-  
-  if (magicLink && resend) {
-    // Send welcome email with magic link
-    try {
-      await resend.emails.send({
-        from: "Talendro <noreply@talendro.com>",
-        to: [email],
-        subject: "Welcome to Interview Coach Pro — Access Your Dashboard",
-        html: generateWelcomeEmail(magicLink, email),
-      });
-      logStep("Welcome email sent", { email });
-    } catch (emailError) {
-      logStep("Error sending welcome email", { error: String(emailError) });
-    }
+
+  if (!magicLink) {
+    logStep("Magic link missing from generateLink response", { email });
+    return userId;
   }
-  
-  return newUser.user.id;
+
+  if (!resend) {
+    logStep("RESEND_API_KEY not configured; cannot send email", { email });
+    return userId;
+  }
+
+  try {
+    const resp = await resend.emails.send({
+      from: fromEmail,
+      to: [email],
+      subject: "Your login link — Interview Coach Pro",
+      html: generateWelcomeEmail(magicLink, email),
+    });
+    logStep("Welcome email queued", { email, id: resp?.id });
+  } catch (emailError) {
+    logStep("Error sending welcome email", { error: String(emailError) });
+  }
+
+  return userId;
 }
 
 // deno-lint-ignore no-explicit-any
-async function handleCheckoutCompleted(supabaseClient: any, session: Stripe.Checkout.Session, resend: any) {
-  const email = session.customer_email;
-  if (!email) return;
-  
+async function handleCheckoutCompleted(supabaseClient: any, stripe: Stripe, session: Stripe.Checkout.Session, resend: any) {
+  const email =
+    session.customer_email ??
+    session.customer_details?.email ??
+    (typeof session.customer === "string" ? await getCustomerEmail(stripe, session.customer) : null);
+
+  if (!email) {
+    logStep("Checkout completed but no email found", { sessionId: session.id });
+    return;
+  }
+
   logStep("Checkout completed, ensuring auth account", { email });
   await ensureAuthAccount(supabaseClient, email, resend);
 }
