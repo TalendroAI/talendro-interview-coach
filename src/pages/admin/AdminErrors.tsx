@@ -6,11 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { Search, CheckCircle, AlertTriangle, Clock, Eye, X } from 'lucide-react';
+import { Search, CheckCircle, AlertTriangle, Clock, Eye, Trash2, MoreVertical, RefreshCw } from 'lucide-react';
 
 interface ErrorLog {
   id: string;
@@ -37,8 +39,12 @@ export default function AdminErrors() {
   const [selectedError, setSelectedError] = useState<ErrorLog | null>(null);
   const [resolutionNotes, setResolutionNotes] = useState('');
   const [isResolving, setIsResolving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [clearType, setClearType] = useState<'all' | 'resolved'>('resolved');
 
   const fetchErrors = async () => {
+    setIsLoading(true);
     try {
       let query = supabase
         .from('error_logs')
@@ -107,6 +113,70 @@ export default function AdminErrors() {
     }
   };
 
+  const handleDeleteError = async (errorId: string) => {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('error_logs')
+        .delete()
+        .eq('id', errorId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Error deleted',
+        description: 'The error log has been removed.',
+      });
+
+      setSelectedError(null);
+      fetchErrors();
+    } catch (error) {
+      console.error('Error deleting:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Failed to delete error',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleClearErrors = async (type: 'all' | 'resolved') => {
+    setIsDeleting(true);
+    try {
+      let query = supabase.from('error_logs').delete();
+      
+      if (type === 'resolved') {
+        query = query.eq('resolved', true);
+      } else {
+        // Delete all - need to match some condition, use created_at not null
+        query = query.not('created_at', 'is', null);
+      }
+
+      const { error } = await query;
+
+      if (error) throw error;
+
+      toast({
+        title: type === 'all' ? 'All errors cleared' : 'Resolved errors cleared',
+        description: type === 'all' 
+          ? 'All error logs have been removed.' 
+          : 'All resolved error logs have been removed.',
+      });
+
+      setClearDialogOpen(false);
+      fetchErrors();
+    } catch (error) {
+      console.error('Error clearing:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Failed to clear errors',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const filteredErrors = errors.filter((error) => {
     if (!search) return true;
     const searchLower = search.toLowerCase();
@@ -160,6 +230,32 @@ export default function AdminErrors() {
                 <SelectItem value="escalated">Needs Attention</SelectItem>
               </SelectContent>
             </Select>
+            <Button variant="outline" size="icon" onClick={fetchErrors} disabled={isLoading}>
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Clear
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem 
+                  onClick={() => { setClearType('resolved'); setClearDialogOpen(true); }}
+                  className="text-amber-600"
+                >
+                  Clear Resolved Errors
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => { setClearType('all'); setClearDialogOpen(true); }}
+                  className="text-destructive"
+                >
+                  Clear All Errors
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardHeader>
         <CardContent>
@@ -199,13 +295,39 @@ export default function AdminErrors() {
                       </TableCell>
                       <TableCell>{getStatusBadge(error)}</TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectedError(error)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedError(error)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Error Log</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently delete this error log. This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleDeleteError(error.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -289,16 +411,100 @@ export default function AdminErrors() {
                       <CheckCircle className="h-4 w-4 mr-2" />
                       Mark as Resolved
                     </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" disabled={isDeleting}>
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Error Log</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently delete this error log. This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={() => handleDeleteError(selectedError.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                     <Button variant="outline" onClick={() => setSelectedError(null)}>
                       Close
                     </Button>
                   </div>
                 </div>
               )}
+
+              {selectedError.resolved && (
+                <div className="border-t pt-4 flex gap-2">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" disabled={isDeleting}>
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete Error
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Error Log</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete this error log. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={() => handleDeleteError(selectedError.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  <Button variant="outline" onClick={() => setSelectedError(null)}>
+                    Close
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Clear Errors Confirmation Dialog */}
+      <AlertDialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {clearType === 'all' ? 'Clear All Error Logs' : 'Clear Resolved Errors'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {clearType === 'all' 
+                ? 'This will permanently delete ALL error logs. This action cannot be undone.'
+                : 'This will permanently delete all resolved error logs. Unresolved errors will be kept.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => handleClearErrors(clearType)}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Clearing...' : clearType === 'all' ? 'Clear All' : 'Clear Resolved'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
