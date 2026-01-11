@@ -2,7 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { SESSION_CONFIGS, SessionType } from '@/types/session';
-import { Shield, Pause, Play, Loader2, PhoneOff } from 'lucide-react';
+import { Shield, Pause, Play, Loader2, PhoneOff, LayoutDashboard } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 const VALUE_PROPOSITIONS = [
@@ -26,6 +26,8 @@ interface HeaderProps {
   showEndButton?: boolean;
   isEnding?: boolean;
   onEndInterview?: () => void;
+  // Pro subscriber props
+  isProSubscriber?: boolean;
 }
 
 export function Header({ 
@@ -39,6 +41,7 @@ export function Header({
   showEndButton = false,
   isEnding = false,
   onEndInterview,
+  isProSubscriber = false,
 }: HeaderProps) {
   const config = sessionType ? SESSION_CONFIGS[sessionType] : null;
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -78,6 +81,16 @@ export function Header({
             <Badge variant={config.badgeVariant} className="animate-fade-in text-sm px-4 py-1.5">
               {config.icon} {config.name}
             </Badge>
+          )}
+          
+          {/* Dashboard Link for Pro Subscribers */}
+          {isProSubscriber && (
+            <Link to="/dashboard">
+              <Button variant="ghost" size="sm" className="gap-2">
+                <LayoutDashboard className="w-4 h-4" />
+                <span className="hidden sm:inline">Dashboard</span>
+              </Button>
+            </Link>
           )}
           
           {/* Pause/Resume Button - Always visible in sticky header */}

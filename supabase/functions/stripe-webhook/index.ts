@@ -116,36 +116,48 @@ async function handleSubscriptionUpdate(supabaseClient: any, stripe: Stripe, sub
 
   const isActive = subscription.status === 'active' || subscription.status === 'trialing';
   const periodEnd = new Date(subscription.current_period_end * 1000).toISOString();
+  const cancelAtPeriodEnd = subscription.cancel_at_period_end || false;
 
   const { data: existingProfile } = await supabaseClient
     .from("profiles")
-    .select("id, pro_session_reset_date")
+    .select("id, pro_session_reset_date, pro_subscription_start")
     .eq("email", email)
     .maybeSingle();
 
-  const typedProfile = existingProfile as ProfileData | null;
+  const typedProfile = existingProfile as (ProfileData & { pro_subscription_start?: string }) | null;
 
   if (typedProfile) {
     const shouldResetCounters = !typedProfile.pro_session_reset_date;
+    const isNewSubscription = !typedProfile.pro_subscription_start;
+    
     const updateData: Record<string, unknown> = {
       is_pro_subscriber: isActive,
       pro_subscription_end: periodEnd,
+      pro_cancel_at_period_end: cancelAtPeriodEnd,
       stripe_customer_id: customerId,
       stripe_subscription_id: subscription.id,
       updated_at: new Date().toISOString(),
     };
+    
+    // Set subscription start date if this is a new subscription
+    if (isNewSubscription && isActive) {
+      updateData.pro_subscription_start = new Date().toISOString();
+    }
+    
     if (shouldResetCounters) {
       updateData.pro_mock_sessions_used = 0;
       updateData.pro_audio_sessions_used = 0;
       updateData.pro_session_reset_date = new Date().toISOString();
     }
     await supabaseClient.from("profiles").update(updateData).eq("id", typedProfile.id);
-    logStep("Profile updated", { email, isActive });
+    logStep("Profile updated", { email, isActive, cancelAtPeriodEnd });
   } else {
     await supabaseClient.from("profiles").insert({
       email,
       is_pro_subscriber: isActive,
       pro_subscription_end: periodEnd,
+      pro_subscription_start: new Date().toISOString(),
+      pro_cancel_at_period_end: cancelAtPeriodEnd,
       stripe_customer_id: customerId,
       stripe_subscription_id: subscription.id,
       pro_mock_sessions_used: 0,
@@ -175,12 +187,30 @@ async function handleInvoicePaid(supabaseClient: any, stripe: Stripe, invoice: S
   const email = await getCustomerEmail(stripe, customerId);
   if (!email) return;
 
-  await supabaseClient.from("profiles").update({
+  // Get subscription to update period end date
+  const subscriptionId = typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription.id;
+  let periodEnd: string | undefined;
+  
+  try {
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    periodEnd = new Date(subscription.current_period_end * 1000).toISOString();
+  } catch (e) {
+    logStep("Could not fetch subscription for period end", { error: String(e) });
+  }
+
+  const updateData: Record<string, unknown> = {
     is_pro_subscriber: true,
     pro_mock_sessions_used: 0,
     pro_audio_sessions_used: 0,
     pro_session_reset_date: new Date().toISOString(),
+    pro_cancel_at_period_end: false, // Reset cancel flag on renewal
     updated_at: new Date().toISOString(),
-  }).eq("email", email);
-  logStep("Session counters reset for renewal", { email });
+  };
+  
+  if (periodEnd) {
+    updateData.pro_subscription_end = periodEnd;
+  }
+
+  await supabaseClient.from("profiles").update(updateData).eq("email", email);
+  logStep("Session counters reset for renewal", { email, periodEnd });
 }
