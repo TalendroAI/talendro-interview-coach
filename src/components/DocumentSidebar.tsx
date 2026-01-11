@@ -45,7 +45,8 @@ export function DocumentSidebar({
   const isPro = sessionType === 'pro';
   const isAudio = sessionType === 'premium_audio';
   const isMock = sessionType === 'full_mock';
-  const requiresFirstName = isAudio || isMock; // Both Mock Interview and Audio Mock require first name
+  // Pro, Mock Interview and Audio Mock all require first name
+  const requiresFirstName = isPro || isAudio || isMock;
   const totalSteps = isPro ? 7 : (requiresFirstName ? 6 : 5);
   const isFirstNameComplete = documents.firstName.trim().length >= 1;
   const isResumeComplete = documents.resume.trim().length > 50;
@@ -109,12 +110,12 @@ export function DocumentSidebar({
       </div>
 
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
-        {/* First Name Section - For Mock Interview and Audio Mock */}
+        {/* First Name Section - For Pro, Mock Interview and Audio Mock */}
         {requiresFirstName && (
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <span className={cn(
-                "flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold transition-all duration-300",
+                "flex items-center justify-center h-7 w-7 min-w-[1.75rem] min-h-[1.75rem] rounded-full text-xs font-bold transition-all duration-300",
                 isFirstNameComplete 
                   ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
                   : "bg-primary text-primary-foreground"
@@ -150,7 +151,7 @@ export function DocumentSidebar({
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <span className={cn(
-              "flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold transition-all duration-300",
+              "flex items-center justify-center h-7 w-7 min-w-[1.75rem] min-h-[1.75rem] rounded-full text-xs font-bold transition-all duration-300",
               isResumeComplete 
                 ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
                 : "bg-primary text-primary-foreground"
@@ -184,7 +185,7 @@ export function DocumentSidebar({
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <span className={cn(
-              "flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold transition-all duration-300",
+              "flex items-center justify-center h-7 w-7 min-w-[1.75rem] min-h-[1.75rem] rounded-full text-xs font-bold transition-all duration-300",
               isJobComplete 
                 ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
                 : "bg-primary text-primary-foreground"
@@ -218,7 +219,7 @@ export function DocumentSidebar({
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <span className={cn(
-              "flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold transition-all duration-300",
+              "flex items-center justify-center h-7 w-7 min-w-[1.75rem] min-h-[1.75rem] rounded-full text-xs font-bold transition-all duration-300",
               isCompanyComplete 
                 ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
                 : "bg-primary text-primary-foreground"
@@ -252,7 +253,7 @@ export function DocumentSidebar({
         {/* Save Documents Button */}
         <div className="flex items-start gap-2">
           <span className={cn(
-            "flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold mt-1 transition-all duration-300",
+            "flex items-center justify-center h-7 w-7 min-w-[1.75rem] min-h-[1.75rem] rounded-full text-xs font-bold mt-1 transition-all duration-300",
             isDocumentsSaved 
               ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
               : "bg-primary text-primary-foreground"
@@ -266,16 +267,16 @@ export function DocumentSidebar({
             disabled={!canSaveDocuments}
           >
             <Save className="h-4 w-4 mr-2" />
-            Save Documents & Proceed
+            Save Documents
           </Button>
         </div>
 
-        {/* Pro Interview Type Selector (Pro only) */}
-        {isPro && isDocumentsSaved && (
+        {/* Pro Interview Type Selector (Pro only - always visible) */}
+        {isPro && (
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <span className={cn(
-                "flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold transition-all duration-300",
+                "flex items-center justify-center h-7 w-7 min-w-[1.75rem] min-h-[1.75rem] rounded-full text-xs font-bold transition-all duration-300",
                 selectedProInterviewType 
                   ? "bg-secondary text-secondary-foreground scale-110 shadow-sm" 
                   : "bg-primary text-primary-foreground"
@@ -286,13 +287,18 @@ export function DocumentSidebar({
                 Select Interview Type
               </Label>
             </div>
-            <div className="ml-8">
+            <div className="ml-9">
               <ProInterviewTypeSelector
                 selectedType={selectedProInterviewType ?? null}
                 onSelect={onProInterviewTypeSelect ?? (() => {})}
-                disabled={isSessionStarted}
+                disabled={isSessionStarted || !isDocumentsSaved}
               />
             </div>
+            {!isDocumentsSaved && (
+              <p className="text-xs text-muted-foreground ml-9">
+                Save documents first to select interview type
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -300,7 +306,7 @@ export function DocumentSidebar({
       <div className="border-t border-border p-5">
         <div className="flex items-start gap-2">
           <span className={cn(
-            "flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold mt-1 transition-all duration-300",
+            "flex items-center justify-center h-7 w-7 min-w-[1.75rem] min-h-[1.75rem] rounded-full text-xs font-bold mt-1 transition-all duration-300",
             isSessionCompleted
               ? "bg-secondary text-secondary-foreground scale-110 shadow-sm"
               : isContentReady 
