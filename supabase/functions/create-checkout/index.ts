@@ -15,8 +15,9 @@ const PRICE_CONFIG = {
   pro: { price_id: "price_1SX74aCoFieNARvY06cE5g5e", amount: 7900, recurring: true }, // $79/month in cents
 };
 
-// Product tier order (lowest to highest)
-const TIER_ORDER = ["quick_prep", "full_mock", "premium_audio", "pro"];
+// Product tier order (lowest to highest) - Pro is EXCLUDED from upgrade path
+// Pro is a subscription product, not part of single-purchase upgrade credits
+const TIER_ORDER = ["quick_prep", "full_mock", "premium_audio"];
 
 const logStep = (step: string, details?: any) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
@@ -83,14 +84,20 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    logStep("Checking for upgrade credit eligibility", { email, targetTier: session_type });
+    logStep("Checking for upgrade credit eligibility", { email, targetTier: session_type, isSubscription });
 
     // Check for upgrade credit ("pay the difference")
     // Policy:
     // - If the customer purchased a LOWER tier within the last 24 hours, they can upgrade by applying that prior purchase amount as a credit.
+    // - Pro subscriptions are NOT eligible for upgrade credits - they are recurring products, not single purchases.
     // NOTE: The frontend displays upgrade credit based on this rule; to avoid charging the wrong amount, we do not attempt to infer "already used" here.
     let upgradeCredit = 0;
     let upgradedFromSession: any = null;
+
+    // Skip upgrade credit check entirely for Pro subscriptions
+    if (isSubscription) {
+      logStep("Pro subscription - upgrade credits do not apply", { session_type });
+    }
 
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
@@ -113,7 +120,8 @@ serve(async (req) => {
       recentCount: recentSessions?.length ?? 0,
     });
 
-    if (!recentError && recentSessions && recentSessions.length > 0) {
+    // Only check for upgrade credits if NOT a subscription (Pro)
+    if (!isSubscription && !recentError && recentSessions && recentSessions.length > 0) {
       logStep("Recent paid sessions", {
         sessions: recentSessions.map((s) => ({
           id: s.id,
@@ -124,7 +132,11 @@ serve(async (req) => {
       });
 
       // Pick the BEST (highest value) lower-tier purchase within 24h.
+      // Only consider single-purchase products (exclude 'pro' from source sessions too)
       for (const session of recentSessions) {
+        // Skip pro sessions as source - they're subscriptions, not single purchases
+        if (session.session_type === 'pro') continue;
+        
         const sessionTierIndex = TIER_ORDER.indexOf(session.session_type);
         if (sessionTierIndex >= 0 && sessionTierIndex < currentTierIndex) {
           const sessionPrice = PRICE_CONFIG[session.session_type as keyof typeof PRICE_CONFIG];
@@ -146,6 +158,8 @@ serve(async (req) => {
       } else {
         logStep("No upgrade credit (no qualifying lower-tier purchase in last 24h)");
       }
+    } else if (isSubscription) {
+      logStep("Skipped upgrade credit check - Pro subscriptions are always full price");
     } else {
       logStep("No recent paid sessions found within 24 hours", { cutoff: twentyFourHoursAgo });
     }

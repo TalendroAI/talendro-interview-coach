@@ -29,15 +29,22 @@ export interface CheckUpgradeResponse {
 }
 
 export async function checkUpgradeCredit(email: string, targetSessionType: SessionType): Promise<CheckUpgradeResponse> {
+  // Pro subscriptions are NOT eligible for upgrade credits - they are recurring subscriptions
+  // Upgrade credits only apply to single-purchase products upgrading to other single-purchase products
+  if (targetSessionType === 'pro') {
+    return { hasUpgradeCredit: false, upgradeCredit: 0 };
+  }
+
   // Check for recent purchases in the last 24 hours that qualify for upgrade credit
   const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   
-  const TIER_ORDER: SessionType[] = ['quick_prep', 'full_mock', 'premium_audio', 'pro'];
+  // Only single-purchase products are eligible for upgrade path
+  const TIER_ORDER: SessionType[] = ['quick_prep', 'full_mock', 'premium_audio'];
   const PRICE_MAP: Record<SessionType, number> = {
     quick_prep: 1200,
     full_mock: 2900,
     premium_audio: 4900,
-    pro: 7900,
+    pro: 7900, // Keep for reference but Pro is excluded from upgrades
   };
   
   const currentTierIndex = TIER_ORDER.indexOf(targetSessionType);
