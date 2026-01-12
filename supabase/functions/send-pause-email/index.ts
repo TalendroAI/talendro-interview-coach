@@ -15,6 +15,17 @@ const logStep = (step: string, details?: any) => {
 const EMAIL_MAX_WIDTH_DESKTOP = 920;
 const EMAIL_MAX_WIDTH_TABLET = 720;
 
+// TALENDRO BRAND COLORS
+const BRAND = {
+  blue: "#2F6DF6",      // Primary / CTAs
+  aqua: "#00C4CC",      // Taglines / Highlights
+  lime: "#A4F400",      // Accent
+  slate: "#2C2F38",     // Body text
+  gray: "#9FA6B2",      // Secondary text
+  navy: "#0F172A",      // Footer background
+  soft: "#F4F7FF",      // Light background
+};
+
 const sessionTypeLabels: Record<string, string> = {
   quick_prep: "Quick Prep Session",
   full_mock: "Mock Interview",
@@ -232,12 +243,16 @@ function generatePauseEmail(params: PauseEmailParams): string {
     ? `Your interview session will expire in ${hoursRemaining} hours. Resume now to continue where you left off.`
     : "Your progress has been saved. Click below to pick up right where you left off.";
 
+  // Use orange for urgent reminders, Talendro Blue for regular pause
+  const headerBgColor = isReminder ? "#D97706" : BRAND.blue;
+  const urgentAccentColor = "#D97706";
+
   const urgencyBanner = isReminder ? `
               <!-- Urgency Banner -->
               <table width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 28px 0;">
                 <tr>
-                  <td style="background-color: #FEF3E8; border: 2px solid #F59E0B; padding: 20px; border-radius: 12px; text-align: center;">
-                    <p style="margin: 0; color: #D97706; font-size: 16px; font-weight: 700;">
+                  <td style="background-color: #FEF3E8; border: 2px solid ${urgentAccentColor}; padding: 20px; border-radius: 12px; text-align: center;">
+                    <p style="margin: 0; color: ${urgentAccentColor}; font-size: 16px; font-weight: 700;">
                       ⚠️ Your progress will be lost if you don't resume by ${formatDate(expirationDate)} (UTC)
                     </p>
                   </td>
@@ -263,7 +278,7 @@ function generatePauseEmail(params: PauseEmailParams): string {
     body, table, td, div, p, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
     table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: collapse !important; }
     img { -ms-interpolation-mode: bicubic; border: 0; line-height: 100%; outline: none; text-decoration: none; }
-    body { margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: #f0f4f8; }
+    body { margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: ${BRAND.soft}; }
     .ExternalClass { width: 100%; }
     .ExternalClass, .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td, .ExternalClass div { line-height: 100%; }
     a[x-apple-data-detectors] { color: inherit !important; text-decoration: none !important; }
@@ -288,23 +303,23 @@ function generatePauseEmail(params: PauseEmailParams): string {
     }
   </style>
 </head>
-<body id="body" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #2C2F38; margin: 0; padding: 0; background-color: #f0f4f8; width: 100% !important; -webkit-font-smoothing: antialiased;">
+<body id="body" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: ${BRAND.slate}; margin: 0; padding: 0; background-color: ${BRAND.soft}; width: 100% !important; -webkit-font-smoothing: antialiased;">
   <!--[if mso]>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f0f4f8;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: ${BRAND.soft};">
   <tr><td align="center" valign="top" style="padding: 24px 12px;">
   <table role="presentation" width="${EMAIL_MAX_WIDTH_DESKTOP}" cellpadding="0" cellspacing="0" border="0">
   <tr><td>
   <![endif]-->
   
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f0f4f8;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: ${BRAND.soft};">
     <tr>
       <td align="center" valign="top" style="padding: 24px 12px;">
         <table role="presentation" class="email-container" width="${EMAIL_MAX_WIDTH_DESKTOP}" cellpadding="0" cellspacing="0" border="0" style="width: ${EMAIL_MAX_WIDTH_DESKTOP}px; max-width: 100%; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
           <!-- Header -->
           <tr>
-            <td class="header-padding" style="background-color: ${isReminder ? '#D97706' : '#2F6DF6'}; padding: 40px 48px; text-align: center;">
+            <td class="header-padding" style="background-color: ${headerBgColor}; padding: 40px 48px; text-align: center;">
               <div style="font-size: 36px; font-weight: 800; color: #ffffff; letter-spacing: -1px;">
-                Talendro<span style="font-size: 16px; vertical-align: super; color: ${isReminder ? '#FEF3E8' : '#00C4CC'}; font-weight: 600;">™</span>
+                Talendro<span style="font-size: 16px; vertical-align: super; color: ${isReminder ? '#FEF3E8' : BRAND.aqua}; font-weight: 600;">™</span>
               </div>
               <h1 class="email-title" style="color: white; margin: 20px 0 0 0; font-size: 28px; font-weight: 700;">${headerTitle}</h1>
               <p style="color: rgba(255,255,255,0.9); margin: 12px 0 0 0; font-size: 17px;">${headerSubtitle}</p>
@@ -312,10 +327,10 @@ function generatePauseEmail(params: PauseEmailParams): string {
           </tr>
           <!-- Hero Banner -->
           <tr>
-            <td class="hero-padding" style="background-color: ${isReminder ? '#FEF3E8' : '#E8F4FE'}; padding: 36px 48px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+            <td class="hero-padding" style="background-color: ${isReminder ? '#FEF3E8' : BRAND.soft}; padding: 36px 48px; text-align: center; border-bottom: 1px solid #e5e7eb;">
               <div style="font-size: 56px; margin-bottom: 16px;">${heroEmoji}</div>
-              <h2 style="color: #2C2F38; font-size: 22px; font-weight: 600; margin: 0 0 10px 0;">${heroTitle}</h2>
-              <p style="color: #6B7280; font-size: 16px; margin: 0;">${heroSubtitle}</p>
+              <h2 style="color: ${BRAND.slate}; font-size: 22px; font-weight: 600; margin: 0 0 10px 0;">${heroTitle}</h2>
+              <p style="color: ${BRAND.gray}; font-size: 16px; margin: 0;">${heroSubtitle}</p>
             </td>
           </tr>
           <!-- Content -->
@@ -326,20 +341,20 @@ function generatePauseEmail(params: PauseEmailParams): string {
               <!-- Session Details -->
               <table width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 28px 0;">
                 <tr>
-                  <td style="background-color: #f8fafc; border-left: 4px solid #2F6DF6; padding: 24px; border-radius: 0 12px 12px 0;">
-                    <p style="margin: 0 0 16px 0; color: #2F6DF6; font-size: 17px; font-weight: 700;">📋 Session Details</p>
+                  <td style="background-color: #f8fafc; border-left: 4px solid ${BRAND.blue}; padding: 24px; border-radius: 0 12px 12px 0;">
+                    <p style="margin: 0 0 16px 0; color: ${BRAND.blue}; font-size: 17px; font-weight: 700;">📋 Session Details</p>
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
-                        <td style="padding: 8px 0; color: #6B7280; font-size: 15px; width: 140px;">Session Type:</td>
-                        <td style="padding: 8px 0; color: #2C2F38; font-size: 15px; font-weight: 600;">${sessionLabel}</td>
+                        <td style="padding: 8px 0; color: ${BRAND.gray}; font-size: 15px; width: 140px;">Session Type:</td>
+                        <td style="padding: 8px 0; color: ${BRAND.slate}; font-size: 15px; font-weight: 600;">${sessionLabel}</td>
                       </tr>
                       <tr>
-                        <td style="padding: 8px 0; color: #6B7280; font-size: 15px;">Position:</td>
-                        <td style="padding: 8px 0; color: #2C2F38; font-size: 15px; font-weight: 600;">${positionDisplay}</td>
+                        <td style="padding: 8px 0; color: ${BRAND.gray}; font-size: 15px;">Position:</td>
+                        <td style="padding: 8px 0; color: ${BRAND.slate}; font-size: 15px; font-weight: 600;">${positionDisplay}</td>
                       </tr>
                       <tr>
-                        <td style="padding: 8px 0; color: #6B7280; font-size: 15px;">Expires At:</td>
-                        <td style="padding: 8px 0; color: ${isReminder ? '#D97706' : '#2C2F38'}; font-size: 15px; font-weight: 600;">${formatDate(expirationDate)} (UTC)</td>
+                        <td style="padding: 8px 0; color: ${BRAND.gray}; font-size: 15px;">Expires At:</td>
+                        <td style="padding: 8px 0; color: ${isReminder ? urgentAccentColor : BRAND.slate}; font-size: 15px; font-weight: 600;">${formatDate(expirationDate)} (UTC)</td>
                       </tr>
                     </table>
                   </td>
@@ -350,9 +365,17 @@ function generatePauseEmail(params: PauseEmailParams): string {
               <table width="100%" cellpadding="0" cellspacing="0" style="margin: 32px 0;">
                 <tr>
                   <td align="center">
-                    <a href="${resumeUrl}" class="cta-button" style="display: inline-block; background-color: ${isReminder ? '#D97706' : '#2F6DF6'}; color: #ffffff; padding: 18px 48px; font-size: 18px; font-weight: 700; text-decoration: none; border-radius: 8px; box-shadow: 0 4px 12px rgba(47, 109, 246, 0.3);">
+                    <!--[if mso]>
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${resumeUrl}" style="height:52px;v-text-anchor:middle;width:280px;" arcsize="15%" stroke="f" fillcolor="${isReminder ? urgentAccentColor : BRAND.blue}">
+                      <w:anchorlock/>
+                      <center style="color:#ffffff;font-family:sans-serif;font-size:18px;font-weight:bold;">Resume Your Interview →</center>
+                    </v:roundrect>
+                    <![endif]-->
+                    <!--[if !mso]><!-->
+                    <a href="${resumeUrl}" class="cta-button" style="display: inline-block; mso-hide: all; background-color: ${isReminder ? urgentAccentColor : BRAND.blue}; color: #ffffff !important; padding: 18px 48px; font-size: 18px; font-weight: 700; text-decoration: none; border-radius: 8px; box-shadow: 0 4px 12px rgba(47, 109, 246, 0.3);">
                       Resume Your Interview →
                     </a>
+                    <!--<![endif]-->
                   </td>
                 </tr>
               </table>
@@ -360,11 +383,11 @@ function generatePauseEmail(params: PauseEmailParams): string {
               <!-- What Happens Next -->
               <table width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
                 <tr>
-                  <td style="background-color: #E8F4FE; border: 1px solid #2F6DF6; border-radius: 12px; padding: 24px;">
-                    <p style="margin: 0 0 12px 0; color: #2F6DF6; font-size: 17px; font-weight: 700;">✨ When You Resume</p>
-                    <p style="margin: 8px 0; color: #2C2F38; font-size: 15px;">✓ Your coach will remember everything from before</p>
-                    <p style="margin: 8px 0; color: #2C2F38; font-size: 15px;">✓ You'll pick up right where you left off</p>
-                    <p style="margin: 8px 0; color: #2C2F38; font-size: 15px;">✓ No need to re-enter your documents</p>
+                  <td style="background-color: ${BRAND.soft}; border: 1px solid ${BRAND.blue}; border-radius: 12px; padding: 24px;">
+                    <p style="margin: 0 0 12px 0; color: ${BRAND.blue}; font-size: 17px; font-weight: 700;">✨ When You Resume</p>
+                    <p style="margin: 8px 0; color: ${BRAND.slate}; font-size: 15px;">✓ Your coach will remember everything from before</p>
+                    <p style="margin: 8px 0; color: ${BRAND.slate}; font-size: 15px;">✓ You'll pick up right where you left off</p>
+                    <p style="margin: 8px 0; color: ${BRAND.slate}; font-size: 15px;">✓ No need to re-enter your documents</p>
                   </td>
                 </tr>
               </table>
@@ -373,12 +396,12 @@ function generatePauseEmail(params: PauseEmailParams): string {
               <table width="100%" cellpadding="0" cellspacing="0" style="margin-top: 40px; border-top: 1px solid #e5e7eb; padding-top: 28px;">
                 <tr>
                   <td>
-                    <p style="margin: 0 0 16px 0; color: #2C2F38; font-size: 15px; line-height: 1.6;">
+                    <p style="margin: 0 0 16px 0; color: ${BRAND.slate}; font-size: 15px; line-height: 1.6;">
                       Good luck with the rest of your interview prep!
                     </p>
-                    <p style="margin: 0; color: #2C2F38; font-size: 15px;">
+                    <p style="margin: 0; color: ${BRAND.slate}; font-size: 15px;">
                       <strong>Greg Jackson</strong><br>
-                      <span style="color: #6B7280;">Founder, Talendro</span>
+                      <span style="color: ${BRAND.gray};">Founder, Talendro</span>
                     </p>
                   </td>
                 </tr>
@@ -387,11 +410,15 @@ function generatePauseEmail(params: PauseEmailParams): string {
           </tr>
           <!-- Footer -->
           <tr>
-            <td class="footer-padding" style="background-color: #f8fafc; padding: 32px 48px; text-align: center; border-top: 1px solid #e5e7eb;">
-              <p style="margin: 0 0 12px 0; color: #6B7280; font-size: 14px;">
-                Questions? Reply to this email or reach out at <a href="mailto:support@talendro.com" style="color: #2F6DF6; text-decoration: none;">support@talendro.com</a>
+            <td class="footer-padding" style="background-color: ${BRAND.navy}; padding: 32px 48px; text-align: center;">
+              <div style="font-size: 24px; font-weight: 800; color: #ffffff; margin-bottom: 8px;">
+                Talendro<span style="font-size: 12px; vertical-align: super; color: ${BRAND.aqua};">™</span>
+              </div>
+              <p style="color: ${BRAND.aqua}; font-style: italic; font-size: 14px; margin: 0 0 12px 0;">Precision Matches. Faster results.</p>
+              <p style="margin: 0 0 16px 0; color: ${BRAND.gray}; font-size: 14px;">
+                Questions? <a href="mailto:support@talendro.com" style="color: ${BRAND.aqua}; text-decoration: none;">support@talendro.com</a>
               </p>
-              <p style="margin: 0; color: #9CA3AF; font-size: 12px;">
+              <p style="margin: 0; color: ${BRAND.gray}; font-size: 12px;">
                 © ${new Date().getFullYear()} Talendro™ — AI-Powered Interview Coaching
               </p>
             </td>
