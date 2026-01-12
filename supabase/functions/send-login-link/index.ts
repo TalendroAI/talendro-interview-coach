@@ -16,9 +16,8 @@ const BRAND = {
   blue: "#2F6DF6",      // Primary / CTAs
   aqua: "#00C4CC",      // Taglines / Highlights
   lime: "#A4F400",      // Accent
-  slate: "#2C2F38",     // Body text
+  slate: "#2C2F38",     // Body text / Dark backgrounds
   gray: "#9FA6B2",      // Secondary text
-  navy: "#0F172A",      // Footer background
   soft: "#F4F7FF",      // Light background
 };
 
@@ -153,7 +152,7 @@ function generateLoginEmailHtml(magicLink: string): string {
           
           <!-- Footer -->
           <tr>
-            <td class="footer-padding" style="background-color: ${BRAND.navy}; padding: 32px 48px; text-align: center;">
+            <td class="footer-padding" style="background-color: ${BRAND.slate}; padding: 32px 48px; text-align: center;">
               <div style="font-size: 24px; font-weight: 800; color: #ffffff; margin-bottom: 8px;">
                 Talendro<span style="font-size: 12px; vertical-align: super; color: ${BRAND.aqua};">™</span>
               </div>
