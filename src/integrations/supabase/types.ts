@@ -273,6 +273,7 @@ export type Database = {
           pro_audio_sessions_used: number
           pro_cancel_at_period_end: boolean | null
           pro_mock_sessions_used: number
+          pro_quick_prep_sessions_used: number
           pro_session_reset_date: string | null
           pro_subscription_end: string | null
           pro_subscription_start: string | null
@@ -290,6 +291,7 @@ export type Database = {
           pro_audio_sessions_used?: number
           pro_cancel_at_period_end?: boolean | null
           pro_mock_sessions_used?: number
+          pro_quick_prep_sessions_used?: number
           pro_session_reset_date?: string | null
           pro_subscription_end?: string | null
           pro_subscription_start?: string | null
@@ -307,6 +309,7 @@ export type Database = {
           pro_audio_sessions_used?: number
           pro_cancel_at_period_end?: boolean | null
           pro_mock_sessions_used?: number
+          pro_quick_prep_sessions_used?: number
           pro_session_reset_date?: string | null
           pro_subscription_end?: string | null
           pro_subscription_start?: string | null

@@ -943,8 +943,8 @@ export default function InterviewCoach() {
         setCompletedSessionResults(data.session_results);
       }
 
-      // Increment Pro session count for limited session types (full_mock, premium_audio)
-      if (isProSubscriber && derivedEmail && (completionType === 'full_mock' || completionType === 'premium_audio')) {
+      // Increment Pro session count for all session types (track usage for analytics)
+      if (isProSubscriber && derivedEmail) {
         try {
           await supabase.functions.invoke('pro-session', {
             body: {
