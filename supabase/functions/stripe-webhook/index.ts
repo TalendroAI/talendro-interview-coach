@@ -87,20 +87,20 @@ function generateWelcomeEmail(magicLink: string): string {
           
           <!-- Header with Talendro branding -->
           <tr>
-            <td class="header-padding" style="background: linear-gradient(135deg, ${BRAND.blue} 0%, ${BRAND.aqua} 100%); padding: 40px 48px; text-align: center;">
+            <td class="header-padding" style="background-color: ${BRAND.blue}; padding: 40px 48px; text-align: center;">
               <div style="font-size: 32px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">
-                Talendro<span style="font-size: 14px; vertical-align: super; color: ${BRAND.aqua}; font-weight: 600;">™</span>
+                Talendro<span style="font-size: 14px; vertical-align: super; color: ${BRAND.lime}; font-weight: 600;">™</span>
               </div>
-              <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 15px; font-weight: 500;">Interview Coach Pro</p>
+              <p style="color: ${BRAND.aqua}; margin: 8px 0 0 0; font-size: 15px; font-weight: 500;">Interview Coach Pro</p>
             </td>
           </tr>
 
           <!-- Hero Section -->
           <tr>
-            <td style="background-color: #dcfce7; padding: 32px 48px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+            <td style="background-color: #ffffff; padding: 32px 48px; text-align: center; border-bottom: 1px solid #e5e7eb;">
               <div style="font-size: 48px; margin-bottom: 12px;">🎉</div>
-              <h1 class="email-title" style="color: #166534; font-size: 26px; font-weight: 700; margin: 0 0 8px 0;">Welcome to Pro!</h1>
-              <p style="color: #15803d; font-size: 16px; margin: 0;">Your subscription is now active</p>
+              <h1 class="email-title" style="color: ${BRAND.slate}; font-size: 26px; font-weight: 700; margin: 0 0 8px 0;">Welcome to Pro!</h1>
+              <p style="color: ${BRAND.aqua}; font-size: 16px; margin: 0;">Your subscription is now active</p>
             </td>
           </tr>
           
