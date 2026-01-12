@@ -453,21 +453,10 @@ async function handleIncrementSessionCount(
 ) {
   logStep("Incrementing session count", { email, sessionType });
 
-  // Quick prep doesn't count
-  if (sessionType === 'quick_prep') {
-    return new Response(JSON.stringify({ 
-      ok: true, 
-      message: "Quick prep does not count against limits" 
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
-  }
-
   const { data: profile, error } = await supabaseClient
     .from("profiles")
     .select("*")
-    .eq("email", email)
+    .ilike("email", email)
     .maybeSingle();
 
   if (error || !profile) {
@@ -482,13 +471,20 @@ async function handleIncrementSessionCount(
 
   const typedProfile = profile as ProfileData;
 
-  const updateField = sessionType === 'full_mock' 
-    ? 'pro_mock_sessions_used' 
-    : 'pro_audio_sessions_used';
+  // Determine which field to update based on session type
+  let updateField: string;
+  let currentCount: number;
 
-  const currentCount = sessionType === 'full_mock'
-    ? typedProfile.pro_mock_sessions_used || 0
-    : typedProfile.pro_audio_sessions_used || 0;
+  if (sessionType === 'quick_prep') {
+    updateField = 'pro_quick_prep_sessions_used';
+    currentCount = (typedProfile as any).pro_quick_prep_sessions_used || 0;
+  } else if (sessionType === 'full_mock') {
+    updateField = 'pro_mock_sessions_used';
+    currentCount = typedProfile.pro_mock_sessions_used || 0;
+  } else {
+    updateField = 'pro_audio_sessions_used';
+    currentCount = typedProfile.pro_audio_sessions_used || 0;
+  }
 
   const { error: updateError } = await supabaseClient
     .from("profiles")
