@@ -38,6 +38,9 @@ function AuthCallbackHandler({ children }: { children: React.ReactNode }) {
     const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
     const type = hashParams.get('type') || queryParams.get('type');
     
+    // Check for redirect_to parameter in hash or query
+    const redirectTo = hashParams.get('redirect_to') || queryParams.get('redirect_to');
+    
     if (accessToken && refreshToken && type === 'magiclink') {
       setIsProcessingAuth(true);
       
@@ -52,9 +55,23 @@ function AuthCallbackHandler({ children }: { children: React.ReactNode }) {
           return;
         }
         
-        // Clear the hash/query params and redirect to dashboard
-        window.history.replaceState(null, '', '/dashboard');
-        navigate('/dashboard', { replace: true });
+        // Determine redirect destination - honor redirect_to param or default to /dashboard
+        let destination = '/dashboard';
+        if (redirectTo) {
+          try {
+            const url = new URL(redirectTo);
+            destination = url.pathname; // Extract just the path
+          } catch {
+            // If not a valid URL, try using it as a path directly
+            if (redirectTo.startsWith('/')) {
+              destination = redirectTo;
+            }
+          }
+        }
+        
+        // Clear the hash/query params and redirect
+        window.history.replaceState(null, '', destination);
+        navigate(destination, { replace: true });
         setIsProcessingAuth(false);
       });
     }
