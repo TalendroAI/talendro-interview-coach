@@ -1025,56 +1025,95 @@ export default function InterviewCoach() {
     }
   };
 
-  // Handle Pro interview type selection - triggers session start
-  const handleProInterviewTypeSelect = (type: ProInterviewType) => {
+  // Handle Pro interview type selection - triggers session start with atomic limit check
+  const handleProInterviewTypeSelect = async (type: ProInterviewType) => {
     setSelectedProInterviewType(type);
     
     // If documents are saved and payment verified, start the session
-    if (isDocumentsSaved && isPaymentVerified && sessionId) {
-      // Use a small delay to let state update, then scroll to top
-      setTimeout(() => {
-        // Scroll to top AFTER state updates so user sees the loading content
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        
-        if (type === 'quick_prep') {
-          // Generate Quick Prep content
-          setIsGeneratingContent(true);
-          setContentError(null);
-          setIsSessionStarted(true);
-          
-          supabase.functions.invoke('ai-coach', {
-            body: {
-              session_id: sessionId,
-              session_type: type,
-              resume: documents.resume,
-              job_description: documents.jobDescription,
-              company_url: documents.companyUrl,
-              is_initial: true
-            }
-          }).then(({ data, error }) => {
-            if (error) {
-              setContentError(error.message || 'Failed to generate content');
-            } else if (data?.message) {
-              setQuickPrepContent(data.message);
-            } else {
-              setContentError('No content received from AI');
-            }
-            setIsGeneratingContent(false);
-          }).catch(err => {
-            setContentError(err instanceof Error ? err.message : 'Failed to generate content');
-            setIsGeneratingContent(false);
+    if (isDocumentsSaved && isPaymentVerified && sessionId && derivedEmail) {
+      // For limited session types (not quick_prep), use atomic check-and-increment
+      if (type !== 'quick_prep') {
+        try {
+          // Atomically check limits AND increment in one transaction to prevent race conditions
+          const { data, error } = await supabase.functions.invoke('pro-session', {
+            body: { 
+              action: 'start_session', 
+              email: derivedEmail, 
+              session_type: type 
+            },
           });
-        } else {
-          // For Mock or Audio, just start the session
-          setIsSessionStarted(true);
+
+          if (error) {
+            toast({
+              variant: 'destructive',
+              title: 'Session Error',
+              description: error.message || 'Failed to start session',
+            });
+            return;
+          }
+
+          if (!data?.allowed) {
+            toast({
+              variant: 'destructive',
+              title: 'Session Limit Reached',
+              description: data?.message || `You've used all your ${type === 'full_mock' ? 'Mock Interview' : 'Audio Mock'} sessions this month.`,
+            });
+            return;
+          }
+
+          console.log('[Pro Session] Atomic start successful:', data);
+        } catch (err) {
+          console.error('[Pro Session] Atomic start error:', err);
           toast({
-            title: 'Session Started!',
-            description: type === 'premium_audio' 
-              ? 'Click "Begin Interview" when you\'re ready to start.'
-              : 'Your personalized coaching session has begun.',
+            variant: 'destructive',
+            title: 'Session Error',
+            description: 'Failed to verify session limits. Please try again.',
           });
+          return;
         }
-      }, 100);
+      }
+
+      // Scroll to top AFTER limit check passes
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      
+      if (type === 'quick_prep') {
+        // Generate Quick Prep content (unlimited, no atomic check needed)
+        setIsGeneratingContent(true);
+        setContentError(null);
+        setIsSessionStarted(true);
+        
+        supabase.functions.invoke('ai-coach', {
+          body: {
+            session_id: sessionId,
+            session_type: type,
+            resume: documents.resume,
+            job_description: documents.jobDescription,
+            company_url: documents.companyUrl,
+            is_initial: true
+          }
+        }).then(({ data, error }) => {
+          if (error) {
+            setContentError(error.message || 'Failed to generate content');
+          } else if (data?.message) {
+            setQuickPrepContent(data.message);
+          } else {
+            setContentError('No content received from AI');
+          }
+          setIsGeneratingContent(false);
+        }).catch(err => {
+          setContentError(err instanceof Error ? err.message : 'Failed to generate content');
+          setIsGeneratingContent(false);
+        });
+      } else {
+        // For Mock or Audio, session was already atomically started above
+        setIsSessionStarted(true);
+        toast({
+          title: 'Session Started!',
+          description: type === 'premium_audio' 
+            ? 'Click "Begin Interview" when you\'re ready to start.'
+            : 'Your personalized coaching session has begun.',
+        });
+      }
     }
   };
 
