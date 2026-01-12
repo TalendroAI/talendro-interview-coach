@@ -1,18 +1,8 @@
 import { Link } from 'react-router-dom';
-import { useClientAuth } from '@/hooks/useClientAuth';
 import { Button } from '@/components/ui/button';
-import { LayoutDashboard, LogIn, Sparkles, User, LogOut } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { LogIn } from 'lucide-react';
 
 export function LandingHeader() {
-  const { user, isLoading, isProSubscriber, signOut, profile } = useClientAuth();
-
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
       <div className="container">
@@ -38,77 +28,13 @@ export function LandingHeader() {
               </a>
             </nav>
 
-            {/* Auth Section */}
-            {!isLoading && (
-              <>
-                {user ? (
-                  // Logged in
-                  <div className="flex items-center gap-3">
-                    {isProSubscriber ? (
-                      // Pro subscriber - show Dashboard link
-                      <Link to="/dashboard">
-                        <Button size="sm" className="gap-2">
-                          <LayoutDashboard className="h-4 w-4" />
-                          <span className="hidden sm:inline">Dashboard</span>
-                        </Button>
-                      </Link>
-                    ) : (
-                      // Not Pro - show Upgrade button
-                      <a href="#products">
-                        <Button size="sm" variant="default" className="gap-2">
-                          <Sparkles className="h-4 w-4" />
-                          <span className="hidden sm:inline">Upgrade to Pro</span>
-                        </Button>
-                      </a>
-                    )}
-                    
-                    {/* User Menu */}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="gap-2">
-                          <User className="h-4 w-4" />
-                          <span className="hidden sm:inline max-w-[100px] truncate">
-                            {profile?.full_name || user.email?.split('@')[0]}
-                          </span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48 bg-background">
-                        <DropdownMenuItem asChild>
-                          <Link to="/dashboard" className="cursor-pointer">
-                            <LayoutDashboard className="h-4 w-4 mr-2" />
-                            Dashboard
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          onClick={() => signOut()}
-                          className="cursor-pointer text-destructive focus:text-destructive"
-                        >
-                          <LogOut className="h-4 w-4 mr-2" />
-                          Sign Out
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                ) : (
-                  // Not logged in
-                  <div className="flex items-center gap-3">
-                    <Link to="/login">
-                      <Button variant="ghost" size="sm" className="gap-2">
-                        <LogIn className="h-4 w-4" />
-                        <span className="hidden sm:inline">Login</span>
-                      </Button>
-                    </Link>
-                    <a href="#products">
-                      <Button size="sm" className="gap-2">
-                        <Sparkles className="h-4 w-4" />
-                        <span className="hidden sm:inline">Get Started</span>
-                      </Button>
-                    </a>
-                  </div>
-                )}
-              </>
-            )}
+            {/* Simple Login Button - no user state shown */}
+            <Link to="/login">
+              <Button variant="outline" size="sm" className="gap-2">
+                <LogIn className="h-4 w-4" />
+                <span className="hidden sm:inline">Login</span>
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
