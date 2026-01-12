@@ -438,7 +438,9 @@ async function handleSubscriptionUpdate(supabaseClient: any, stripe: Stripe, sub
   if (!email) return;
 
   const isActive = subscription.status === 'active' || subscription.status === 'trialing';
+  const periodStart = new Date(subscription.current_period_start * 1000).toISOString();
   const periodEnd = new Date(subscription.current_period_end * 1000).toISOString();
+  const subscriptionStart = new Date(subscription.start_date * 1000).toISOString();
   const cancelAtPeriodEnd = subscription.cancel_at_period_end || false;
 
   // For new subscriptions, ensure auth account exists
@@ -458,7 +460,7 @@ async function handleSubscriptionUpdate(supabaseClient: any, stripe: Stripe, sub
   if (typedProfile) {
     const shouldResetCounters = !typedProfile.pro_session_reset_date;
     const isNewSub = !typedProfile.pro_subscription_start;
-    
+
     const updateData: Record<string, unknown> = {
       is_pro_subscriber: isActive,
       pro_subscription_end: periodEnd,
@@ -467,41 +469,41 @@ async function handleSubscriptionUpdate(supabaseClient: any, stripe: Stripe, sub
       stripe_subscription_id: subscription.id,
       updated_at: new Date().toISOString(),
     };
-    
+
     // Link user_id if we have it and profile doesn't
     if (userId && !typedProfile.user_id) {
       updateData.user_id = userId;
     }
-    
-    // Set subscription start date if this is a new subscription
+
+    // Set subscription start date (use Stripe's real anchor)
     if (isNewSub && isActive) {
-      updateData.pro_subscription_start = new Date().toISOString();
+      updateData.pro_subscription_start = subscriptionStart;
     }
-    
+
     if (shouldResetCounters) {
       updateData.pro_mock_sessions_used = 0;
       updateData.pro_audio_sessions_used = 0;
-      updateData.pro_session_reset_date = new Date().toISOString();
+      updateData.pro_session_reset_date = periodStart;
     }
     await supabaseClient.from("profiles").update(updateData).eq("id", typedProfile.id);
     logStep("Profile updated", { email, isActive, cancelAtPeriodEnd, userId });
   } else {
     // Get customer name for new profile
     const fullName = await getCustomerName(stripe, customerId);
-    
+
     await supabaseClient.from("profiles").insert({
       email,
       full_name: fullName,
       user_id: userId,
       is_pro_subscriber: isActive,
       pro_subscription_end: periodEnd,
-      pro_subscription_start: new Date().toISOString(),
+      pro_subscription_start: subscriptionStart,
       pro_cancel_at_period_end: cancelAtPeriodEnd,
       stripe_customer_id: customerId,
       stripe_subscription_id: subscription.id,
       pro_mock_sessions_used: 0,
       pro_audio_sessions_used: 0,
-      pro_session_reset_date: new Date().toISOString(),
+      pro_session_reset_date: periodStart,
     });
     logStep("Profile created", { email, userId });
   }
@@ -526,29 +528,34 @@ async function handleInvoicePaid(supabaseClient: any, stripe: Stripe, invoice: S
   const email = await getCustomerEmail(stripe, customerId);
   if (!email) return;
 
-  // Get subscription to update period end date
+  // Get subscription to update period dates
   const subscriptionId = typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription.id;
   let periodEnd: string | undefined;
-  
+  let periodStart: string | undefined;
+  let subscriptionStart: string | undefined;
+
   try {
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    periodStart = new Date(subscription.current_period_start * 1000).toISOString();
     periodEnd = new Date(subscription.current_period_end * 1000).toISOString();
+    subscriptionStart = new Date(subscription.start_date * 1000).toISOString();
   } catch (e) {
-    logStep("Could not fetch subscription for period end", { error: String(e) });
+    logStep("Could not fetch subscription for period dates", { error: String(e) });
   }
 
   const updateData: Record<string, unknown> = {
     is_pro_subscriber: true,
     pro_mock_sessions_used: 0,
     pro_audio_sessions_used: 0,
-    pro_session_reset_date: new Date().toISOString(),
+    pro_session_reset_date: periodStart ?? new Date().toISOString(),
     pro_cancel_at_period_end: false, // Reset cancel flag on renewal
+    stripe_customer_id: customerId,
+    stripe_subscription_id: subscriptionId,
     updated_at: new Date().toISOString(),
   };
-  
-  if (periodEnd) {
-    updateData.pro_subscription_end = periodEnd;
-  }
+
+  if (periodEnd) updateData.pro_subscription_end = periodEnd;
+  if (subscriptionStart) updateData.pro_subscription_start = subscriptionStart;
 
   await supabaseClient.from("profiles").update(updateData).eq("email", email);
   logStep("Session counters reset for renewal", { email, periodEnd });

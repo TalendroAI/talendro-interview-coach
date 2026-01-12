@@ -17,11 +17,18 @@ const PRO_LIMITS = {
 interface ProfileData {
   id: string;
   email: string;
+  full_name?: string | null;
+  user_id?: string | null;
+
   is_pro_subscriber: boolean | null;
+  pro_subscription_start: string | null;
   pro_subscription_end: string | null;
+  pro_cancel_at_period_end?: boolean | null;
+
   pro_mock_sessions_used: number;
   pro_audio_sessions_used: number;
   pro_session_reset_date: string | null;
+
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
 }
@@ -30,6 +37,137 @@ const logStep = (step: string, details?: Record<string, unknown>) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
   console.log(`[PRO-SESSION] ${step}${detailsStr}`);
 };
+
+const secondsToIso = (seconds?: number | null) => {
+  if (!seconds || typeof seconds !== "number") return null;
+  const d = new Date(seconds * 1000);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+};
+
+const isActiveSubscription = (sub: Stripe.Subscription) =>
+  sub.status === "active" || sub.status === "trialing";
+
+async function resolveCustomerId(stripe: Stripe, email: string, existingCustomerId: string | null) {
+  if (existingCustomerId) return existingCustomerId;
+  const customers = await stripe.customers.list({ email, limit: 1 });
+  return customers.data[0]?.id ?? null;
+}
+
+async function resolveActiveSubscription(
+  stripe: Stripe,
+  customerId: string,
+  existingSubscriptionId: string | null
+) {
+  if (existingSubscriptionId) {
+    try {
+      const sub = await stripe.subscriptions.retrieve(existingSubscriptionId);
+      if (isActiveSubscription(sub)) return sub;
+    } catch {
+      // ignore and fall back to listing by customer
+    }
+  }
+
+  const subs = await stripe.subscriptions.list({
+    customer: customerId,
+    status: "all",
+    limit: 10,
+  });
+
+  return subs.data.find(isActiveSubscription) ?? null;
+}
+
+// Ensures the profile has the subscription fields required by the dashboard.
+// Returns the latest profile row (or null).
+// deno-lint-ignore no-explicit-any
+async function syncProProfileFromStripe(
+  supabaseClient: any,
+  stripe: Stripe,
+  email: string,
+  existingProfile: ProfileData | null
+): Promise<ProfileData | null> {
+  const customerId = await resolveCustomerId(stripe, email, existingProfile?.stripe_customer_id ?? null);
+
+  if (!customerId) {
+    // If we can't find the customer in Stripe, we can't treat them as Pro.
+    if (existingProfile?.is_pro_subscriber) {
+      await supabaseClient
+        .from("profiles")
+        .update({ is_pro_subscriber: false, updated_at: new Date().toISOString() })
+        .eq("id", existingProfile.id);
+    }
+    return existingProfile;
+  }
+
+  const subscription = await resolveActiveSubscription(
+    stripe,
+    customerId,
+    existingProfile?.stripe_subscription_id ?? null
+  );
+
+  if (!subscription || !isActiveSubscription(subscription)) {
+    if (existingProfile?.is_pro_subscriber) {
+      await supabaseClient
+        .from("profiles")
+        .update({
+          is_pro_subscriber: false,
+          stripe_customer_id: customerId,
+          stripe_subscription_id: subscription?.id ?? existingProfile?.stripe_subscription_id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingProfile.id);
+    }
+    return existingProfile;
+  }
+
+  const periodStart = secondsToIso(subscription.current_period_start);
+  const periodEnd = secondsToIso(subscription.current_period_end);
+  const subscriptionStart = secondsToIso(subscription.start_date) ?? periodStart;
+
+  const updateData: Record<string, unknown> = {
+    is_pro_subscriber: true,
+    pro_subscription_end: periodEnd,
+    pro_cancel_at_period_end: subscription.cancel_at_period_end ?? false,
+    stripe_customer_id: customerId,
+    stripe_subscription_id: subscription.id,
+    updated_at: new Date().toISOString(),
+  };
+
+  // Only set these if missing to avoid overwriting historical anchors.
+  if (!existingProfile?.pro_subscription_start && subscriptionStart) {
+    updateData.pro_subscription_start = subscriptionStart;
+  }
+  if (!existingProfile?.pro_session_reset_date && (periodStart || subscriptionStart)) {
+    updateData.pro_session_reset_date = periodStart ?? subscriptionStart;
+    updateData.pro_mock_sessions_used = 0;
+    updateData.pro_audio_sessions_used = 0;
+  }
+
+  if (existingProfile) {
+    await supabaseClient.from("profiles").update(updateData).eq("id", existingProfile.id);
+  } else {
+    await supabaseClient.from("profiles").insert({
+      email,
+      is_pro_subscriber: true,
+      pro_subscription_start: subscriptionStart,
+      pro_subscription_end: periodEnd,
+      pro_cancel_at_period_end: subscription.cancel_at_period_end ?? false,
+      stripe_customer_id: customerId,
+      stripe_subscription_id: subscription.id,
+      pro_mock_sessions_used: 0,
+      pro_audio_sessions_used: 0,
+      pro_session_reset_date: periodStart ?? subscriptionStart,
+      updated_at: new Date().toISOString(),
+    });
+  }
+
+  const { data: refreshed } = await supabaseClient
+    .from("profiles")
+    .select("*")
+    .ilike("email", email)
+    .maybeSingle();
+
+  return refreshed as ProfileData | null;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -46,7 +184,7 @@ serve(async (req) => {
     }
 
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
-    const stripe = new Stripe(stripeSecretKey, { apiVersion: "2025-04-30.basil" });
+    const stripe = new Stripe(stripeSecretKey, { apiVersion: "2025-08-27.basil" });
 
     const { action, email, session_type } = await req.json();
     logStep("Request received", { action, email, session_type });
@@ -110,13 +248,14 @@ async function handleCheckProStatus(
   stripe: Stripe,
   email: string
 ) {
-  logStep("Checking Pro status", { email });
+  const normalizedEmail = email.toLowerCase().trim();
+  logStep("Checking Pro status", { email: normalizedEmail });
 
-  // First check profile for cached subscription status
+  // Load current profile (if any)
   const { data: profile, error: profileError } = await supabaseClient
     .from("profiles")
     .select("*")
-    .eq("email", email)
+    .ilike("email", normalizedEmail)
     .maybeSingle();
 
   if (profileError) {
@@ -124,149 +263,41 @@ async function handleCheckProStatus(
     throw profileError;
   }
 
-  const typedProfile = profile as ProfileData | null;
+  let typedProfile = profile as ProfileData | null;
 
-  // If profile exists and shows active Pro, verify with Stripe
-  if (typedProfile?.is_pro_subscriber) {
-    // Check if subscription is still active in Stripe
-    if (typedProfile.stripe_subscription_id) {
-      try {
-        const subscription = await stripe.subscriptions.retrieve(typedProfile.stripe_subscription_id);
-        const isActive = subscription.status === 'active' || subscription.status === 'trialing';
-        
-        if (!isActive) {
-          // Subscription is no longer active - update profile
-          await supabaseClient
-            .from("profiles")
-            .update({ 
-              is_pro_subscriber: false,
-              updated_at: new Date().toISOString()
-            })
-            .eq("id", typedProfile.id);
-
-          return new Response(JSON.stringify({ 
-            is_pro: false, 
-            message: "Subscription is no longer active" 
-          }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-            status: 200,
-          });
-        }
-
-        // Calculate remaining sessions
-        const remaining = calculateRemainingSessions(typedProfile);
-
-        return new Response(JSON.stringify({ 
-          is_pro: true,
-          subscription_end: typedProfile.pro_subscription_end,
-          remaining_sessions: remaining,
-          reset_date: typedProfile.pro_session_reset_date,
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        });
-      } catch (stripeError) {
-        logStep("Error checking Stripe subscription", { error: String(stripeError) });
-        // Fall through to check by email
-      }
-    }
-
-    // Fallback: Check pro_subscription_end date
-    if (typedProfile.pro_subscription_end) {
-      const endDate = new Date(typedProfile.pro_subscription_end);
-      if (endDate > new Date()) {
-        const remaining = calculateRemainingSessions(typedProfile);
-        return new Response(JSON.stringify({ 
-          is_pro: true,
-          subscription_end: typedProfile.pro_subscription_end,
-          remaining_sessions: remaining,
-          reset_date: typedProfile.pro_session_reset_date,
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        });
-      }
-    }
-  }
-
-  // Check Stripe directly for active subscription
+  // Always attempt to sync from Stripe so the dashboard fields never stay blank.
   try {
-    const customers = await stripe.customers.list({ email, limit: 1 });
-    if (customers.data.length > 0) {
-      const subscriptions = await stripe.subscriptions.list({
-        customer: customers.data[0].id,
-        status: "active",
-        limit: 1,
-      });
-
-      if (subscriptions.data.length > 0) {
-        const subscription = subscriptions.data[0];
-        const periodEnd = new Date(subscription.current_period_end * 1000).toISOString();
-
-        // Update or create profile with subscription info
-        if (typedProfile) {
-          await supabaseClient
-            .from("profiles")
-            .update({
-              is_pro_subscriber: true,
-              pro_subscription_end: periodEnd,
-              stripe_customer_id: customers.data[0].id,
-              stripe_subscription_id: subscription.id,
-              pro_session_reset_date: typedProfile.pro_session_reset_date || new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", typedProfile.id);
-        } else {
-          await supabaseClient
-            .from("profiles")
-            .insert({
-              email,
-              is_pro_subscriber: true,
-              pro_subscription_end: periodEnd,
-              stripe_customer_id: customers.data[0].id,
-              stripe_subscription_id: subscription.id,
-              pro_mock_sessions_used: 0,
-              pro_audio_sessions_used: 0,
-              pro_session_reset_date: new Date().toISOString(),
-            });
-        }
-
-        // Fetch updated profile for remaining sessions
-        const { data: updatedProfile } = await supabaseClient
-          .from("profiles")
-          .select("*")
-          .eq("email", email)
-          .maybeSingle();
-
-        const typedUpdatedProfile = updatedProfile as ProfileData | null;
-
-        const remaining = calculateRemainingSessions(typedUpdatedProfile || {
-          pro_mock_sessions_used: 0,
-          pro_audio_sessions_used: 0,
-        } as ProfileData);
-
-        return new Response(JSON.stringify({ 
-          is_pro: true,
-          subscription_end: periodEnd,
-          remaining_sessions: remaining,
-          reset_date: typedUpdatedProfile?.pro_session_reset_date || new Date().toISOString(),
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        });
-      }
-    }
+    typedProfile = await syncProProfileFromStripe(supabaseClient, stripe, normalizedEmail, typedProfile);
   } catch (stripeError) {
-    logStep("Error checking Stripe for subscription", { error: String(stripeError) });
+    logStep("Stripe sync failed (falling back to cached profile)", { error: String(stripeError) });
   }
 
-  return new Response(JSON.stringify({ 
-    is_pro: false, 
-    message: "No active Pro subscription found" 
-  }), {
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-    status: 200,
-  });
+  // If we still look Pro, return cached values.
+  if (typedProfile?.is_pro_subscriber) {
+    const remaining = calculateRemainingSessions(typedProfile);
+
+    return new Response(
+      JSON.stringify({
+        is_pro: true,
+        subscription_start: typedProfile.pro_subscription_start,
+        subscription_end: typedProfile.pro_subscription_end,
+        remaining_sessions: remaining,
+        reset_date: typedProfile.pro_session_reset_date,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      }
+    );
+  }
+
+  return new Response(
+    JSON.stringify({ is_pro: false, message: "No active Pro subscription found" }),
+    {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200,
+    }
+  );
 }
 
 function calculateRemainingSessions(profile: Partial<ProfileData>) {
@@ -484,12 +515,13 @@ async function handleGetRemainingSessions(
   supabaseClient: any,
   email: string
 ) {
-  logStep("Getting remaining sessions", { email });
+  const normalizedEmail = email.toLowerCase().trim();
+  logStep("Getting remaining sessions", { email: normalizedEmail });
 
   const { data: profile, error } = await supabaseClient
     .from("profiles")
     .select("*")
-    .eq("email", email)
+    .ilike("email", normalizedEmail)
     .maybeSingle();
 
   if (error) {
@@ -497,16 +529,27 @@ async function handleGetRemainingSessions(
     throw error;
   }
 
-  const typedProfile = profile as ProfileData | null;
+  let typedProfile = profile as ProfileData | null;
+
+  // Keep subscription fields synced so the dashboard can render dates reliably.
+  try {
+    typedProfile = await syncProProfileFromStripe(supabaseClient, null as unknown as Stripe, normalizedEmail, typedProfile);
+  } catch (e) {
+    // If Stripe isn't available in this action (older clients), just ignore.
+    logStep("Stripe sync skipped/failed", { error: String(e) });
+  }
 
   if (!typedProfile || !typedProfile.is_pro_subscriber) {
-    return new Response(JSON.stringify({ 
-      is_pro: false,
-      remaining: null,
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
+    return new Response(
+      JSON.stringify({
+        is_pro: false,
+        remaining: null,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      }
+    );
   }
 
   // Check if we need to reset counters
@@ -518,7 +561,7 @@ async function handleGetRemainingSessions(
     const resetDateObj = new Date(resetDate);
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
+
     if (resetDateObj < thirtyDaysAgo) {
       // Counters would reset
       mockUsed = 0;
@@ -527,29 +570,32 @@ async function handleGetRemainingSessions(
     }
   }
 
-  const nextResetDate = resetDate 
+  const nextResetDate = resetDate
     ? new Date(new Date(resetDate).getTime() + 30 * 24 * 60 * 60 * 1000)
     : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-  return new Response(JSON.stringify({ 
-    is_pro: true,
-    subscription_end: typedProfile.pro_subscription_end,
-    remaining: {
-      quick_prep: { used: 0, limit: null, remaining: null }, // Unlimited
-      full_mock: { 
-        used: mockUsed, 
-        limit: PRO_LIMITS.full_mock, 
-        remaining: Math.max(0, PRO_LIMITS.full_mock - mockUsed) 
+  return new Response(
+    JSON.stringify({
+      is_pro: true,
+      subscription_end: typedProfile.pro_subscription_end,
+      remaining: {
+        quick_prep: { used: 0, limit: null, remaining: null }, // Unlimited
+        full_mock: {
+          used: mockUsed,
+          limit: PRO_LIMITS.full_mock,
+          remaining: Math.max(0, PRO_LIMITS.full_mock - mockUsed),
+        },
+        premium_audio: {
+          used: audioUsed,
+          limit: PRO_LIMITS.premium_audio,
+          remaining: Math.max(0, PRO_LIMITS.premium_audio - audioUsed),
+        },
       },
-      premium_audio: { 
-        used: audioUsed, 
-        limit: PRO_LIMITS.premium_audio, 
-        remaining: Math.max(0, PRO_LIMITS.premium_audio - audioUsed) 
-      },
-    },
-    next_reset: nextResetDate.toISOString(),
-  }), {
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-    status: 200,
-  });
+      next_reset: nextResetDate.toISOString(),
+    }),
+    {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200,
+    }
+  );
 }
