@@ -1,8 +1,9 @@
+import { useNavigate } from "react-router-dom";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Mail, Download } from "lucide-react";
+import { Mail, Download, LayoutDashboard, Plus } from "lucide-react";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 
 export interface SessionResultsViewProps {
@@ -48,6 +49,7 @@ export function SessionResultsView({
   transcript,
   analysisMarkdown,
 }: SessionResultsViewProps) {
+  const navigate = useNavigate();
   const isQuickPrep = sessionLabel.toLowerCase().includes('quick prep');
   const hasPrepPacket = Boolean(prepPacket && prepPacket.length > 50);
   const hasTranscript = Boolean(transcript && transcript.length > 50);
@@ -199,10 +201,29 @@ export function SessionResultsView({
           </ScrollArea>
 
           <Separator />
-          <div className="p-6">
+          <div className="p-6 space-y-4">
             <p className="text-sm text-muted-foreground">
               💡 <strong>Tip:</strong> If you didn't receive the email, check your Promotions or Spam folder and search for "Talendro".
             </p>
+            
+            {/* Navigation buttons for Pro subscribers */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <Button 
+                onClick={() => navigate('/dashboard')} 
+                variant="outline"
+                className="flex-1 gap-2"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                Go to Dashboard
+              </Button>
+              <Button 
+                onClick={() => navigate('/interview-coach?session_type=pro')} 
+                className="flex-1 gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Start New Session
+              </Button>
+            </div>
           </div>
         </Card>
       </div>
