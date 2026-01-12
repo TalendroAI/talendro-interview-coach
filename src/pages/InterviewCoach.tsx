@@ -777,6 +777,23 @@ export default function InterviewCoach() {
         setCompletedSessionResults(data.session_results);
       }
 
+      // Increment Pro session count for premium_audio
+      if (isProSubscriber && derivedEmail) {
+        try {
+          await supabase.functions.invoke('pro-session', {
+            body: {
+              action: 'increment_session_count',
+              email: derivedEmail,
+              session_type: 'premium_audio',
+            },
+          });
+          console.log('[InterviewCoach] Pro session count incremented for: premium_audio');
+        } catch (incErr) {
+          console.error('[InterviewCoach] Failed to increment session count:', incErr);
+          // Don't fail the whole flow if increment fails
+        }
+      }
+
       toast({
         title: 'Results sent!',
         description: 'Your full report is shown here and has been emailed to you.',
@@ -924,6 +941,23 @@ export default function InterviewCoach() {
       }
       if (data?.session_results) {
         setCompletedSessionResults(data.session_results);
+      }
+
+      // Increment Pro session count for limited session types (full_mock, premium_audio)
+      if (isProSubscriber && derivedEmail && (completionType === 'full_mock' || completionType === 'premium_audio')) {
+        try {
+          await supabase.functions.invoke('pro-session', {
+            body: {
+              action: 'increment_session_count',
+              email: derivedEmail,
+              session_type: completionType,
+            },
+          });
+          console.log('[InterviewCoach] Pro session count incremented for:', completionType);
+        } catch (incErr) {
+          console.error('[InterviewCoach] Failed to increment session count:', incErr);
+          // Don't fail the whole flow if increment fails
+        }
       }
 
       toast({
