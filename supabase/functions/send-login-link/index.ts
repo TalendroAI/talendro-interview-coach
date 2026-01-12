@@ -9,6 +9,7 @@ const corsHeaders = {
 };
 
 const DASHBOARD_URL = "https://coach.talendro.com/dashboard";
+const EMAIL_MAX_WIDTH = 600;
 
 const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
@@ -16,6 +17,154 @@ const logStep = (step: string, details?: Record<string, unknown>) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : "";
   console.log(`[SEND-LOGIN-LINK] ${step}${detailsStr}`);
 };
+
+function generateLoginEmailHtml(magicLink: string): string {
+  return `
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <!--[if gte mso 9]>
+  <xml>
+    <o:OfficeDocumentSettings>
+      <o:AllowPNG/>
+      <o:PixelsPerInch>96</o:PixelsPerInch>
+    </o:OfficeDocumentSettings>
+  </xml>
+  <![endif]-->
+  <style type="text/css">
+    body, table, td, div, p, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: collapse !important; }
+    img { -ms-interpolation-mode: bicubic; border: 0; line-height: 100%; outline: none; text-decoration: none; }
+    body { margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: #f0f4f8; }
+    .ExternalClass { width: 100%; }
+    .ExternalClass, .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td, .ExternalClass div { line-height: 100%; }
+    a[x-apple-data-detectors] { color: inherit !important; text-decoration: none !important; }
+    u + #body a { color: inherit; text-decoration: none; }
+    #MessageViewBody a { color: inherit; text-decoration: none; }
+    
+    @media only screen and (max-width: 599px) {
+      .email-container { width: 100% !important; max-width: 100% !important; }
+      .content-padding { padding: 24px 20px !important; }
+      .header-padding { padding: 32px 20px !important; }
+      .footer-padding { padding: 24px 20px !important; }
+      h1.email-title { font-size: 24px !important; }
+      .cta-button { padding: 16px 32px !important; font-size: 16px !important; }
+    }
+  </style>
+</head>
+<body id="body" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #2C2F38; margin: 0; padding: 0; background-color: #f0f4f8; width: 100% !important; -webkit-font-smoothing: antialiased;">
+  <!--[if mso]>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f0f4f8;">
+  <tr><td align="center" valign="top" style="padding: 40px 20px;">
+  <table role="presentation" width="${EMAIL_MAX_WIDTH}" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff;">
+  <tr><td>
+  <![endif]-->
+  
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f0f4f8;">
+    <tr>
+      <td align="center" valign="top" style="padding: 40px 20px;">
+        <table role="presentation" class="email-container" width="${EMAIL_MAX_WIDTH}" cellpadding="0" cellspacing="0" border="0" style="width: ${EMAIL_MAX_WIDTH}px; max-width: 100%; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+          
+          <!-- Header with Talendro branding -->
+          <tr>
+            <td class="header-padding" style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); padding: 40px 48px; text-align: center;">
+              <div style="font-size: 32px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">
+                Talendro<span style="font-size: 14px; vertical-align: super; color: #f59e0b; font-weight: 600;">™</span>
+              </div>
+              <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 15px; font-weight: 500;">Interview Coach</p>
+            </td>
+          </tr>
+
+          <!-- Hero Section -->
+          <tr>
+            <td style="background-color: #E8F4FE; padding: 32px 48px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+              <div style="font-size: 48px; margin-bottom: 12px;">🔐</div>
+              <h1 class="email-title" style="color: #1e3a5f; font-size: 26px; font-weight: 700; margin: 0 0 8px 0;">Access Your Dashboard</h1>
+              <p style="color: #64748b; font-size: 16px; margin: 0;">Click the button below to securely sign in</p>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td class="content-padding" style="padding: 40px 48px;">
+              <p style="margin: 0 0 28px 0; color: #475569; font-size: 16px; line-height: 1.7;">
+                Use this secure link to access your Talendro Interview Coach dashboard. This link is valid for <strong style="color: #1e3a5f;">1 hour</strong> and can only be used once.
+              </p>
+              
+              <!-- CTA Button with VML fallback for Outlook -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 32px 0;">
+                <tr>
+                  <td align="center">
+                    <!--[if mso]>
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${magicLink}" style="height:52px;v-text-anchor:middle;width:220px;" arcsize="15%" stroke="f" fillcolor="#1e3a5f">
+                      <w:anchorlock/>
+                      <center style="color:#ffffff;font-family:sans-serif;font-size:17px;font-weight:bold;">Open Dashboard</center>
+                    </v:roundrect>
+                    <![endif]-->
+                    <!--[if !mso]><!-->
+                    <a href="${magicLink}" class="cta-button" style="display: inline-block; mso-hide: all; background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); color: #ffffff !important; padding: 16px 40px; font-size: 17px; font-weight: 700; text-decoration: none; border-radius: 8px; box-shadow: 0 4px 12px rgba(30, 58, 95, 0.3);">
+                      Open Dashboard
+                    </a>
+                    <!--<![endif]-->
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Fallback Link -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+                <tr>
+                  <td style="background-color: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px;">
+                    <p style="margin: 0 0 8px 0; color: #64748b; font-size: 13px; font-weight: 600;">If the button doesn't work, copy this link:</p>
+                    <p style="margin: 0; font-size: 12px; color: #2563eb; word-break: break-all;">
+                      <a href="${magicLink}" style="color: #2563eb; text-decoration: underline;">${magicLink}</a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Security Note -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0 0 0;">
+                <tr>
+                  <td style="background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 0 8px 8px 0; padding: 16px;">
+                    <p style="margin: 0; color: #92400e; font-size: 14px;">
+                      <strong>🔒 Security Note:</strong> This link expires in 1 hour. If you didn't request this email, you can safely ignore it.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td class="footer-padding" style="background-color: #0f172a; padding: 32px 48px; text-align: center;">
+              <div style="font-size: 24px; font-weight: 800; color: #ffffff; margin-bottom: 8px;">
+                Talendro<span style="font-size: 12px; vertical-align: super; color: #00C4CC;">™</span>
+              </div>
+              <p style="color: #00C4CC; font-style: italic; font-size: 14px; margin: 0 0 16px 0;">"Your partner in interview success"</p>
+              <p style="color: #94a3b8; font-size: 12px; margin: 0;">
+                © ${new Date().getFullYear()} Talendro. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+  
+  <!--[if mso]>
+  </td></tr></table>
+  </td></tr></table>
+  <![endif]-->
+</body>
+</html>
+  `;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -99,83 +248,7 @@ serve(async (req) => {
       from: fromEmail,
       to: [email],
       subject: "Your Talendro Login Link",
-      html: `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="color-scheme" content="light">
-  <meta name="supported-color-schemes" content="light">
-  <title>Your Talendro Login Link</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f4f5;">
-    <tr>
-      <td align="center" style="padding: 40px 20px;">
-        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width: 480px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-          <!-- Header -->
-          <tr>
-            <td style="padding: 32px 32px 24px; text-align: center; border-bottom: 1px solid #e5e7eb;">
-              <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: #0f172a; letter-spacing: -0.5px;">Talendro</h1>
-              <p style="margin: 8px 0 0; font-size: 14px; color: #64748b;">Interview Coaching</p>
-            </td>
-          </tr>
-          <!-- Content -->
-          <tr>
-            <td style="padding: 32px;">
-              <h2 style="margin: 0 0 16px; font-size: 20px; font-weight: 600; color: #1e293b;">Access Your Dashboard</h2>
-              <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.6; color: #475569;">
-                Click the button below to securely log in to your Talendro account and access your interview coaching dashboard.
-              </p>
-              <!-- Button - using VML for Outlook compatibility -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td align="center" style="padding: 8px 0 24px;">
-                    <!--[if mso]>
-                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${magicLink}" style="height:48px;v-text-anchor:middle;width:200px;" arcsize="17%" stroke="f" fillcolor="#0f172a">
-                      <w:anchorlock/>
-                      <center style="color:#ffffff;font-family:sans-serif;font-size:16px;font-weight:bold;">Open Dashboard</center>
-                    </v:roundrect>
-                    <![endif]-->
-                    <!--[if !mso]><!-->
-                    <a href="${magicLink}" target="_blank" style="display: inline-block; mso-hide: all; padding: 14px 32px; background-color: #0f172a; color: #ffffff !important; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; text-align: center; line-height: 1.2;">
-                      Open Dashboard
-                    </a>
-                    <!--<![endif]-->
-                  </td>
-                </tr>
-              </table>
-              <p style="margin: 0 0 8px; font-size: 14px; color: #64748b;">
-                Or copy and paste this link into your browser:
-              </p>
-              <p style="margin: 0; font-size: 12px; color: #0ea5e9; word-break: break-all;">
-                <a href="${magicLink}" style="color: #0ea5e9; text-decoration: underline;">${magicLink}</a>
-              </p>
-            </td>
-          </tr>
-          <!-- Footer -->
-          <tr>
-            <td style="padding: 24px 32px; background-color: #f8fafc; border-top: 1px solid #e5e7eb; border-radius: 0 0 12px 12px;">
-              <p style="margin: 0 0 8px; font-size: 12px; color: #94a3b8; text-align: center;">
-                This link expires in 1 hour for security purposes.
-              </p>
-              <p style="margin: 0; font-size: 12px; color: #94a3b8; text-align: center;">
-                If you didn't request this email, you can safely ignore it.
-              </p>
-            </td>
-          </tr>
-        </table>
-        <!-- Bottom text -->
-        <p style="margin: 24px 0 0; font-size: 12px; color: #94a3b8; text-align: center;">
-          © ${new Date().getFullYear()} Talendro. All rights reserved.
-        </p>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-      `,
+      html: generateLoginEmailHtml(magicLink),
     });
 
     const resendError = (emailResponse as any)?.error;
