@@ -45,18 +45,19 @@ export default function Dashboard() {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
 
-  // Redirect non-Pro users
+  // Redirect non-Pro users (only after profile has fully loaded)
   useEffect(() => {
     if (!isLoading && !user) {
       navigate('/login');
       return;
     }
     
-    if (!isLoading && user && !isProSubscriber) {
+    // Wait until we have a profile before deciding - the profile determines pro status
+    if (!isLoading && user && profile !== undefined && !isProSubscriber) {
       navigate('/');
       return;
     }
-  }, [isLoading, user, isProSubscriber, navigate]);
+  }, [isLoading, user, profile, isProSubscriber, navigate]);
 
   // Fetch session history
   useEffect(() => {
