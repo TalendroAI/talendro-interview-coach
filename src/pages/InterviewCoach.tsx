@@ -12,6 +12,7 @@ import { PausedSessionNotification } from '@/components/PausedSessionNotificatio
 import { PausedSessionConflictDialog } from '@/components/PausedSessionConflictDialog';
 import { PrepPacketGeneratingOverlay } from '@/components/PrepPacketGeneratingOverlay';
 import { useSessionParams } from '@/hooks/useSessionParams';
+import { useClientAuth } from '@/hooks/useClientAuth';
 import { DocumentInputs, SessionType } from '@/types/session';
 import { useToast } from '@/hooks/use-toast';
 import { verifyPayment } from '@/services/api';
@@ -29,7 +30,8 @@ interface PausedSession {
 }
 
 export default function InterviewCoach() {
-  const { sessionType, userEmail } = useSessionParams();
+  const { sessionType, userEmail, preSelectedInterviewType } = useSessionParams();
+  const { isProSubscriber, profile, user, isLoading: isAuthLoading } = useClientAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -115,21 +117,31 @@ export default function InterviewCoach() {
   }>({});
   const [isEndingInterview, setIsEndingInterview] = useState(false);
 
-  // Pro interview type selection state
-  const [selectedProInterviewType, setSelectedProInterviewType] = useState<ProInterviewType | null>(null);
+  // Pro interview type selection state - initialize from URL parameter if available
+  const [selectedProInterviewType, setSelectedProInterviewType] = useState<ProInterviewType | null>(
+    preSelectedInterviewType as ProInterviewType | null
+  );
 
   // Determine the effective session type for Pro subscribers
   const effectiveSessionType = resolvedSessionType === 'pro' ? selectedProInterviewType : resolvedSessionType;
+
+  // Scroll to top on page load
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, []);
 
   // Check if documents are ready
   const isResumeComplete = documents.resume.trim().length > 50;
   const isJobComplete = documents.jobDescription.trim().length > 50;
   const isDocumentsReady = isResumeComplete && isJobComplete && isDocumentsSaved;
 
+  // Derive email - prefer logged-in user's email, fallback to URL param
+  const derivedEmail = user?.email || userEmail;
+
   // Check for paused sessions before starting new one
   // Only returns paused sessions of the SAME type as what user is trying to start
   const checkForPausedSessions = async (): Promise<PausedSession | null> => {
-    if (!userEmail) return null;
+    if (!derivedEmail) return null;
     
     // Determine what session type we're trying to start
     const targetSessionType = effectiveSessionType || resolvedSessionType;
@@ -139,7 +151,7 @@ export default function InterviewCoach() {
       const { data, error } = await supabase.functions.invoke('audio-session', {
         body: {
           action: 'get_paused_sessions',
-          email: userEmail,
+          email: derivedEmail,
         },
       });
       
@@ -218,13 +230,13 @@ export default function InterviewCoach() {
     setIsDocumentsSaved(true);
 
     // Persist documents for resume links (backend function uses service role; safe for anon sessions)
-    if (sessionId && userEmail) {
+    if (sessionId && derivedEmail) {
       try {
         const { error } = await supabase.functions.invoke('audio-session', {
           body: {
             action: 'save_documents',
             sessionId,
-            email: userEmail,
+            email: derivedEmail,
             firstName: documents.firstName,
             resume: documents.resume,
             jobDescription: documents.jobDescription,
@@ -338,7 +350,7 @@ export default function InterviewCoach() {
 
   // Handle abandon and start new session
   const handleAbandonAndStartNew = async (abandonedSessionId: string) => {
-    if (!userEmail) {
+    if (!derivedEmail) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -354,7 +366,7 @@ export default function InterviewCoach() {
         body: {
           action: 'abandon_session',
           sessionId: abandonedSessionId,
-          email: userEmail,
+          email: derivedEmail,
         },
       });
       
@@ -394,7 +406,7 @@ export default function InterviewCoach() {
 
   // Handle resume from conflict dialog
   const handleResumeFromConflict = async (pausedSessionId: string, pausedSessionType: string) => {
-    if (!userEmail) {
+    if (!derivedEmail) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -414,7 +426,7 @@ export default function InterviewCoach() {
         body: {
           action: 'resume_session',
           sessionId: pausedSessionId,
-          email: userEmail,
+          email: derivedEmail,
         },
       });
       
@@ -567,7 +579,7 @@ export default function InterviewCoach() {
     return; // Skip normal payment verification
   }, [searchParams, navigate]);
 
-  // Verify payment on page load
+  // Verify payment on page load - Pro subscribers get auto-verified
   useEffect(() => {
     const checkPayment = async () => {
       // Skip if resuming from email link or using a direct session_id link
@@ -576,15 +588,82 @@ export default function InterviewCoach() {
         return; // Handled by the other useEffects
       }
       
-      if (!resolvedSessionType || !userEmail) {
+      // Wait for auth to finish loading before checking Pro status
+      if (isAuthLoading) {
+        return;
+      }
+
+      // Derive the email to use - prefer logged-in user's email, fallback to URL param
+      const emailToUse = user?.email || userEmail;
+      
+      if (!resolvedSessionType || !emailToUse) {
         setIsVerifying(false);
         return;
       }
 
+      // Check if user is a Pro subscriber (from local auth state or profile)
+      // This avoids needing to call the backend for Pro status verification
+      const isProFromProfile = isProSubscriber || profile?.is_pro_subscriber === true;
+      
+      // For Pro subscribers accessing session_type=pro, auto-verify without calling verify-payment
+      if (isProFromProfile && resolvedSessionType === 'pro') {
+        console.log('[InterviewCoach] Pro subscriber detected, auto-verifying session');
+        
+        // Determine the effective session type from URL or default to quick_prep
+        const effectiveType = preSelectedInterviewType || 'quick_prep';
+        
+        try {
+          // Create a new session for the Pro subscriber
+          const result = await verifyPayment(
+            undefined,
+            emailToUse,
+            effectiveType // Pass the actual interview type, not 'pro'
+          );
+
+          if (result.verified && result.session) {
+            setIsPaymentVerified(true);
+            setSessionId(result.session.id);
+            toast({
+              title: 'Pro Session Ready',
+              description: 'Your unlimited session is ready to begin.',
+            });
+          } else if (result.session_limit_reached) {
+            // Session limit reached for this type
+            toast({
+              title: 'Session Limit Reached',
+              description: result.message || 'You\'ve reached your session limit for this month.',
+              variant: 'destructive',
+            });
+          } else if (result.session_status === 'completed') {
+            setCompletedSessionResults(result.session_results);
+            setShowCompletedDialog(true);
+          } else {
+            // Fallback - still show as verified for Pro users
+            setIsPaymentVerified(true);
+            toast({
+              title: 'Pro Session Ready',
+              description: 'Your session is ready to begin.',
+            });
+          }
+        } catch (error) {
+          console.error('Pro session verification error:', error);
+          // Even on error, trust the local Pro status
+          setIsPaymentVerified(true);
+          toast({
+            title: 'Pro Session Ready',
+            description: 'Your session is ready to begin.',
+          });
+        } finally {
+          setIsVerifying(false);
+        }
+        return;
+      }
+
+      // Standard payment verification for non-Pro or checkout sessions
       try {
         const result = await verifyPayment(
           checkoutSessionId || undefined,
-          userEmail,
+          emailToUse,
           resolvedSessionType
         );
 
@@ -594,6 +673,16 @@ export default function InterviewCoach() {
           toast({
             title: 'Payment verified!',
             description: 'Your session is ready to begin.',
+          });
+        } else if (result.is_pro) {
+          // Backend confirmed Pro status
+          setIsPaymentVerified(true);
+          if (result.session) {
+            setSessionId(result.session.id);
+          }
+          toast({
+            title: 'Pro Session Ready',
+            description: 'Your unlimited session is ready to begin.',
           });
         } else if (result.session_status === 'completed') {
           // Session was already completed - show the dialog
@@ -619,7 +708,7 @@ export default function InterviewCoach() {
     };
 
     checkPayment();
-  }, [resolvedSessionType, userEmail, searchParams]);
+  }, [resolvedSessionType, userEmail, searchParams, isAuthLoading, isProSubscriber, profile, user, preSelectedInterviewType]);
 
   // Callback when mock interview is complete
   const handleMockInterviewComplete = (messages: any[]) => {
@@ -657,7 +746,7 @@ export default function InterviewCoach() {
       const { data, error } = await supabase.functions.invoke('send-results', {
         body: {
           session_id: sessionId,
-          email: userEmail,
+          email: derivedEmail,
           session_type: 'premium_audio',
           prep_content: contentToSend,
           results: null,
@@ -806,7 +895,7 @@ export default function InterviewCoach() {
       const { data, error } = await supabase.functions.invoke('send-results', {
         body: {
           session_id: sessionId,
-          email: userEmail,
+          email: derivedEmail,
           session_type: completionType,
           prep_content: contentToSend,
           results: resultsToSend,
@@ -1014,7 +1103,7 @@ export default function InterviewCoach() {
             </h2>
             <p className="text-muted-foreground mb-6">
               You've already completed this <span className="font-semibold text-foreground">{sessionName}</span> session. 
-              Your results were sent to <span className="font-semibold text-foreground">{userEmail}</span>.
+              Your results were sent to <span className="font-semibold text-foreground">{derivedEmail}</span>.
             </p>
             {completedSessionResults?.overall_score && (
               <div className="bg-muted/50 rounded-lg p-4 mb-6">
@@ -1048,7 +1137,7 @@ export default function InterviewCoach() {
       return (
         <WelcomeMessage 
           sessionType={resolvedSessionType} 
-          userEmail={userEmail}
+          userEmail={derivedEmail}
           isPaymentVerified={isPaymentVerified}
           isReady={isDocumentsReady}
           onStartSession={handleStartSession}
@@ -1070,7 +1159,7 @@ export default function InterviewCoach() {
       return (
         <SessionResultsView
           sessionLabel={sessionName}
-          email={userEmail || ''}
+          email={derivedEmail || ''}
           prepPacket={resultsReport?.prepPacket || null}
           transcript={resultsReport?.transcript || null}
           analysisMarkdown={resultsReport?.analysisMarkdown || null}
@@ -1133,7 +1222,7 @@ export default function InterviewCoach() {
                 <CheckCircle className="w-8 h-8 text-green-600" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Interview Complete!</h3>
-              <p className="text-gray-500 mb-4">Your results have been emailed to <span className="font-medium text-gray-900">{userEmail}</span></p>
+              <p className="text-gray-500 mb-4">Your results have been emailed to <span className="font-medium text-gray-900">{derivedEmail}</span></p>
               <p className="text-sm text-gray-400">Check your inbox for your full performance analysis and interview transcript.</p>
               <Button
                 onClick={() => navigate('/')}
@@ -1156,7 +1245,7 @@ export default function InterviewCoach() {
           onInterviewStarted={() => setIsAudioInterviewStarted(true)}
           onInterviewComplete={() => setIsAudioInterviewComplete(true)}
           onSessionComplete={handleAudioSessionComplete}
-          userEmail={userEmail}
+          userEmail={derivedEmail}
         />
       );
     }
@@ -1172,7 +1261,7 @@ export default function InterviewCoach() {
         isCompletingSession={isLoading}
         isSessionCompleted={isSessionCompleted}
         isContentReady={isMockInterviewComplete}
-        userEmail={userEmail}
+        userEmail={derivedEmail}
         resumeFromPause={resumeFromPause}
         onHeaderPauseStateChange={(state) => setHeaderPauseState(state)}
         onRegisterPauseHandlers={(handlers) => setPauseHandlers(handlers)}
@@ -1226,9 +1315,9 @@ export default function InterviewCoach() {
         {/* Main Content */}
         <main className="flex-1 flex flex-col bg-gradient-subtle">
           {/* Paused Sessions - always show as a small, non-blocking notification */}
-          {userEmail && !isSessionStarted && !isVerifying && !showCompletedDialog && (
+          {derivedEmail && !isSessionStarted && !isVerifying && !showCompletedDialog && (
             <div className="p-4 pb-0">
-              <PausedSessionNotification userEmail={userEmail} />
+              <PausedSessionNotification userEmail={derivedEmail} />
             </div>
           )}
           
