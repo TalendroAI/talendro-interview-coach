@@ -68,7 +68,7 @@ export default function Dashboard() {
         .from('coaching_sessions')
         .select('id, created_at, session_type, first_name, company_url, job_description, status')
         .ilike('email', profile.email)
-        .in('status', ['completed', 'active'])
+        .eq('status', 'completed')
         .order('created_at', { ascending: false })
         .limit(10);
 
