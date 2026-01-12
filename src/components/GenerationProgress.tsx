@@ -137,7 +137,7 @@ export function GenerationProgress({
   const currentStep = steps[currentStepIndex];
 
   return (
-    <div className="flex-1 flex items-center justify-center p-8 bg-gradient-to-b from-background to-muted/30">
+    <div className="flex-1 flex items-start justify-center pt-8 px-8 pb-8 bg-gradient-to-b from-background to-muted/30">
       <div className="w-full max-w-2xl mx-auto">
         {/* Main Card */}
         <div className="bg-card border border-border rounded-2xl shadow-xl overflow-hidden">
