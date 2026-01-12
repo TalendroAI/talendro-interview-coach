@@ -85,13 +85,24 @@ function generateWelcomeEmail(magicLink: string): string {
       <td align="center" valign="top" style="padding: 40px 20px;">
         <table role="presentation" class="email-container" width="${EMAIL_MAX_WIDTH}" cellpadding="0" cellspacing="0" border="0" style="width: ${EMAIL_MAX_WIDTH}px; max-width: 100%; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
           
-          <!-- Header with Talendro branding -->
+          <!-- Header with Talendro branding - VML fallback for Outlook -->
           <tr>
-            <td class="header-padding" style="background-color: ${BRAND.blue}; padding: 40px 48px; text-align: center;">
-              <div style="font-size: 32px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">
-                Talendro<span style="font-size: 14px; vertical-align: super; color: ${BRAND.lime}; font-weight: 600;">™</span>
+            <td class="header-padding" style="padding: 40px 48px; text-align: center;">
+              <!--[if mso]>
+              <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:600px;height:100px;">
+                <v:fill type="solid" color="${BRAND.blue}" />
+                <v:textbox inset="0,0,0,0" style="mso-fit-shape-to-text:true">
+              <![endif]-->
+              <div style="background-color: ${BRAND.blue}; padding: 40px 48px; text-align: center;">
+                <div style="font-size: 32px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">
+                  Talendro<span style="font-size: 14px; vertical-align: super; color: ${BRAND.lime}; font-weight: 600;">™</span>
+                </div>
+                <p style="color: ${BRAND.aqua}; margin: 8px 0 0 0; font-size: 15px; font-weight: 500;">Interview Coach Pro</p>
               </div>
-              <p style="color: ${BRAND.aqua}; margin: 8px 0 0 0; font-size: 15px; font-weight: 500;">Interview Coach Pro</p>
+              <!--[if mso]>
+                </v:textbox>
+              </v:rect>
+              <![endif]-->
             </td>
           </tr>
 
