@@ -222,7 +222,7 @@ serve(async (req) => {
       }
 
       case "get_remaining_sessions": {
-        return await handleGetRemainingSessions(supabaseClient, email);
+        return await handleGetRemainingSessions(supabaseClient, stripe, email);
       }
 
       default:
@@ -513,6 +513,7 @@ async function handleIncrementSessionCount(
 // deno-lint-ignore no-explicit-any
 async function handleGetRemainingSessions(
   supabaseClient: any,
+  stripe: Stripe,
   email: string
 ) {
   const normalizedEmail = email.toLowerCase().trim();
@@ -533,10 +534,9 @@ async function handleGetRemainingSessions(
 
   // Keep subscription fields synced so the dashboard can render dates reliably.
   try {
-    typedProfile = await syncProProfileFromStripe(supabaseClient, null as unknown as Stripe, normalizedEmail, typedProfile);
+    typedProfile = await syncProProfileFromStripe(supabaseClient, stripe, normalizedEmail, typedProfile);
   } catch (e) {
-    // If Stripe isn't available in this action (older clients), just ignore.
-    logStep("Stripe sync skipped/failed", { error: String(e) });
+    logStep("Stripe sync failed in get_remaining_sessions", { error: String(e) });
   }
 
   if (!typedProfile || !typedProfile.is_pro_subscriber) {
