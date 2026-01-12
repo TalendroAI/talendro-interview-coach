@@ -25,7 +25,7 @@ interface ClientAuthState {
   isProSubscriber: boolean;
 }
 
-// Fetch profile by user_id first, then fallback to email
+// Fetch profile by user_id first, then fallback to email (case-insensitive)
 async function fetchProfileForUser(user: User): Promise<ClientProfile | null> {
   try {
     // Try to find profile by user_id first
@@ -35,12 +35,12 @@ async function fetchProfileForUser(user: User): Promise<ClientProfile | null> {
       .eq('user_id', user.id)
       .maybeSingle();
 
-    // If no profile found by user_id, try by email
+    // If no profile found by user_id, try by email (case-insensitive)
     if (!profile && user.email) {
       const { data: emailProfile } = await supabase
         .from('profiles')
         .select('*')
-        .eq('email', user.email)
+        .ilike('email', user.email)
         .maybeSingle();
 
       if (emailProfile) {
@@ -48,10 +48,18 @@ async function fetchProfileForUser(user: User): Promise<ClientProfile | null> {
         
         // Link the profile to this user_id if not already linked
         if (!emailProfile.user_id) {
-          await supabase
+          const { error: updateError } = await supabase
             .from('profiles')
             .update({ user_id: user.id, updated_at: new Date().toISOString() })
             .eq('id', emailProfile.id);
+          
+          if (updateError) {
+            console.error('Error linking profile to user:', updateError);
+          } else {
+            console.log('Profile linked to user_id:', user.id);
+            // Update local profile reference with the new user_id
+            profile = { ...profile, user_id: user.id };
+          }
         }
       }
     }
