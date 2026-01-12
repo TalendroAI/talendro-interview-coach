@@ -20,7 +20,7 @@ import {
   FileText,
   Loader2
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { addMonths, format } from 'date-fns';
 
 interface SessionHistoryItem {
   id: string;
@@ -179,8 +179,44 @@ export default function Dashboard() {
   const mockProgress = ((profile?.pro_mock_sessions_used || 0) / PRO_LIMITS.full_mock) * 100;
   const audioProgress = ((profile?.pro_audio_sessions_used || 0) / PRO_LIMITS.premium_audio) * 100;
 
-  const subscriptionStatus = profile?.pro_cancel_at_period_end 
-    ? `Cancels on ${profile?.pro_subscription_end ? format(new Date(profile.pro_subscription_end), 'MMM d, yyyy') : 'period end'}`
+  const parseIsoDate = (value?: string | null) => {
+    if (!value) return null;
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d;
+  };
+
+  const formatUtcDate = (date: Date, variant: 'short' | 'long' = 'long') => {
+    const fmt = new Intl.DateTimeFormat(undefined, {
+      timeZone: 'UTC',
+      year: 'numeric',
+      month: variant === 'long' ? 'long' : 'short',
+      day: 'numeric',
+    });
+    return fmt.format(date);
+  };
+
+  const memberSinceDate = parseIsoDate(profile?.pro_subscription_start);
+
+  const nextBillingDate = (() => {
+    const now = new Date();
+    const end = parseIsoDate(profile?.pro_subscription_end);
+
+    // Prefer backend-provided period end when available.
+    // Allow a small window to avoid timezone/clock edge cases.
+    if (end && end.getTime() > now.getTime() - 6 * 60 * 60 * 1000) return end;
+
+    // Fallback: derive the next billing date from the original purchase date (billing anchor).
+    if (!memberSinceDate) return end;
+
+    let next = memberSinceDate;
+    while (next.getTime() <= now.getTime()) {
+      next = addMonths(next, 1);
+    }
+    return next;
+  })();
+
+  const subscriptionStatus = profile?.pro_cancel_at_period_end
+    ? `Cancels on ${nextBillingDate ? formatUtcDate(nextBillingDate, 'short') : 'period end'}`
     : 'Active';
 
   return (
@@ -228,17 +264,13 @@ export default function Dashboard() {
               <div>
                 <p className="text-sm text-muted-foreground">Member since</p>
                 <p className="font-medium">
-                  {profile?.pro_subscription_start 
-                    ? format(new Date(profile.pro_subscription_start), 'MMMM d, yyyy')
-                    : 'N/A'}
+                  {memberSinceDate ? formatUtcDate(memberSinceDate, 'long') : 'N/A'}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Next billing</p>
                 <p className="font-medium">
-                  {profile?.pro_subscription_end 
-                    ? `${format(new Date(profile.pro_subscription_end), 'MMMM d, yyyy')} — $79.00`
-                    : 'N/A'}
+                  {nextBillingDate ? `${formatUtcDate(nextBillingDate, 'long')} — $79.00` : 'N/A'}
                 </p>
               </div>
             </div>
