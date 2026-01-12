@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 
@@ -25,17 +25,9 @@ interface ClientAuthState {
   isProSubscriber: boolean;
 }
 
-export function useClientAuth() {
-  const [state, setState] = useState<ClientAuthState>({
-    user: null,
-    session: null,
-    profile: null,
-    isLoading: true,
-    isProSubscriber: false,
-  });
-
-  // Fetch profile by user_id first, then fallback to email
-  const fetchProfile = useCallback(async (user: User) => {
+// Fetch profile by user_id first, then fallback to email
+async function fetchProfileForUser(user: User): Promise<ClientProfile | null> {
+  try {
     // Try to find profile by user_id first
     let { data: profile } = await supabase
       .from('profiles')
@@ -65,14 +57,41 @@ export function useClientAuth() {
     }
 
     return profile as ClientProfile | null;
-  }, []);
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    return null;
+  }
+}
+
+export function useClientAuth() {
+  const [state, setState] = useState<ClientAuthState>({
+    user: null,
+    session: null,
+    profile: null,
+    isLoading: true,
+    isProSubscriber: false,
+  });
+  
+  const initializedRef = useRef(false);
 
   useEffect(() => {
-    // Set up auth state change listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+    // Prevent double initialization in React StrictMode
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
+    let isMounted = true;
+
+    // Check current session first
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!isMounted) return;
+
         if (session?.user) {
-          const profile = await fetchProfile(session.user);
+          const profile = await fetchProfileForUser(session.user);
+          
+          if (!isMounted) return;
 
           setState({
             user: session.user,
@@ -81,6 +100,41 @@ export function useClientAuth() {
             isLoading: false,
             isProSubscriber: profile?.is_pro_subscriber || false,
           });
+        } else {
+          setState(prev => ({ ...prev, isLoading: false }));
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        if (isMounted) {
+          setState(prev => ({ ...prev, isLoading: false }));
+        }
+      }
+    };
+
+    initializeAuth();
+
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!isMounted) return;
+
+        if (session?.user) {
+          // Use setTimeout to avoid Supabase deadlock issue
+          setTimeout(async () => {
+            if (!isMounted) return;
+            
+            const profile = await fetchProfileForUser(session.user);
+            
+            if (!isMounted) return;
+
+            setState({
+              user: session.user,
+              session,
+              profile,
+              isLoading: false,
+              isProSubscriber: profile?.is_pro_subscriber || false,
+            });
+          }, 0);
         } else {
           setState({
             user: null,
@@ -93,25 +147,11 @@ export function useClientAuth() {
       }
     );
 
-    // Then check current session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        const profile = await fetchProfile(session.user);
-
-        setState({
-          user: session.user,
-          session,
-          profile,
-          isLoading: false,
-          isProSubscriber: profile?.is_pro_subscriber || false,
-        });
-      } else {
-        setState(prev => ({ ...prev, isLoading: false }));
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [fetchProfile]);
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -149,7 +189,7 @@ export function useClientAuth() {
   const refreshProfile = async () => {
     if (!state.user) return;
     
-    const profile = await fetchProfile(state.user);
+    const profile = await fetchProfileForUser(state.user);
 
     setState(prev => ({
       ...prev,
