@@ -83,12 +83,33 @@ export default function Dashboard() {
     }
   }, [profile?.email]);
 
-  // Refresh profile on mount to get latest subscription data
+  // Refresh + sync profile on mount to get latest subscription data
   useEffect(() => {
-    if (user) {
-      refreshProfile();
-    }
-  }, [user]);
+    let cancelled = false;
+
+    const run = async () => {
+      if (!user?.email) return;
+
+      // Sync subscription fields (member since / next billing / resets)
+      try {
+        await supabase.functions.invoke('pro-session', {
+          body: { action: 'check_pro_status', email: user.email },
+        });
+      } catch (e) {
+        console.warn('Pro status sync failed:', e);
+      }
+
+      if (!cancelled) {
+        refreshProfile();
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.email]);
 
   const handleManageSubscription = async () => {
     if (!profile?.email) return;
