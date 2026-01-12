@@ -1,6 +1,6 @@
 export function LandingFooter() {
   return (
-    <footer className="bg-tal-navy py-8">
+    <footer className="bg-tal-slate py-8">
       <div className="container">
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 text-center md:text-left">
           <p className="text-tal-gray text-sm font-sans">
