@@ -91,7 +91,19 @@ export default function InterviewCoach() {
     const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
     confetti({ particleCount: 140, spread: 75, startVelocity: 45, origin: { y: 0.65 }, colors });
     confetti({ particleCount: 80, spread: 110, startVelocity: 55, origin: { y: 0.6 }, colors });
-  }, [isSessionCompleted]);
+
+    // Auto-redirect Pro subscribers to dashboard after session completion
+    if (isProSubscriber) {
+      const redirectTimer = setTimeout(() => {
+        toast({
+          title: 'Redirecting to Dashboard',
+          description: 'Your results have been emailed to you.',
+        });
+        navigate('/dashboard');
+      }, 2500); // 2.5 seconds to see confetti and success message
+      return () => clearTimeout(redirectTimer);
+    }
+  }, [isSessionCompleted, isProSubscriber, navigate, toast]);
   
   // Resume from pause state
   const [resumeFromPause, setResumeFromPause] = useState(false);
