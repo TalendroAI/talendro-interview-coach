@@ -11,7 +11,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { Search, Clock, CheckCircle, XCircle, Hourglass, Trash2, RefreshCw } from 'lucide-react';
+import { Search, Clock, CheckCircle, XCircle, Hourglass, Trash2, RefreshCw, AlertCircle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 
 interface Session {
   id: string;
@@ -29,11 +30,11 @@ const SESSION_TYPE_LABELS: Record<string, string> = {
   pro: 'Pro',
 };
 
-const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  pending: { label: 'Pending', icon: Hourglass, variant: 'secondary' },
-  active: { label: 'Active', icon: Clock, variant: 'default' },
-  completed: { label: 'Completed', icon: CheckCircle, variant: 'outline' },
-  cancelled: { label: 'Cancelled', icon: XCircle, variant: 'destructive' },
+const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; variant: 'default' | 'secondary' | 'destructive' | 'outline'; description?: string }> = {
+  pending: { label: 'Pending', icon: Hourglass, variant: 'secondary', description: 'Checkout started but payment not completed' },
+  active: { label: 'Active', icon: Clock, variant: 'default', description: 'Session in progress' },
+  completed: { label: 'Completed', icon: CheckCircle, variant: 'outline', description: 'Session finished' },
+  cancelled: { label: 'Cancelled', icon: XCircle, variant: 'destructive', description: 'Session was cancelled' },
 };
 
 export default function AdminSessions() {
@@ -44,8 +45,9 @@ export default function AdminSessions() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteType, setDeleteType] = useState<'selected' | 'all' | 'completed'>('selected');
+  const [deleteType, setDeleteType] = useState<'selected' | 'all' | 'completed' | 'pending'>('selected');
   const [isDeleting, setIsDeleting] = useState(false);
+  const pendingCount = sessions.filter(s => s.status === 'pending').length;
 
   const fetchSessions = async () => {
     setIsLoading(true);
@@ -92,10 +94,19 @@ export default function AdminSessions() {
     const config = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
     const Icon = config.icon;
     return (
-      <Badge variant={config.variant}>
-        <Icon className="h-3 w-3 mr-1" />
-        {config.label}
-      </Badge>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge variant={config.variant} className="cursor-help">
+              <Icon className="h-3 w-3 mr-1" />
+              {config.label}
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{config.description}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   };
 
@@ -149,6 +160,8 @@ export default function AdminSessions() {
         query = query.in('id', Array.from(selectedIds));
       } else if (deleteType === 'completed') {
         query = query.eq('status', 'completed');
+      } else if (deleteType === 'pending') {
+        query = query.eq('status', 'pending');
       } else {
         // Delete all - match on non-null id
         query = query.not('id', 'is', null);
@@ -161,6 +174,7 @@ export default function AdminSessions() {
       const messages = {
         selected: `${selectedIds.size} session(s) deleted`,
         completed: 'All completed sessions deleted',
+        pending: 'All pending (abandoned) sessions deleted',
         all: 'All sessions deleted',
       };
 
@@ -187,6 +201,21 @@ export default function AdminSessions() {
           <p className="text-muted-foreground">View and manage all coaching sessions</p>
         </div>
       </div>
+
+      {pendingCount > 0 && (
+        <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+          <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+          <div className="text-sm">
+            <p className="font-medium text-amber-800 dark:text-amber-200">
+              {pendingCount} pending session{pendingCount !== 1 ? 's' : ''} found
+            </p>
+            <p className="text-amber-700 dark:text-amber-300 mt-1">
+              Pending sessions are abandoned checkouts where users started payment but never completed. 
+              These can be safely deleted using the Delete dropdown → "Delete All Pending".
+            </p>
+          </div>
+        </div>
+      )}
 
       <Card>
         <CardContent className="pt-6">
@@ -247,6 +276,13 @@ export default function AdminSessions() {
                   className="text-amber-600"
                 >
                   Delete All Completed
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => { setDeleteType('pending'); setDeleteDialogOpen(true); }}
+                  disabled={pendingCount === 0}
+                  className="text-amber-600"
+                >
+                  Delete All Pending ({pendingCount})
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -332,13 +368,17 @@ export default function AdminSessions() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
+          <AlertDialogTitle>
               {deleteType === 'selected' && `Delete ${selectedIds.size} Session(s)?`}
               {deleteType === 'completed' && 'Delete All Completed Sessions?'}
+              {deleteType === 'pending' && `Delete All ${pendingCount} Pending Sessions?`}
               {deleteType === 'all' && 'Delete All Sessions?'}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the selected session records.
+              {deleteType === 'pending' 
+                ? 'Pending sessions are abandoned checkouts where payment was never completed. This action cannot be undone.'
+                : 'This action cannot be undone. This will permanently delete the selected session records.'
+              }
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
