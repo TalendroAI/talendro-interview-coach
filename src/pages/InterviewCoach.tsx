@@ -127,7 +127,7 @@ export default function InterviewCoach() {
 
   // Scroll to top on page load
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    window.scrollTo({ top: 0, behavior: 'auto' });
   }, []);
 
   // Check if documents are ready
