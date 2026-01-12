@@ -31,140 +31,103 @@ const logStep = (step: string, details?: Record<string, unknown>) => {
 function generateLoginEmailHtml(magicLink: string): string {
   return `
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="color-scheme" content="light">
-  <meta name="supported-color-schemes" content="light">
-  <!--[if gte mso 9]>
-  <xml>
-    <o:OfficeDocumentSettings>
-      <o:AllowPNG/>
-      <o:PixelsPerInch>96</o:PixelsPerInch>
-    </o:OfficeDocumentSettings>
-  </xml>
-  <![endif]-->
-  <style type="text/css">
-    body, table, td, div, p, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
-    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: collapse !important; }
-    img { -ms-interpolation-mode: bicubic; border: 0; line-height: 100%; outline: none; text-decoration: none; }
-    body { margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: ${BRAND.soft}; }
-    .ExternalClass { width: 100%; }
-    .ExternalClass, .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td, .ExternalClass div { line-height: 100%; }
-    a[x-apple-data-detectors] { color: inherit !important; text-decoration: none !important; }
-    u + #body a { color: inherit; text-decoration: none; }
-    #MessageViewBody a { color: inherit; text-decoration: none; }
-    
-    @media only screen and (max-width: 599px) {
-      .email-container { width: 100% !important; max-width: 100% !important; }
-      .content-padding { padding: 24px 20px !important; }
-      .header-padding { padding: 32px 20px !important; }
-      .footer-padding { padding: 24px 20px !important; }
-      h1.email-title { font-size: 24px !important; }
-      .cta-button { padding: 16px 32px !important; font-size: 16px !important; }
-    }
-  </style>
+  <title>Your Talendro Login Link</title>
 </head>
-<body id="body" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: ${BRAND.slate}; margin: 0; padding: 0; background-color: ${BRAND.soft}; width: 100% !important; -webkit-font-smoothing: antialiased;">
-  <!--[if mso]>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: ${BRAND.soft};">
-  <tr><td align="center" valign="top" style="padding: 40px 20px;">
-  <table role="presentation" width="${EMAIL_MAX_WIDTH}" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff;">
-  <tr><td>
-  <![endif]-->
-  
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: ${BRAND.slate}; margin: 0; padding: 0; background-color: ${BRAND.soft};">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: ${BRAND.soft};">
     <tr>
-      <td align="center" valign="top" style="padding: 40px 20px;">
-        <table role="presentation" class="email-container" width="${EMAIL_MAX_WIDTH}" cellpadding="0" cellspacing="0" border="0" style="width: ${EMAIL_MAX_WIDTH}px; max-width: 100%; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" width="${EMAIL_MAX_WIDTH}" cellpadding="0" cellspacing="0" border="0" style="max-width: ${EMAIL_MAX_WIDTH}px; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
           
-          <!-- Header with Talendro branding - matching welcome email format -->
+          <!-- Blue Header -->
           <tr>
-            <td class="header-padding" align="center" style="background-color: ${BRAND.blue}; padding: 40px 48px; text-align: center;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td align="center">
-                    <div style="font-size: 32px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">
-                      Talendro<span style="font-size: 14px; vertical-align: super; color: ${BRAND.aqua}; font-weight: 600;">™</span>
-                    </div>
-                    <p style="color: ${BRAND.aqua}; margin: 8px 0 0 0; font-size: 15px; font-weight: 500;">Interview Coach Pro</p>
-                  </td>
-                </tr>
-              </table>
+            <td align="center" style="background-color: ${BRAND.blue}; padding: 32px 40px;">
+              <div style="font-size: 28px; font-weight: 800; color: #ffffff;">
+                Talendro<span style="font-size: 12px; vertical-align: super; color: ${BRAND.aqua};">™</span>
+              </div>
+              <p style="color: ${BRAND.aqua}; margin: 4px 0 0 0; font-size: 14px; font-weight: 500;">Interview Coach Pro</p>
             </td>
           </tr>
 
-          <!-- Hero Section -->
+          <!-- Hero Section with Emoji -->
           <tr>
-            <td style="background-color: #ffffff; padding: 32px 48px; text-align: center;">
-              <div style="font-size: 48px; margin-bottom: 12px;">🎉</div>
-              <h1 class="email-title" style="color: ${BRAND.slate}; font-size: 26px; font-weight: 700; margin: 0 0 8px 0;">Access Your Dashboard</h1>
-              <p style="color: ${BRAND.aqua}; font-size: 16px; margin: 0;">Click the button below to securely sign in</p>
+            <td align="center" style="padding: 32px 40px 24px 40px;">
+              <div style="font-size: 48px; margin-bottom: 16px;">🎉</div>
+              <h1 style="color: ${BRAND.slate}; font-size: 24px; font-weight: 700; margin: 0 0 8px 0;">Welcome Back!</h1>
+              <p style="color: ${BRAND.aqua}; font-size: 16px; margin: 0; font-weight: 500;">Your login link is ready</p>
             </td>
           </tr>
           
           <!-- Content -->
           <tr>
-            <td class="content-padding" style="padding: 40px 48px;">
-              <p style="margin: 0 0 28px 0; color: ${BRAND.slate}; font-size: 16px; line-height: 1.7;">
-                Use this secure link to access your Talendro Interview Coach dashboard. This link is valid for <strong style="color: ${BRAND.blue};">1 hour</strong> and can only be used once.
+            <td style="padding: 0 40px 32px 40px;">
+              <p style="margin: 0 0 24px 0; color: ${BRAND.slate}; font-size: 15px; line-height: 1.7;">
+                Thank you for using <strong style="color: ${BRAND.blue};">Interview Coach Pro</strong>! Click the button below to access your dashboard and continue your interview preparation:
               </p>
               
-              <!-- CTA Button with VML fallback for Outlook -->
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 32px 0;">
+              <!-- CTA Button -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td align="center">
-                    <!--[if mso]>
-                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${magicLink}" style="height:52px;v-text-anchor:middle;width:220px;" arcsize="15%" stroke="f" fillcolor="${BRAND.blue}">
-                      <w:anchorlock/>
-                      <center style="color:#ffffff;font-family:sans-serif;font-size:17px;font-weight:bold;">Open Dashboard</center>
-                    </v:roundrect>
-                    <![endif]-->
-                    <!--[if !mso]><!-->
-                    <a href="${magicLink}" class="cta-button" style="display: inline-block; mso-hide: all; background: ${BRAND.blue}; color: #ffffff !important; padding: 16px 40px; font-size: 17px; font-weight: 700; text-decoration: none; border-radius: 8px; box-shadow: 0 4px 12px rgba(47, 109, 246, 0.3);">
-                      Open Dashboard
+                  <td align="center" style="padding: 8px 0 24px 0;">
+                    <a href="${magicLink}" style="display: inline-block; background-color: ${BRAND.blue}; color: #ffffff; padding: 14px 32px; font-size: 16px; font-weight: 700; text-decoration: none; border-radius: 6px;">
+                      Access My Dashboard
                     </a>
-                    <!--<![endif]-->
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Info Box -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="background-color: ${BRAND.soft}; border-left: 4px solid ${BRAND.aqua}; padding: 16px; border-radius: 0 8px 8px 0;">
+                    <p style="margin: 0; color: ${BRAND.blue}; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">YOUR DASHBOARD INCLUDES:</p>
+                    <p style="margin: 8px 0 0 0; color: ${BRAND.slate}; font-size: 14px;">✓ Unlimited Quick Prep sessions</p>
+                    <p style="margin: 4px 0 0 0; color: ${BRAND.slate}; font-size: 14px;">✓ 6 Mock Interviews per month</p>
+                    <p style="margin: 4px 0 0 0; color: ${BRAND.slate}; font-size: 14px;">✓ 2 Audio Mock sessions per month</p>
                   </td>
                 </tr>
               </table>
 
               <!-- Fallback Link -->
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="background-color: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px;">
-                    <p style="margin: 0 0 8px 0; color: ${BRAND.gray}; font-size: 13px; font-weight: 600;">If the button doesn't work, copy this link:</p>
-                    <p style="margin: 0; font-size: 12px; color: ${BRAND.blue}; word-break: break-all;">
+                    <p style="margin: 0 0 8px 0; color: ${BRAND.gray}; font-size: 13px;">If the button doesn't work, copy this link:</p>
+                    <p style="margin: 0; font-size: 12px; word-break: break-all;">
                       <a href="${magicLink}" style="color: ${BRAND.blue}; text-decoration: underline;">${magicLink}</a>
                     </p>
                   </td>
                 </tr>
               </table>
 
-              <!-- Security Note -->
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0 0 0;">
-                <tr>
-                  <td style="background-color: #F0FDF4; border-left: 4px solid ${BRAND.aqua}; border-radius: 0 8px 8px 0; padding: 16px;">
-                    <p style="margin: 0; color: ${BRAND.slate}; font-size: 14px;">
-                      <strong>🔒 Security Note:</strong> This link expires in 1 hour. If you didn't request this email, you can safely ignore it.
-                    </p>
-                  </td>
-                </tr>
-              </table>
+              <p style="margin: 24px 0 0 0; color: ${BRAND.gray}; font-size: 13px;">
+                This link expires in 24 hours. Need a new one? Visit <a href="https://coach.talendro.com/login" style="color: ${BRAND.blue};">coach.talendro.com/login</a>
+              </p>
+
+              <p style="margin: 16px 0 0 0; color: ${BRAND.slate}; font-size: 14px;">
+                Questions? Reply to this email — we're here to help.
+              </p>
+
+              <p style="margin: 16px 0 0 0; color: ${BRAND.slate}; font-size: 14px;">
+                — <strong style="color: ${BRAND.blue};">Greg Jackson</strong>
+              </p>
             </td>
           </tr>
           
           <!-- Footer -->
           <tr>
-            <td class="footer-padding" style="background-color: ${BRAND.slate}; padding: 32px 48px; text-align: center;">
-              <div style="font-size: 24px; font-weight: 800; color: #ffffff; margin-bottom: 8px;">
-                Talendro<span style="font-size: 12px; vertical-align: super; color: ${BRAND.aqua};">™</span>
+            <td align="center" style="background-color: ${BRAND.slate}; padding: 24px 40px;">
+              <div style="font-size: 20px; font-weight: 800; color: #ffffff; margin-bottom: 4px;">
+                Talendro<span style="font-size: 10px; vertical-align: super; color: ${BRAND.aqua};">™</span>
               </div>
-              <p style="color: ${BRAND.aqua}; font-style: italic; font-size: 14px; margin: 0 0 12px 0;">Precision Matches. Faster results.</p>
-              <p style="margin: 0 0 16px 0; font-size: 13px; color: ${BRAND.gray};">🇺🇸 American-Built · 🎖️ Veteran-Led · ✅ Recruiter-Tested</p>
-              <p style="color: ${BRAND.gray}; font-size: 12px; margin: 0;">
+              <p style="color: ${BRAND.aqua}; font-style: italic; font-size: 13px; margin: 0 0 8px 0;">Precision Matches. Faster results.</p>
+              <p style="margin: 0 0 8px 0; font-size: 12px; color: ${BRAND.gray};">🇺🇸 American-Built · 🎖️ Veteran-Led · ✅ Recruiter-Tested</p>
+              <p style="color: ${BRAND.gray}; font-size: 11px; margin: 0;">
                 © ${new Date().getFullYear()} Talendro. All rights reserved.
               </p>
             </td>
@@ -173,11 +136,6 @@ function generateLoginEmailHtml(magicLink: string): string {
       </td>
     </tr>
   </table>
-  
-  <!--[if mso]>
-  </td></tr></table>
-  </td></tr></table>
-  <![endif]-->
 </body>
 </html>
   `;
