@@ -300,9 +300,7 @@ export default function Dashboard() {
               </CardTitle>
               <span className="text-sm text-muted-foreground flex items-center gap-1">
                 <Calendar className="w-4 h-4" />
-                Resets: {profile?.pro_session_reset_date 
-                  ? format(new Date(new Date(profile.pro_session_reset_date).getTime() + 30 * 24 * 60 * 60 * 1000), 'MMM d')
-                  : 'N/A'}
+                Resets: {nextBillingDate ? formatUtcDate(nextBillingDate, 'short') : 'N/A'}
               </span>
             </div>
           </CardHeader>
