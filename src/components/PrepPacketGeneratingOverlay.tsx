@@ -122,7 +122,7 @@ export function PrepPacketGeneratingOverlay({
   const currentStep = steps[currentStepIndex];
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex items-start justify-center pt-8 p-4 overflow-y-auto">
       <div className="w-full max-w-lg mx-auto">
         {/* Main Card */}
         <div className="bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
