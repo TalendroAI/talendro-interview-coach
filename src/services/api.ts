@@ -18,6 +18,8 @@ export interface VerifyPaymentResponse {
     recommendations?: string;
   };
   is_pro?: boolean;
+  session_limit_reached?: boolean;
+  next_reset?: string;
   message?: string;
 }
 
