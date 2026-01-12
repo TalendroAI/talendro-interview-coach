@@ -61,12 +61,13 @@ export default function Dashboard() {
   // Fetch session history
   useEffect(() => {
     async function fetchHistory() {
-      if (!user) return;
+      if (!profile?.email) return;
       
       const { data, error } = await supabase
         .from('coaching_sessions')
         .select('id, created_at, session_type, first_name, company_url, job_description, status')
-        .eq('profile_id', user.id)
+        .ilike('email', profile.email)
+        .in('status', ['completed', 'active'])
         .order('created_at', { ascending: false })
         .limit(10);
 
@@ -76,10 +77,10 @@ export default function Dashboard() {
       setHistoryLoading(false);
     }
 
-    if (user) {
+    if (profile?.email) {
       fetchHistory();
     }
-  }, [user]);
+  }, [profile?.email]);
 
   // Refresh profile on mount to get latest subscription data
   useEffect(() => {
