@@ -387,6 +387,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      atomic_check_and_increment_session: {
+        Args: { p_email: string; p_session_type: string }
+        Returns: Json
+      }
       get_secret_from_vault: { Args: { secret_name: string }; Returns: string }
       has_role: {
         Args: {

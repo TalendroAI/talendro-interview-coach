@@ -221,6 +221,17 @@ serve(async (req) => {
         return await handleIncrementSessionCount(supabaseClient, email, session_type);
       }
 
+      // NEW: Atomic check-and-increment to prevent race conditions
+      case "start_session": {
+        if (!session_type) {
+          return new Response(JSON.stringify({ error: "session_type is required" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        return await handleAtomicStartSession(supabaseClient, email, session_type);
+      }
+
       case "get_remaining_sessions": {
         return await handleGetRemainingSessions(supabaseClient, stripe, email);
       }
@@ -505,6 +516,40 @@ async function handleIncrementSessionCount(
     ok: true, 
     new_count: currentCount + 1 
   }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    status: 200,
+  });
+}
+
+// NEW: Atomic check-and-increment using database function to prevent race conditions
+// deno-lint-ignore no-explicit-any
+async function handleAtomicStartSession(
+  supabaseClient: any,
+  email: string,
+  sessionType: string
+) {
+  logStep("Atomic start session", { email, sessionType });
+
+  // Call the atomic database function that checks and increments in one transaction
+  const { data, error } = await supabaseClient.rpc('atomic_check_and_increment_session', {
+    p_email: email,
+    p_session_type: sessionType,
+  });
+
+  if (error) {
+    logStep("Error in atomic start session", { error });
+    return new Response(JSON.stringify({ 
+      allowed: false, 
+      error: error.message || "Failed to start session" 
+    }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200,
+    });
+  }
+
+  logStep("Atomic start session result", { result: data });
+
+  return new Response(JSON.stringify(data), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
     status: 200,
   });
