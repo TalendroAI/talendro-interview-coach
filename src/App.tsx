@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { ScrollToTop } from "@/components/ScrollToTop";
 import Index from "./pages/Index";
 import InterviewCoach from "./pages/InterviewCoach";
 import Dashboard from "./pages/Dashboard";
@@ -33,17 +34,17 @@ function AuthCallbackHandler({ children }: { children: React.ReactNode }) {
     // Check if URL contains auth callback parameters (access_token in hash or query params)
     const hashParams = new URLSearchParams(location.hash.slice(1));
     const queryParams = new URLSearchParams(location.search);
-    
+
     const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
     const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
     const type = hashParams.get('type') || queryParams.get('type');
-    
+
     // Check for redirect_to parameter in hash or query
     const redirectTo = hashParams.get('redirect_to') || queryParams.get('redirect_to');
-    
+
     if (accessToken && refreshToken && type === 'magiclink') {
       setIsProcessingAuth(true);
-      
+
       // Set the session with the tokens
       supabase.auth.setSession({
         access_token: accessToken,
@@ -54,7 +55,7 @@ function AuthCallbackHandler({ children }: { children: React.ReactNode }) {
           setIsProcessingAuth(false);
           return;
         }
-        
+
         // Determine redirect destination - honor redirect_to param or default to /dashboard
         let destination = '/dashboard';
         if (redirectTo) {
@@ -68,7 +69,7 @@ function AuthCallbackHandler({ children }: { children: React.ReactNode }) {
             }
           }
         }
-        
+
         // Clear the hash/query params and redirect
         window.history.replaceState(null, '', destination);
         navigate(destination, { replace: true });
@@ -98,6 +99,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthCallbackHandler>
+          <ScrollToTop />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/interview-coach" element={<InterviewCoach />} />
@@ -106,7 +108,7 @@ const App = () => (
             <Route path="/purchase-success" element={<PurchaseSuccess />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
-            
+
             {/* Admin Routes */}
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin" element={<AdminLayout />}>
@@ -116,7 +118,7 @@ const App = () => (
               <Route path="errors" element={<AdminErrors />} />
               <Route path="discounts" element={<AdminDiscounts />} />
             </Route>
-            
+
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
