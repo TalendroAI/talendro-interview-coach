@@ -80,22 +80,28 @@ function generateLoginEmailHtml(magicLink: string): string {
       <td align="center" valign="top" style="padding: 40px 20px;">
         <table role="presentation" class="email-container" width="${EMAIL_MAX_WIDTH}" cellpadding="0" cellspacing="0" border="0" style="width: ${EMAIL_MAX_WIDTH}px; max-width: 100%; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
           
-          <!-- Header with Talendro branding -->
+          <!-- Header with Talendro branding - matching welcome email format -->
           <tr>
-            <td class="header-padding" style="background: linear-gradient(135deg, ${BRAND.blue} 0%, ${BRAND.aqua} 100%); padding: 40px 48px; text-align: center;">
-              <div style="font-size: 32px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">
-                Talendro<span style="font-size: 14px; vertical-align: super; color: ${BRAND.aqua}; font-weight: 600;">™</span>
-              </div>
-              <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 15px; font-weight: 500; font-style: italic;">Precision Matches. Faster results.</p>
+            <td class="header-padding" align="center" style="background-color: ${BRAND.blue}; padding: 40px 48px; text-align: center;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center">
+                    <div style="font-size: 32px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">
+                      Talendro<span style="font-size: 14px; vertical-align: super; color: ${BRAND.aqua}; font-weight: 600;">™</span>
+                    </div>
+                    <p style="color: ${BRAND.aqua}; margin: 8px 0 0 0; font-size: 15px; font-weight: 500;">Interview Coach Pro</p>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
           <!-- Hero Section -->
           <tr>
-            <td style="background-color: ${BRAND.soft}; padding: 32px 48px; text-align: center; border-bottom: 1px solid #e5e7eb;">
-              <div style="font-size: 48px; margin-bottom: 12px;">🔐</div>
-              <h1 class="email-title" style="color: ${BRAND.blue}; font-size: 26px; font-weight: 700; margin: 0 0 8px 0;">Access Your Dashboard</h1>
-              <p style="color: ${BRAND.gray}; font-size: 16px; margin: 0;">Click the button below to securely sign in</p>
+            <td style="background-color: #ffffff; padding: 32px 48px; text-align: center;">
+              <div style="font-size: 48px; margin-bottom: 12px;">🎉</div>
+              <h1 class="email-title" style="color: ${BRAND.slate}; font-size: 26px; font-weight: 700; margin: 0 0 8px 0;">Access Your Dashboard</h1>
+              <p style="color: ${BRAND.aqua}; font-size: 16px; margin: 0;">Click the button below to securely sign in</p>
             </td>
           </tr>
           
