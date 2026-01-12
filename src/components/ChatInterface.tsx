@@ -147,16 +147,30 @@ export function ChatInterface({
       
       // Restore messages from database
       if (result.messages.length > 0) {
-        // Count how many questions the USER has answered (user messages after the initial greeting)
-        // The next question number = answered count + 1
+        // Analyze the conversation to determine if the user needs to answer the last question
+        // or if we should proceed to the next one
+        const lastMessage = result.messages[result.messages.length - 1];
         const userAnswerCount = result.messages.filter(m => m.role === 'user').length;
-        const nextQuestionNumber = userAnswerCount + 1;
+        
+        // Determine the appropriate welcome back message
+        // If the last message was from the assistant (a question), they need to answer it
+        // If the last message was from the user, they can proceed to the next question
+        let welcomeContent: string;
+        
+        if (lastMessage.role === 'assistant') {
+          // Last message was a question from Sarah - user hasn't answered yet
+          welcomeContent = `Welcome back! I have your previous answers saved. Let's continue with your response to the last question I presented.`;
+        } else {
+          // Last message was the user's answer - they're ready for the next question
+          // We'll let the AI naturally continue the interview
+          welcomeContent = `Welcome back! I have your previous answers saved. You've answered ${userAnswerCount} questions so far. Let's continue the interview.`;
+        }
         
         // Create a welcome back message from Sarah
         const welcomeBackMessage: Message = {
           id: `resume-${Date.now()}`,
           role: 'assistant',
-          content: `Welcome back! I have your previous answers saved. We were on Question ${nextQuestionNumber} of 10. Let's continue where we left off.`,
+          content: welcomeContent,
           timestamp: new Date(),
         };
         
