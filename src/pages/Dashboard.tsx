@@ -414,8 +414,8 @@ export default function Dashboard() {
                     disabled={mockRemaining <= 0}
                     onClick={() => navigate('/interview-coach?session_type=pro&type=mock')}
                   >
-                    {mockRemaining > 0 ? 'Start' : `Resets ${profile?.pro_session_reset_date 
-                      ? format(new Date(new Date(profile.pro_session_reset_date).getTime() + 30 * 24 * 60 * 60 * 1000), 'MMM d')
+                    {mockRemaining > 0 ? 'Start' : `Resets ${nextBillingDate 
+                      ? format(nextBillingDate, 'MMM d')
                       : 'soon'}`}
                   </Button>
                 </CardContent>
@@ -438,8 +438,8 @@ export default function Dashboard() {
                     disabled={audioRemaining <= 0}
                     onClick={() => navigate('/interview-coach?session_type=pro&type=audio')}
                   >
-                    {audioRemaining > 0 ? 'Start' : `Resets ${profile?.pro_session_reset_date 
-                      ? format(new Date(new Date(profile.pro_session_reset_date).getTime() + 30 * 24 * 60 * 60 * 1000), 'MMM d')
+                    {audioRemaining > 0 ? 'Start' : `Resets ${nextBillingDate 
+                      ? format(nextBillingDate, 'MMM d')
                       : 'soon'}`}
                   </Button>
                 </CardContent>
