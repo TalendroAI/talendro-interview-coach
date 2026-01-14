@@ -671,43 +671,8 @@ serve(async (req) => {
       }
     }
 
-    // Check for completed session by email
-    const { data: completedSession, error: completedError } = await supabaseClient
-      .from("coaching_sessions")
-      .select("*")
-      .eq("email", email)
-      .eq("session_type", session_type)
-      .eq("status", "completed")
-      .order("completed_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (completedError) {
-      logStep("Error fetching completed session", { error: completedError });
-    }
-
-    if (completedSession) {
-      logStep("Completed session found", { sessionId: completedSession.id });
-      
-      // Also fetch the session results if available
-      const { data: sessionResults } = await supabaseClient
-        .from("session_results")
-        .select("*")
-        .eq("session_id", completedSession.id)
-        .maybeSingle();
-
-      return new Response(JSON.stringify({ 
-        verified: false, 
-        session: completedSession,
-        session_status: "completed",
-        session_results: sessionResults,
-        message: "Session already completed"
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      });
-    }
-
+    // IMPORTANT: Check for Pro subscription FIRST before blocking on completed sessions.
+    // Pro subscribers should be able to start new sessions even if they have old completed ones.
     // Check for Pro subscription
     const customers = await stripe.customers.list({ email, limit: 1 });
     if (customers.data.length > 0) {
@@ -812,6 +777,44 @@ serve(async (req) => {
           });
         }
       }
+    }
+
+    // NOT a Pro subscriber - check if they have a completed one-time purchase session
+    // (This blocks non-Pro users from reusing a session they already completed)
+    const { data: completedSession, error: completedError } = await supabaseClient
+      .from("coaching_sessions")
+      .select("*")
+      .eq("email", email)
+      .eq("session_type", session_type)
+      .eq("status", "completed")
+      .order("completed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (completedError) {
+      logStep("Error fetching completed session", { error: completedError });
+    }
+
+    if (completedSession) {
+      logStep("Completed session found for non-Pro user", { sessionId: completedSession.id });
+      
+      // Also fetch the session results if available
+      const { data: sessionResults } = await supabaseClient
+        .from("session_results")
+        .select("*")
+        .eq("session_id", completedSession.id)
+        .maybeSingle();
+
+      return new Response(JSON.stringify({ 
+        verified: false, 
+        session: completedSession,
+        session_status: "completed",
+        session_results: sessionResults,
+        message: "Session already completed"
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
     }
 
     return new Response(JSON.stringify({ 
