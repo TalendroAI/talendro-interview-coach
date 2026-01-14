@@ -7,7 +7,6 @@ import { Separator } from "@/components/ui/separator";
 import { Mail, Download, LayoutDashboard, Plus, Home, Sparkles } from "lucide-react";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { supabase } from "@/integrations/supabase/client";
-import { STRIPE_PRICES } from "@/config/stripe";
 
 export interface SessionResultsViewProps {
   sessionLabel: string;
@@ -270,8 +269,7 @@ export function SessionResultsView({
                       try {
                         const { data, error } = await supabase.functions.invoke('create-checkout', {
                           body: {
-                            priceId: STRIPE_PRICES.pro.price_id,
-                            sessionType: 'pro',
+                            session_type: 'pro',
                             email: email,
                           },
                         });
