@@ -1,11 +1,13 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Mail, Download, LayoutDashboard, Plus } from "lucide-react";
+import { Mail, Download, LayoutDashboard, Plus, Home, Sparkles } from "lucide-react";
 import { MarkdownRenderer } from "./MarkdownRenderer";
+import { supabase } from "@/integrations/supabase/client";
+import { STRIPE_PRICES } from "@/config/stripe";
 
 export interface SessionResultsViewProps {
   sessionLabel: string;
@@ -13,6 +15,7 @@ export interface SessionResultsViewProps {
   prepPacket?: string | null;
   transcript?: string | null;
   analysisMarkdown?: string | null;
+  isProSubscriber?: boolean;
 }
 
 // Parse transcript into Q&A pairs for clean display
@@ -49,9 +52,11 @@ export function SessionResultsView({
   prepPacket,
   transcript,
   analysisMarkdown,
+  isProSubscriber = false,
 }: SessionResultsViewProps) {
   const navigate = useNavigate();
   const cardRef = useRef<HTMLDivElement>(null);
+  const [isUpgradeLoading, setIsUpgradeLoading] = useState(false);
 
   const isQuickPrep = sessionLabel.toLowerCase().includes("quick prep");
   const hasPrepPacket = Boolean(prepPacket && prepPacket.length > 50);
@@ -229,23 +234,65 @@ export function SessionResultsView({
               💡 <strong>Tip:</strong> If you didn't receive the email, check your Promotions or Spam folder and search for "Talendro".
             </p>
             
-            {/* Navigation buttons for Pro subscribers */}
+            {/* Navigation buttons - different for Pro vs one-time purchasers */}
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
-              <Button 
-                onClick={() => navigate('/dashboard')} 
-                variant="outline"
-                className="flex-1 gap-2"
-              >
-                <LayoutDashboard className="h-4 w-4" />
-                Go to Dashboard
-              </Button>
-              <Button 
-                onClick={() => navigate('/interview-coach?session_type=pro')} 
-                className="flex-1 gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Start New Session
-              </Button>
+              {isProSubscriber ? (
+                <>
+                  <Button 
+                    onClick={() => navigate('/dashboard')} 
+                    variant="outline"
+                    className="flex-1 gap-2"
+                  >
+                    <LayoutDashboard className="h-4 w-4" />
+                    Go to Dashboard
+                  </Button>
+                  <Button 
+                    onClick={() => navigate('/interview-coach?session_type=pro')} 
+                    className="flex-1 gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Start New Session
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button 
+                    onClick={() => window.location.href = 'https://coach.talendro.com'} 
+                    variant="outline"
+                    className="flex-1 gap-2"
+                  >
+                    <Home className="h-4 w-4" />
+                    Return to Home
+                  </Button>
+                  <Button 
+                    onClick={async () => {
+                      setIsUpgradeLoading(true);
+                      try {
+                        const { data, error } = await supabase.functions.invoke('create-checkout', {
+                          body: {
+                            priceId: STRIPE_PRICES.pro.price_id,
+                            sessionType: 'pro',
+                            email: email,
+                          },
+                        });
+                        if (error) throw error;
+                        if (data?.url) {
+                          window.open(data.url, '_blank');
+                        }
+                      } catch (err) {
+                        console.error('Error creating checkout:', err);
+                      } finally {
+                        setIsUpgradeLoading(false);
+                      }
+                    }}
+                    disabled={isUpgradeLoading}
+                    className="flex-1 gap-2"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    {isUpgradeLoading ? 'Loading...' : 'Upgrade to Pro — $79/month'}
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </Card>
