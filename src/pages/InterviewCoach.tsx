@@ -105,14 +105,41 @@ export default function InterviewCoach() {
     }
   }, [isSessionCompleted, isProSubscriber, navigate, toast]);
 
-  // Scroll to top when results are shown
+  // Scroll to top when results are shown (results render without a route change)
   useEffect(() => {
-    if (resultsReport || isSessionCompleted) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
-    }
-  }, [resultsReport, isSessionCompleted]);
+    if (!isSessionCompleted || !resultsReport) return;
+
+    const doScroll = () => {
+      // Window scroll
+      try {
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      } catch {
+        window.scrollTo(0, 0);
+      }
+
+      // App scroll containers
+      const candidates: Array<Element | null> = [
+        document.documentElement,
+        document.body,
+        document.querySelector('main'),
+        document.getElementById('main-scroll-container'),
+        document.getElementById('chat-messages-container'),
+      ];
+
+      for (const el of candidates) {
+        if (!el || !(el instanceof HTMLElement)) continue;
+        try {
+          el.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+        } catch {
+          el.scrollTop = 0;
+          el.scrollLeft = 0;
+        }
+      }
+    };
+
+    requestAnimationFrame(doScroll);
+    setTimeout(doScroll, 50);
+  }, [isSessionCompleted, resultsReport]);
   
   // Resume from pause state
   const [resumeFromPause, setResumeFromPause] = useState(false);
