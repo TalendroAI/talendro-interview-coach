@@ -42,7 +42,7 @@ export default function InterviewCoach() {
   // Allow session links that only contain session_id (no session_type)
   const [sessionTypeOverride, setSessionTypeOverride] = useState<SessionType | null>(null);
   const resolvedSessionType = sessionTypeOverride ?? sessionType;
-  
+  const isProSessionFlow = resolvedSessionType === 'pro';
   const [documents, setDocuments] = useState<DocumentInputs>({
     firstName: '',
     resume: '',
@@ -93,8 +93,8 @@ export default function InterviewCoach() {
     confetti({ particleCount: 140, spread: 75, startVelocity: 45, origin: { y: 0.65 }, colors });
     confetti({ particleCount: 80, spread: 110, startVelocity: 55, origin: { y: 0.6 }, colors });
 
-    // Auto-redirect Pro subscribers to dashboard after session completion
-    if (isProSubscriber) {
+    // Auto-redirect ONLY Pro sessions to dashboard after session completion
+    if (isProSessionFlow) {
       const redirectTimer = setTimeout(() => {
         toast({
           title: 'Redirecting to Dashboard',
@@ -104,7 +104,7 @@ export default function InterviewCoach() {
       }, 2500); // 2.5 seconds to see confetti and success message
       return () => clearTimeout(redirectTimer);
     }
-  }, [isSessionCompleted, isProSubscriber, navigate, toast]);
+  }, [isSessionCompleted, isProSessionFlow, navigate, toast]);
 
   // Scroll to top when results are shown (results render without a route change)
   useEffect(() => {
@@ -821,7 +821,7 @@ export default function InterviewCoach() {
       }
 
       // Increment Pro session count for premium_audio
-      if (isProSubscriber && derivedEmail) {
+      if (isProSessionFlow && derivedEmail) {
         try {
           await supabase.functions.invoke('pro-session', {
             body: {
@@ -987,7 +987,7 @@ export default function InterviewCoach() {
       }
 
       // Increment Pro session count for all session types (track usage for analytics)
-      if (isProSubscriber && derivedEmail) {
+      if (isProSessionFlow && derivedEmail) {
         try {
           await supabase.functions.invoke('pro-session', {
             body: {
@@ -1292,7 +1292,7 @@ export default function InterviewCoach() {
           prepPacket={resultsReport?.prepPacket || null}
           transcript={resultsReport?.transcript || null}
           analysisMarkdown={resultsReport?.analysisMarkdown || null}
-          isProSubscriber={isProSubscriber}
+          isProSessionFlow={isProSessionFlow}
         />
       );
     }

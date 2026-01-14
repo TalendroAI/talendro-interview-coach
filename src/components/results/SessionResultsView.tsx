@@ -14,7 +14,7 @@ export interface SessionResultsViewProps {
   prepPacket?: string | null;
   transcript?: string | null;
   analysisMarkdown?: string | null;
-  isProSubscriber?: boolean;
+  isProSessionFlow?: boolean;
 }
 
 // Parse transcript into Q&A pairs for clean display
@@ -51,7 +51,7 @@ export function SessionResultsView({
   prepPacket,
   transcript,
   analysisMarkdown,
-  isProSubscriber = false,
+  isProSessionFlow = false,
 }: SessionResultsViewProps) {
   const navigate = useNavigate();
   const cardRef = useRef<HTMLDivElement>(null);
@@ -233,9 +233,9 @@ export function SessionResultsView({
               💡 <strong>Tip:</strong> If you didn't receive the email, check your Promotions or Spam folder and search for "Talendro".
             </p>
             
-            {/* Navigation buttons - different for Pro vs one-time purchasers */}
+            {/* Navigation buttons - based on session type (Pro flow vs one-time) */}
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
-              {isProSubscriber ? (
+              {isProSessionFlow ? (
                 <>
                   <Button 
                     onClick={() => navigate('/dashboard')} 
