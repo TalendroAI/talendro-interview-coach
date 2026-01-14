@@ -279,13 +279,15 @@ export default function InterviewCoach() {
     setIsDocumentsSaved(true);
 
     // Persist documents for resume links (backend function uses service role; safe for anon sessions)
-    if (sessionId && derivedEmail) {
+    // Use sessionEmail (from purchase) as source of truth, fallback to derivedEmail
+    const emailForSession = sessionEmail || derivedEmail;
+    if (sessionId && emailForSession) {
       try {
         const { error } = await supabase.functions.invoke('audio-session', {
           body: {
             action: 'save_documents',
             sessionId,
-            email: derivedEmail,
+            email: emailForSession,
             firstName: documents.firstName,
             resume: documents.resume,
             jobDescription: documents.jobDescription,
