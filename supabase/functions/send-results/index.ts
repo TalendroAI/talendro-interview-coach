@@ -518,8 +518,8 @@ serve(async (req) => {
       });
     }
 
-    if (!session_id || !email) {
-      throw new Error("session_id and email are required");
+    if (!session_id) {
+      throw new Error("session_id is required");
     }
 
     const supabaseClient = createClient(
@@ -532,6 +532,26 @@ serve(async (req) => {
       .select("id, email, status, session_type, prep_packet, profile_id, chat_messages(role, content, created_at)")
       .eq("id", session_id)
       .single();
+
+    if (sessionError || !session) {
+      logStep("Invalid session", { hasSession: false, sessionId: session_id });
+      throw new Error("Invalid session ID");
+    }
+
+    // CRITICAL: Use the session's email from the database as the SINGLE SOURCE OF TRUTH
+    // This is the email the customer entered at checkout - ignore any client-provided email
+    const sessionEmail = session.email;
+    if (!sessionEmail) {
+      logStep("Session has no email", { sessionId: session_id });
+      throw new Error("Session has no associated email");
+    }
+
+    logStep("Using session email from database", { 
+      sessionId: session_id, 
+      sessionEmail,
+      clientProvidedEmail: email || "(none)",
+      emailsMatch: email ? email.toLowerCase() === sessionEmail.toLowerCase() : "N/A"
+    });
 
     // Check if user is a Pro subscriber
     let isProSubscriber = false;
@@ -547,15 +567,6 @@ serve(async (req) => {
     
     // Also check if this session itself was a Pro session type
     const isProSession = session?.session_type === "pro";
-
-    if (sessionError || !session) {
-      logStep("Invalid session", { hasSession: false });
-      throw new Error("Invalid session ID");
-    }
-
-    if ((session.email ?? "").toLowerCase() !== email.toLowerCase()) {
-      throw new Error("Email does not match session");
-    }
 
     if (session.status !== "active" && session.status !== "completed") {
       throw new Error("Session is not eligible for results");
@@ -669,7 +680,7 @@ serve(async (req) => {
     });
 
     const emailHtml = sanitizeEmailHtml(
-      generateResultsEmailHtml({ sessionLabel, sessionType: effectiveSessionType, email, messageCount, prepPacket, transcript, analysisMarkdown, isProSubscriber: isProSubscriber || isProSession }),
+      generateResultsEmailHtml({ sessionLabel, sessionType: effectiveSessionType, email: sessionEmail, messageCount, prepPacket, transcript, analysisMarkdown, isProSubscriber: isProSubscriber || isProSession }),
     );
 
     // Optional: server-side preview for debugging (does not send or write to DB)
@@ -688,7 +699,7 @@ serve(async (req) => {
     const emailResponse = await resend.emails.send({
       from: "Talendro Interview Coach <results@talendro.com>",
       reply_to: "Talendro Support <support@talendro.com>",
-      to: [email],
+      to: [sessionEmail],
       subject: `Your ${sessionLabel} Results - Talendro™`,
       html: emailHtml,
     });
@@ -697,7 +708,7 @@ serve(async (req) => {
     logStep("Resend API response", { 
       id: (emailResponse as any)?.data?.id || (emailResponse as any)?.id,
       error: (emailResponse as any)?.error,
-      recipient: email,
+      recipient: sessionEmail,
       sessionType: session.session_type
     });
 
