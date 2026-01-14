@@ -104,6 +104,15 @@ export default function InterviewCoach() {
       return () => clearTimeout(redirectTimer);
     }
   }, [isSessionCompleted, isProSubscriber, navigate, toast]);
+
+  // Scroll to top when results are shown
+  useEffect(() => {
+    if (resultsReport || isSessionCompleted) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }
+  }, [resultsReport, isSessionCompleted]);
   
   // Resume from pause state
   const [resumeFromPause, setResumeFromPause] = useState(false);
