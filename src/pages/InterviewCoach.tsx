@@ -184,8 +184,8 @@ export default function InterviewCoach() {
   const isJobComplete = documents.jobDescription.trim().length > 50;
   const isDocumentsReady = isResumeComplete && isJobComplete && isDocumentsSaved;
 
-  // Derive email - prefer logged-in user's email, fallback to URL param
-  const derivedEmail = user?.email || userEmail;
+  // Derive email - prefer purchase email (URL param), fallback to logged-in email
+  const derivedEmail = userEmail || user?.email;
 
   // Check for paused sessions before starting new one
   // Only returns paused sessions of the SAME type as what user is trying to start
@@ -675,7 +675,7 @@ export default function InterviewCoach() {
           if (result.verified && result.session) {
             setIsPaymentVerified(true);
             setSessionId(result.session.id);
-            setSessionEmail(emailToUse || undefined);
+            setSessionEmail(result.session.email || emailToUse || undefined);
             toast({
               title: 'Pro Session Ready',
               description: 'Your unlimited session is ready to begin.',
@@ -723,7 +723,7 @@ export default function InterviewCoach() {
         if (result.verified && result.session) {
           setIsPaymentVerified(true);
           setSessionId(result.session.id);
-          setSessionEmail(emailToUse || undefined);
+          setSessionEmail(result.session.email || emailToUse || undefined);
           toast({
             title: 'Payment verified!',
             description: 'Your session is ready to begin.',
@@ -733,7 +733,7 @@ export default function InterviewCoach() {
           setIsPaymentVerified(true);
           if (result.session) {
             setSessionId(result.session.id);
-            setSessionEmail(emailToUse || undefined);
+            setSessionEmail(result.session.email || emailToUse || undefined);
           }
           toast({
             title: 'Pro Session Ready',
@@ -801,7 +801,7 @@ export default function InterviewCoach() {
       const { data, error } = await supabase.functions.invoke('send-results', {
         body: {
           session_id: sessionId,
-          email: sessionEmail || derivedEmail, // Use session's email to match DB record
+          email: sessionEmail || userEmail || derivedEmail, // Use session's email to match DB record
           session_type: 'premium_audio',
           prep_content: contentToSend,
           results: null,
@@ -967,7 +967,7 @@ export default function InterviewCoach() {
       const { data, error } = await supabase.functions.invoke('send-results', {
         body: {
           session_id: sessionId,
-          email: sessionEmail || derivedEmail, // Use session's email to match DB record
+          email: sessionEmail || userEmail || derivedEmail, // Use session's email to match DB record
           session_type: completionType,
           prep_content: contentToSend,
           results: resultsToSend,
