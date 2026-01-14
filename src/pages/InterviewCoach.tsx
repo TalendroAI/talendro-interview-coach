@@ -54,6 +54,7 @@ export default function InterviewCoach() {
   const [isVerifying, setIsVerifying] = useState(true);
   const [isPaymentVerified, setIsPaymentVerified] = useState(false);
   const [sessionId, setSessionId] = useState<string | undefined>();
+  const [sessionEmail, setSessionEmail] = useState<string | undefined>(); // Email associated with current session
   const [isDocumentsSaved, setIsDocumentsSaved] = useState(false);
   
   // Quick Prep content state
@@ -538,6 +539,7 @@ export default function InterviewCoach() {
         };
 
         setSessionId(s.id);
+        setSessionEmail(userEmail || undefined); // Use the email from URL param that was used to load session
         setSessionTypeOverride(s.sessionType);
 
         const docs = s.documents ?? {};
@@ -671,6 +673,7 @@ export default function InterviewCoach() {
           if (result.verified && result.session) {
             setIsPaymentVerified(true);
             setSessionId(result.session.id);
+            setSessionEmail(emailToUse || undefined);
             toast({
               title: 'Pro Session Ready',
               description: 'Your unlimited session is ready to begin.',
@@ -718,6 +721,7 @@ export default function InterviewCoach() {
         if (result.verified && result.session) {
           setIsPaymentVerified(true);
           setSessionId(result.session.id);
+          setSessionEmail(emailToUse || undefined);
           toast({
             title: 'Payment verified!',
             description: 'Your session is ready to begin.',
@@ -727,6 +731,7 @@ export default function InterviewCoach() {
           setIsPaymentVerified(true);
           if (result.session) {
             setSessionId(result.session.id);
+            setSessionEmail(emailToUse || undefined);
           }
           toast({
             title: 'Pro Session Ready',
@@ -794,7 +799,7 @@ export default function InterviewCoach() {
       const { data, error } = await supabase.functions.invoke('send-results', {
         body: {
           session_id: sessionId,
-          email: derivedEmail,
+          email: sessionEmail || derivedEmail, // Use session's email to match DB record
           session_type: 'premium_audio',
           prep_content: contentToSend,
           results: null,
@@ -960,7 +965,7 @@ export default function InterviewCoach() {
       const { data, error } = await supabase.functions.invoke('send-results', {
         body: {
           session_id: sessionId,
-          email: derivedEmail,
+          email: sessionEmail || derivedEmail, // Use session's email to match DB record
           session_type: completionType,
           prep_content: contentToSend,
           results: resultsToSend,
@@ -1066,6 +1071,7 @@ export default function InterviewCoach() {
 
       // Now switch UI into resumed-session mode
       setSessionId(pausedSessionId);
+      setSessionEmail(emailForLookup); // Store session email for result delivery
       setResumeFromPause(true);
       setResumingSessionType(pausedSessionType);
       setSessionTypeOverride(pausedSessionType as SessionType);
