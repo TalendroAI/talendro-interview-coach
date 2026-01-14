@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
@@ -17,28 +18,28 @@ export interface SessionResultsViewProps {
 // Parse transcript into Q&A pairs for clean display
 function parseTranscriptToQA(transcript: string): Array<{ question: string; answer: string }> {
   const pairs: Array<{ question: string; answer: string }> = [];
-  
+
   // Split by the --- delimiter
-  const parts = transcript.split(/\n---\n/).filter(p => p.trim());
-  
-  let currentQuestion = '';
-  
+  const parts = transcript.split(/\n---\n/).filter((p) => p.trim());
+
+  let currentQuestion = "";
+
   for (const part of parts) {
     const trimmed = part.trim();
     if (!trimmed) continue;
-    
+
     // Check if this is from coach/Sarah
-    if (trimmed.startsWith('Sarah (Coach):')) {
-      currentQuestion = trimmed.replace('Sarah (Coach):', '').trim();
-    } else if (trimmed.startsWith('You:')) {
-      const answer = trimmed.replace('You:', '').trim();
+    if (trimmed.startsWith("Sarah (Coach):")) {
+      currentQuestion = trimmed.replace("Sarah (Coach):", "").trim();
+    } else if (trimmed.startsWith("You:")) {
+      const answer = trimmed.replace("You:", "").trim();
       if (currentQuestion && answer) {
         pairs.push({ question: currentQuestion, answer });
-        currentQuestion = '';
+        currentQuestion = "";
       }
     }
   }
-  
+
   return pairs;
 }
 
@@ -50,50 +51,72 @@ export function SessionResultsView({
   analysisMarkdown,
 }: SessionResultsViewProps) {
   const navigate = useNavigate();
-  const isQuickPrep = sessionLabel.toLowerCase().includes('quick prep');
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const isQuickPrep = sessionLabel.toLowerCase().includes("quick prep");
   const hasPrepPacket = Boolean(prepPacket && prepPacket.length > 50);
   const hasTranscript = Boolean(transcript && transcript.length > 50);
   const hasAnalysis = Boolean(analysisMarkdown && analysisMarkdown.length > 50);
-  
+
+  // Ensure the results panel starts at the top when mounted
+  useEffect(() => {
+    const doScroll = () => {
+      const viewport = cardRef.current?.querySelector<HTMLElement>(
+        "[data-radix-scroll-area-viewport]",
+      );
+      if (!viewport) return;
+
+      try {
+        viewport.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      } catch {
+        viewport.scrollTop = 0;
+        viewport.scrollLeft = 0;
+      }
+    };
+
+    requestAnimationFrame(doScroll);
+    setTimeout(doScroll, 50);
+  }, []);
+
   // Parse transcript into Q&A pairs
   const qaPairs = hasTranscript ? parseTranscriptToQA(transcript!) : [];
 
   const handleDownload = () => {
     // Build a plain text report - Mock/Audio get ALL three sections
     let reportContent = `${sessionLabel} Results\n`;
-    reportContent += `${'='.repeat(50)}\n\n`;
+    reportContent += `${"=".repeat(50)}\n\n`;
     reportContent += `Email: ${email}\n`;
     reportContent += `Date: ${new Date().toLocaleDateString()}\n\n`;
-    
+
     // Section 1: Performance Analysis (for Mock/Audio interviews)
     if (hasAnalysis && !isQuickPrep) {
-      reportContent += `SECTION 1: PERFORMANCE ANALYSIS\n${'─'.repeat(40)}\n\n`;
-      reportContent += analysisMarkdown + '\n\n';
+      reportContent += `SECTION 1: PERFORMANCE ANALYSIS\n${"─".repeat(40)}\n\n`;
+      reportContent += analysisMarkdown + "\n\n";
     }
-    
+
     // Section 2: Interview Q&A (for Mock/Audio interviews)
     if (qaPairs.length > 0) {
-      reportContent += `SECTION 2: INTERVIEW Q&A\n${'─'.repeat(40)}\n\n`;
+      reportContent += `SECTION 2: INTERVIEW Q&A\n${"─".repeat(40)}\n\n`;
       qaPairs.forEach((qa, idx) => {
         reportContent += `Question ${idx + 1}:\n${qa.question}\n\n`;
         reportContent += `Your Answer:\n${qa.answer}\n\n`;
-        reportContent += '---\n\n';
+        reportContent += "---\n\n";
       });
     }
-    
+
     // Section 3: Prep Packet (included for ALL tiers - Quick Prep and Mock/Audio)
     if (hasPrepPacket) {
-      const sectionNum = isQuickPrep ? '1' : '3';
-      reportContent += `SECTION ${sectionNum}: ${isQuickPrep ? 'YOUR INTERVIEW PREPARATION PACKET' : 'PREPARATION MATERIALS'}\n${'─'.repeat(40)}\n\n`;
-      reportContent += prepPacket + '\n';
+      const sectionNum = isQuickPrep ? "1" : "3";
+      reportContent += `SECTION ${sectionNum}: ${isQuickPrep ? "YOUR INTERVIEW PREPARATION PACKET" : "PREPARATION MATERIALS"}\n${"─".repeat(40)}\n\n`;
+      reportContent += prepPacket + "\n";
     }
-    
+
     // Create and download file
-    const blob = new Blob([reportContent], { type: 'text/plain' });
+    const blob = new Blob([reportContent], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `talendro-${sessionLabel.toLowerCase().replace(/\s+/g, '-')}-results.txt`;
+    a.download = `talendro-${sessionLabel.toLowerCase().replace(/\s+/g, "-")}-results.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -116,7 +139,7 @@ export function SessionResultsView({
               </h1>
             </div>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-6 p-4 bg-primary/5 rounded-xl border border-primary/10">
             <p className="text-muted-foreground flex items-center gap-2">
               <Mail className="h-4 w-4 text-primary" />
@@ -130,7 +153,7 @@ export function SessionResultsView({
         </header>
 
         {/* Single Unified Report */}
-        <Card className="shadow-lg border-border/50">
+        <Card ref={cardRef} className="shadow-lg border-border/50">
           <ScrollArea className="h-[65vh]">
             <div className="p-6 md:p-8 space-y-8">
               
