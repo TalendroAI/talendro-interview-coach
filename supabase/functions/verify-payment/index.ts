@@ -482,7 +482,7 @@ serve(async (req) => {
         const sessionTypeFromMetadata = checkoutSession.metadata?.session_type || session_type;
         const customerEmail = checkoutSession.customer_email || email;
         
-        // FIRST: Check if session for this checkout is already completed
+        // FIRST: Check if session for this checkout is already processed (active or completed)
         const { data: existingSession } = await supabaseClient
           .from("coaching_sessions")
           .select("*, session_results(*)")
@@ -501,6 +501,22 @@ serve(async (req) => {
             session_status: "completed",
             session_results: sessionResults,
             message: "Session already completed"
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          });
+        }
+        
+        // If session is already active, return immediately WITHOUT sending another email
+        // This prevents duplicate emails when verify-payment is called multiple times
+        if (existingSession?.status === "active") {
+          logStep("Session already active - skipping email", { sessionId: existingSession.id });
+          
+          return new Response(JSON.stringify({ 
+            verified: true, 
+            session: existingSession,
+            session_status: "active",
+            message: "Session already verified"
           }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 200,
