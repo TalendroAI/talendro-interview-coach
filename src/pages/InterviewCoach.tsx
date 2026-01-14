@@ -1284,6 +1284,7 @@ export default function InterviewCoach() {
           prepPacket={resultsReport?.prepPacket || null}
           transcript={resultsReport?.transcript || null}
           analysisMarkdown={resultsReport?.analysisMarkdown || null}
+          isProSubscriber={isProSubscriber}
         />
       );
     }
