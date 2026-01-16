@@ -8,12 +8,12 @@ export function LandingHeader() {
       <div className="container">
         <div className="flex justify-between items-center py-4">
           {/* Logo links to main Talendro hub */}
-          <a 
-            href="https://talendro.com" 
-            className="text-2xl font-heading font-bold text-primary"
-          >
-            Talendro<span className="text-secondary">™</span>
-          </a>
+            <a 
+              href="https://talendro.com" 
+              className="text-2xl font-heading font-bold text-primary"
+            >
+              Talendro<span className="text-primary font-bold">™</span>
+            </a>
           
           <div className="flex items-center gap-4">
             {/* Navigation Links - hidden on mobile */}
