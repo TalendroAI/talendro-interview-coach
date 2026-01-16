@@ -580,7 +580,20 @@ export function AudioInterface({
         ? JSON.stringify(details)
         : String(details ?? 'unknown');
 
-      // Note: Not logging disconnects to error_logs - these are normal lifecycle events
+      // Log unexpected disconnects as errors (for refund investigations)
+      // Skip logging if user intentionally ended or paused the session
+      if (!userEndedSession.current && !paused) {
+        logEvent({
+          eventType: 'elevenlabs_disconnect',
+          message: `Session disconnected after ${Math.round((Date.now() - lastActivityTime) / 1000)}s since last activity`,
+          code: 'disconnect',
+          context: {
+            details: disconnectReason,
+            questionCount: questionCountRef.current,
+            transcriptLength: transcriptRef.current.length,
+          },
+        });
+      }
 
       if (userEndedSession.current) {
         userEndedSession.current = false;
