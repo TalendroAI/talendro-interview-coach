@@ -341,11 +341,12 @@ async function ensureAuthAccount(
   supabaseClient: any,
   email: string,
   resend: any,
-  opts?: { sendEmail?: boolean }
+  opts?: { sendEmail?: boolean; newSubscriptionId?: string }
 ): Promise<string | null> {
   logStep("Ensuring auth account", { email });
 
   const sendEmail = opts?.sendEmail ?? true;
+  const newSubscriptionId = opts?.newSubscriptionId;
   const fromEmail = "Talendro <noreply@talendro.com>";
 
   // Check if user already exists
@@ -386,18 +387,33 @@ async function ensureAuthAccount(
     return userId;
   }
 
-  // If they've already been marked as Pro in the database, don't re-send the welcome email.
-  // (This commonly happens due to webhook retries.)
+  // Check if this is a re-subscription or webhook retry
+  // Only skip if they're ALREADY Pro with the SAME subscription ID (webhook retry)
+  // If subscription ID is different or not stored yet, this is a new/re-subscription - send email
   try {
     const { data: existingProfile } = await supabaseClient
       .from("profiles")
-      .select("is_pro_subscriber, pro_subscription_start")
+      .select("is_pro_subscriber, pro_subscription_start, stripe_subscription_id")
       .eq("email", email)
       .maybeSingle();
 
     if (existingProfile?.is_pro_subscriber && existingProfile?.pro_subscription_start) {
-      logStep("Skipping welcome email (already Pro)", { email });
-      return userId;
+      // If we have a new subscription ID and it matches what's in the DB, this is a retry - skip
+      if (newSubscriptionId && existingProfile.stripe_subscription_id === newSubscriptionId) {
+        logStep("Skipping welcome email (webhook retry - same subscription)", { email, subscriptionId: newSubscriptionId });
+        return userId;
+      }
+      // If no new subscription ID provided, use legacy behavior (skip if already Pro)
+      if (!newSubscriptionId) {
+        logStep("Skipping welcome email (already Pro, no subscription ID to compare)", { email });
+        return userId;
+      }
+      // Different subscription ID = re-subscription, proceed with email
+      logStep("Re-subscription detected, will send welcome email", { 
+        email, 
+        oldSubscriptionId: existingProfile.stripe_subscription_id, 
+        newSubscriptionId 
+      });
     }
   } catch (e) {
     logStep("Non-fatal: could not check profile before email", { email, error: String(e) });
@@ -461,9 +477,18 @@ async function handleCheckoutCompleted(
     return;
   }
 
-  logStep("Checkout completed, ensuring auth account", { email });
+  // Get the subscription ID from the checkout session
+  const subscriptionId = typeof session.subscription === "string" 
+    ? session.subscription 
+    : session.subscription?.id;
+
+  logStep("Checkout completed, ensuring auth account", { email, subscriptionId });
   // Send welcome email ONLY from checkout completion to avoid duplicates across event types.
-  await ensureAuthAccount(supabaseClient, email, resend, { sendEmail: true });
+  // Pass the subscription ID to detect re-subscriptions vs webhook retries.
+  await ensureAuthAccount(supabaseClient, email, resend, { 
+    sendEmail: true, 
+    newSubscriptionId: subscriptionId || undefined 
+  });
 }
 
 // deno-lint-ignore no-explicit-any
