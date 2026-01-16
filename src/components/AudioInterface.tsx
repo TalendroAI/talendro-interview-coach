@@ -580,18 +580,7 @@ export function AudioInterface({
         ? JSON.stringify(details)
         : String(details ?? 'unknown');
 
-      logEvent({
-        eventType: 'elevenlabs_disconnect',
-        message: `Session disconnected after ${Math.round((Date.now() - lastActivityTime) / 1000)}s since last activity`,
-        code: 'disconnect',
-        context: {
-          details: disconnectReason,
-          questionCount: questionCountRef.current,
-          transcriptLength: transcriptRef.current.length,
-          wasUserEnded: userEndedSession.current,
-          isPaused: paused,
-        },
-      });
+      // Note: Not logging disconnects to error_logs - these are normal lifecycle events
 
       if (userEndedSession.current) {
         userEndedSession.current = false;
@@ -958,13 +947,7 @@ export function AudioInterface({
           },
         });
 
-        if (!isInitial) {
-          logEvent({
-            eventType: 'session_reconnected',
-            message: `Reconnected with ${transcriptRef.current.length} history turns`,
-            context: { questionCount: questionsSoFar, historyLength: transcriptRef.current.length },
-          });
-        }
+        // Note: Not logging reconnects to error_logs - these are normal lifecycle events
       } catch (error) {
         console.error(isInitial ? '[reconnect] Connection failed:' : '[reconnect] Reconnection failed:', error);
 
@@ -1041,7 +1024,7 @@ export function AudioInterface({
       if (error) console.error('[pauseInterview] Failed to save pause state:', error);
 
       toast({ title: 'Interview Paused', description: 'Your progress is saved. You can resume within 24 hours.' });
-      logEvent({ eventType: 'session_paused', message: `Paused at question ${completedQuestions} (asked: ${questionsAsked})`, context: { questionCount: completedQuestions, questionsAsked: questionsAsked } });
+      // Note: Not logging pause to error_logs - this is a normal lifecycle event
     } catch (error) {
       console.error('[pauseInterview] Failed to save pause state:', error);
       toast({ title: 'Interview Paused', description: 'Your session is paused locally.', variant: 'default' });
