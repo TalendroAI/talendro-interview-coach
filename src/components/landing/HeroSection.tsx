@@ -12,8 +12,7 @@ export function HeroSection({ onSelectSession }: HeroSectionProps) {
       <div className="container">
         <div className="max-w-3xl mx-auto">
           {/* Authority Badge - Vibrant Aqua background with white text */}
-          <div className="inline-flex items-center gap-2 bg-secondary text-secondary-foreground px-4 py-2 rounded-full text-sm font-sans font-medium mb-8">
-            <Shield className="w-4 h-4" />
+          <div className="inline-flex items-center gap-2 bg-secondary text-secondary-foreground px-4 py-2 rounded-full text-sm font-sans font-medium mb-8 italic">
             Built by veteran recruiting executive • 30 years experience
           </div>
 
