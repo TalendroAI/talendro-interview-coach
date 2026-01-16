@@ -337,9 +337,15 @@ async function getCustomerName(stripe: Stripe, customerId: string): Promise<stri
 }
 
 // deno-lint-ignore no-explicit-any
-async function ensureAuthAccount(supabaseClient: any, email: string, resend: any): Promise<string | null> {
+async function ensureAuthAccount(
+  supabaseClient: any,
+  email: string,
+  resend: any,
+  opts?: { sendEmail?: boolean }
+): Promise<string | null> {
   logStep("Ensuring auth account", { email });
 
+  const sendEmail = opts?.sendEmail ?? true;
   const fromEmail = "Talendro <noreply@talendro.com>";
 
   // Check if user already exists
@@ -374,7 +380,30 @@ async function ensureAuthAccount(supabaseClient: any, email: string, resend: any
     logStep("Auth account created", { email, userId });
   }
 
-  // Generate magic link (always)
+  // Some webhook events (e.g. subscription.updated) only need to ensure the account exists.
+  // To prevent duplicate emails, callers can set sendEmail=false.
+  if (!sendEmail) {
+    return userId;
+  }
+
+  // If they've already been marked as Pro in the database, don't re-send the welcome email.
+  // (This commonly happens due to webhook retries.)
+  try {
+    const { data: existingProfile } = await supabaseClient
+      .from("profiles")
+      .select("is_pro_subscriber, pro_subscription_start")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (existingProfile?.is_pro_subscriber && existingProfile?.pro_subscription_start) {
+      logStep("Skipping welcome email (already Pro)", { email });
+      return userId;
+    }
+  } catch (e) {
+    logStep("Non-fatal: could not check profile before email", { email, error: String(e) });
+  }
+
+  // Generate magic link
   const { data: linkData, error: linkError } = await supabaseClient.auth.admin.generateLink({
     type: "magiclink",
     email,
@@ -416,7 +445,12 @@ async function ensureAuthAccount(supabaseClient: any, email: string, resend: any
 }
 
 // deno-lint-ignore no-explicit-any
-async function handleCheckoutCompleted(supabaseClient: any, stripe: Stripe, session: Stripe.Checkout.Session, resend: any) {
+async function handleCheckoutCompleted(
+  supabaseClient: any,
+  stripe: Stripe,
+  session: Stripe.Checkout.Session,
+  resend: any
+) {
   const email =
     session.customer_email ??
     session.customer_details?.email ??
@@ -428,25 +462,32 @@ async function handleCheckoutCompleted(supabaseClient: any, stripe: Stripe, sess
   }
 
   logStep("Checkout completed, ensuring auth account", { email });
-  await ensureAuthAccount(supabaseClient, email, resend);
+  // Send welcome email ONLY from checkout completion to avoid duplicates across event types.
+  await ensureAuthAccount(supabaseClient, email, resend, { sendEmail: true });
 }
 
 // deno-lint-ignore no-explicit-any
-async function handleSubscriptionUpdate(supabaseClient: any, stripe: Stripe, subscription: Stripe.Subscription, resend: any, isNewSubscription: boolean) {
-  const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
+async function handleSubscriptionUpdate(
+  supabaseClient: any,
+  stripe: Stripe,
+  subscription: Stripe.Subscription,
+  resend: any,
+  isNewSubscription: boolean
+) {
+  const customerId = typeof subscription.customer === "string" ? subscription.customer : subscription.customer.id;
   const email = await getCustomerEmail(stripe, customerId);
   if (!email) return;
 
-  const isActive = subscription.status === 'active' || subscription.status === 'trialing';
+  const isActive = subscription.status === "active" || subscription.status === "trialing";
   const periodStart = new Date(subscription.current_period_start * 1000).toISOString();
   const periodEnd = new Date(subscription.current_period_end * 1000).toISOString();
   const subscriptionStart = new Date(subscription.start_date * 1000).toISOString();
   const cancelAtPeriodEnd = subscription.cancel_at_period_end || false;
 
-  // For new subscriptions, ensure auth account exists
+  // For new subscriptions, ensure auth account exists (but DO NOT send email here).
   let userId: string | null = null;
   if (isNewSubscription && isActive) {
-    userId = await ensureAuthAccount(supabaseClient, email, resend);
+    userId = await ensureAuthAccount(supabaseClient, email, resend, { sendEmail: false });
   }
 
   const { data: existingProfile } = await supabaseClient
