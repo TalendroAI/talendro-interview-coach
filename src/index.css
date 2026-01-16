@@ -11,12 +11,13 @@
     
     /* Brand Colors (exact hex codes) */
     --tal-blue: 220 91% 57%;        /* #2F6DF6 - Primary brand, CTAs, links, headlines */
-    --tal-aqua: 183 100% 40%;       /* #00C4CC - Accents, highlights, taglines, ™ symbol */
+    --tal-aqua: 183 100% 40%;       /* #00C4CC - Accents, highlights, credibility badge */
     --tal-lime: 79 100% 48%;        /* #A4F400 - Highlights, success (use sparingly) */
-    --tal-navy: 222 47% 11%;        /* #0F172A - Headlines, body text, footer backgrounds */
-    --tal-slate: 225 12% 20%;       /* #2C2F38 - Body text */
+    --tal-navy: 222 47% 11%;        /* #0F172A - Footer backgrounds, dark text */
+    --tal-slate: 225 12% 20%;       /* #2C2F38 - Body text, nav text */
     --tal-gray: 218 11% 66%;        /* #9FA6B2 - Secondary text, descriptions */
     --tal-soft: 224 100% 98%;       /* #F4F7FF - Section backgrounds */
+    --tal-hero: 224 100% 97%;       /* #EEF4FF - Hero section background */
     
     /* Primary = Talendro Blue */
     --primary: 220 91% 57%;
@@ -59,7 +60,7 @@
     
     /* Custom Tokens */
     --bg-soft: 224 100% 98%;
-    --bg-hero: 224 100% 98%;
+    --bg-hero: 224 100% 97%;
     --border-soft: 220 20% 90%;
     --shadow-soft: 0 18px 45px hsla(222, 47%, 11%, 0.08);
     
@@ -143,9 +144,9 @@
     background-color: hsl(var(--bg-soft));
   }
   
-  /* Hero background - clean gradient using brand Background Soft */
+  /* Hero background - gradient from #EEF4FF to white */
   .bg-hero {
-    background: linear-gradient(135deg, hsl(var(--bg-soft)) 0%, hsl(var(--background)) 100%);
+    background: linear-gradient(180deg, hsl(var(--bg-hero)) 0%, hsl(var(--background)) 100%);
   }
   
   .shadow-soft {

@@ -11,7 +11,6 @@ import { HeroSection } from '@/components/landing/HeroSection';
 import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
 import { ProductsSection } from '@/components/landing/ProductsSection';
 import { WhySection } from '@/components/landing/WhySection';
-import { ComingSoonSection } from '@/components/landing/ComingSoonSection';
 import { FAQSection } from '@/components/landing/FAQSection';
 import { FinalCTASection } from '@/components/landing/FinalCTASection';
 import { CheckoutDialog } from '@/components/CheckoutDialog';
@@ -309,7 +308,6 @@ export default function Index() {
         <HowItWorksSection />
         <ProductsSection />
         <WhySection />
-        <ComingSoonSection />
         <FAQSection />
         <FinalCTASection />
       </main>

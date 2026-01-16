@@ -62,6 +62,7 @@ export default {
           slate: "hsl(var(--tal-slate))",     /* #2C2F38 */
           gray: "hsl(var(--tal-gray))",       /* #9FA6B2 */
           soft: "hsl(var(--tal-soft))",       /* #F4F7FF */
+          hero: "hsl(var(--tal-hero))",       /* #EEF4FF */
         },
         session: {
           quick: "hsl(var(--session-quick))",   /* Bright Lime */

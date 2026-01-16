@@ -8,16 +8,16 @@ interface HeroSectionProps {
 
 export function HeroSection({ onSelectSession }: HeroSectionProps) {
   return (
-    <section className="pt-32 pb-16 bg-tal-soft text-center">
+    <section className="pt-32 pb-16 bg-hero text-center">
       <div className="container">
         <div className="max-w-3xl mx-auto">
-          {/* Authority Badge */}
-          <div className="inline-flex items-center gap-2 bg-secondary/10 text-secondary px-4 py-2 rounded-full text-sm font-sans font-medium mb-8">
+          {/* Authority Badge - Vibrant Aqua background with white text */}
+          <div className="inline-flex items-center gap-2 bg-secondary text-secondary-foreground px-4 py-2 rounded-full text-sm font-sans font-medium mb-8">
             <Shield className="w-4 h-4" />
             Built by veteran recruiting executive • 30 years experience
           </div>
 
-          {/* Headline */}
+          {/* Headline - Single H1 */}
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-heading font-bold leading-tight mb-6 text-tal-navy">
             Walk in confident—<span className="text-primary">walk out hired</span>
           </h1>
@@ -27,7 +27,7 @@ export function HeroSection({ onSelectSession }: HeroSectionProps) {
             AI-powered interview coaching engineered for <strong className="text-tal-slate font-semibold">behavioral and situational questions</strong>, company and industry intelligence, and role-specific delivery.
           </p>
 
-          {/* CTA Buttons */}
+          {/* CTA Buttons - Talendro Blue background */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
             <Button 
               size="lg" 

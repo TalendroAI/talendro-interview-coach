@@ -8,7 +8,7 @@ export function WhySection() {
   ];
 
   return (
-    <section id="why" className="py-20 bg-background">
+    <section id="why-talendro" className="py-20 bg-background">
       <div className="container">
         <div className="text-center mb-12">
           <h2 className="text-4xl font-heading font-bold text-primary mb-4">
