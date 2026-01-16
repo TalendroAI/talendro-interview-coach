@@ -23,7 +23,7 @@ const faqs = [
 
 export function FAQSection() {
   return (
-    <section className="py-20 bg-background">
+    <section id="faq" className="py-20 bg-background">
       <div className="container">
         <div className="text-center mb-12">
           <h2 className="text-4xl font-heading font-bold text-primary mb-4">
@@ -40,7 +40,7 @@ export function FAQSection() {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {faqs.map((faq, idx) => (
             <div key={idx} className="bg-tal-soft rounded-xl p-6 border border-border">
-              <h4 className="font-heading font-semibold text-tal-navy mb-2">{faq.question}</h4>
+              <h3 className="font-heading font-semibold text-tal-navy mb-2 text-base">{faq.question}</h3>
               <p className="text-tal-gray font-sans text-sm leading-relaxed">{faq.answer}</p>
             </div>
           ))}
