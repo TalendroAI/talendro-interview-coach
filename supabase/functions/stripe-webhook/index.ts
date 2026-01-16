@@ -336,17 +336,20 @@ async function getCustomerName(stripe: Stripe, customerId: string): Promise<stri
   }
 }
 
+// Track which checkout sessions have already triggered welcome emails
+const processedCheckoutSessions = new Set<string>();
+
 // deno-lint-ignore no-explicit-any
 async function ensureAuthAccount(
   supabaseClient: any,
   email: string,
   resend: any,
-  opts?: { sendEmail?: boolean; newSubscriptionId?: string }
+  opts?: { sendEmail?: boolean; checkoutSessionId?: string }
 ): Promise<string | null> {
   logStep("Ensuring auth account", { email });
 
   const sendEmail = opts?.sendEmail ?? true;
-  const newSubscriptionId = opts?.newSubscriptionId;
+  const checkoutSessionId = opts?.checkoutSessionId;
   const fromEmail = "Talendro <noreply@talendro.com>";
 
   // Check if user already exists
@@ -387,36 +390,55 @@ async function ensureAuthAccount(
     return userId;
   }
 
-  // Check if this is a re-subscription or webhook retry
-  // Only skip if they're ALREADY Pro with the SAME subscription ID (webhook retry)
-  // If subscription ID is different or not stored yet, this is a new/re-subscription - send email
-  try {
-    const { data: existingProfile } = await supabaseClient
-      .from("profiles")
-      .select("is_pro_subscriber, pro_subscription_start, stripe_subscription_id")
-      .eq("email", email)
-      .maybeSingle();
-
-    if (existingProfile?.is_pro_subscriber && existingProfile?.pro_subscription_start) {
-      // If we have a new subscription ID and it matches what's in the DB, this is a retry - skip
-      if (newSubscriptionId && existingProfile.stripe_subscription_id === newSubscriptionId) {
-        logStep("Skipping welcome email (webhook retry - same subscription)", { email, subscriptionId: newSubscriptionId });
-        return userId;
-      }
-      // If no new subscription ID provided, use legacy behavior (skip if already Pro)
-      if (!newSubscriptionId) {
-        logStep("Skipping welcome email (already Pro, no subscription ID to compare)", { email });
-        return userId;
-      }
-      // Different subscription ID = re-subscription, proceed with email
-      logStep("Re-subscription detected, will send welcome email", { 
-        email, 
-        oldSubscriptionId: existingProfile.stripe_subscription_id, 
-        newSubscriptionId 
-      });
+  // Welcome emails are based on unique email + unique transaction (checkout session) ID
+  // This ensures:
+  // 1. Every unique purchase triggers a welcome email
+  // 2. Webhook retries for the same checkout session don't send duplicates
+  if (checkoutSessionId) {
+    // Check if we've already processed this checkout session in this instance
+    if (processedCheckoutSessions.has(checkoutSessionId)) {
+      logStep("Skipping welcome email (already processed this checkout session in memory)", { email, checkoutSessionId });
+      return userId;
     }
-  } catch (e) {
-    logStep("Non-fatal: could not check profile before email", { email, error: String(e) });
+    
+    // Check database for this checkout session to handle webhook retries across instances
+    try {
+      const { data: existingSession } = await supabaseClient
+        .from("coaching_sessions")
+        .select("id, stripe_checkout_session_id")
+        .eq("stripe_checkout_session_id", checkoutSessionId)
+        .eq("email", email)
+        .maybeSingle();
+      
+      // If we find a session with this checkout ID that was already created, 
+      // and it's older than 2 minutes, assume email was already sent
+      if (existingSession) {
+        const { data: profile } = await supabaseClient
+          .from("profiles")
+          .select("pro_subscription_start")
+          .eq("email", email)
+          .maybeSingle();
+        
+        if (profile?.pro_subscription_start) {
+          const subscriptionStart = new Date(profile.pro_subscription_start);
+          const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
+          
+          if (subscriptionStart < twoMinutesAgo) {
+            logStep("Skipping welcome email (checkout session already processed)", { email, checkoutSessionId });
+            processedCheckoutSessions.add(checkoutSessionId);
+            return userId;
+          }
+        }
+      }
+    } catch (e) {
+      logStep("Non-fatal: could not check for existing checkout session", { email, checkoutSessionId, error: String(e) });
+    }
+    
+    // Mark this checkout session as processed
+    processedCheckoutSessions.add(checkoutSessionId);
+    logStep("Processing welcome email for unique transaction", { email, checkoutSessionId });
+  } else {
+    logStep("No checkout session ID provided, proceeding with welcome email", { email });
   }
 
   // Generate magic link
@@ -477,17 +499,15 @@ async function handleCheckoutCompleted(
     return;
   }
 
-  // Get the subscription ID from the checkout session
-  const subscriptionId = typeof session.subscription === "string" 
-    ? session.subscription 
-    : session.subscription?.id;
+  // Use the checkout session ID as the unique transaction identifier
+  // This ensures every unique purchase triggers a welcome email
+  const checkoutSessionId = session.id;
 
-  logStep("Checkout completed, ensuring auth account", { email, subscriptionId });
-  // Send welcome email ONLY from checkout completion to avoid duplicates across event types.
-  // Pass the subscription ID to detect re-subscriptions vs webhook retries.
+  logStep("Checkout completed, ensuring auth account", { email, checkoutSessionId });
+  // Send welcome email for every unique email + transaction ID combination
   await ensureAuthAccount(supabaseClient, email, resend, { 
     sendEmail: true, 
-    newSubscriptionId: subscriptionId || undefined 
+    checkoutSessionId 
   });
 }
 
