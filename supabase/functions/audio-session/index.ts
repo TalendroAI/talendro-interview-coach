@@ -280,14 +280,7 @@ serve(async (req) => {
 
       if (error) throw error;
 
-      // Log the pause event
-      await supabase.from("error_logs").insert({
-        error_type: "session_paused",
-        error_message: `Session paused at question ${questionsCompleted}`,
-        session_id: sessionId,
-        user_email: email,
-        context: { questionsAsked, questionsCompleted, lastRole, lastContentHasQuestion: lastContent.includes("?") },
-      });
+      // Note: Not logging pause to error_logs - this is a normal lifecycle event
 
       // Send pause confirmation email (best-effort; do not fail pause if email fails)
       try {
@@ -408,14 +401,7 @@ serve(async (req) => {
 
       if (historyError) throw historyError;
 
-      // Log the resume event
-      await supabase.from("error_logs").insert({
-        error_type: "session_resumed",
-        error_message: `Session resumed from question ${session.current_question_number}`,
-        session_id: sessionId,
-        user_email: email,
-        context: { currentQuestionNumber: session.current_question_number },
-      });
+      // Note: Not logging resume to error_logs - this is a normal lifecycle event
 
       return new Response(
         JSON.stringify({
