@@ -336,9 +336,6 @@ async function getCustomerName(stripe: Stripe, customerId: string): Promise<stri
   }
 }
 
-// Track which checkout sessions have already triggered welcome emails
-const processedCheckoutSessions = new Set<string>();
-
 // deno-lint-ignore no-explicit-any
 async function ensureAuthAccount(
   supabaseClient: any,
@@ -390,52 +387,27 @@ async function ensureAuthAccount(
     return userId;
   }
 
-  // Welcome emails are based on unique email + unique transaction (checkout session) ID
-  // This ensures:
-  // 1. Every unique purchase triggers a welcome email
-  // 2. Webhook retries for the same checkout session don't send duplicates
+  // Database-level deduplication for welcome emails
+  // Uses unique constraint on (email, checkout_session_id) to prevent duplicates
   if (checkoutSessionId) {
-    // Check if we've already processed this checkout session in this instance
-    if (processedCheckoutSessions.has(checkoutSessionId)) {
-      logStep("Skipping welcome email (already processed this checkout session in memory)", { email, checkoutSessionId });
+    // Attempt to insert - if it already exists, the unique constraint will prevent insertion
+    const { data: inserted, error: insertError } = await supabaseClient
+      .from("welcome_emails_sent")
+      .insert({ email, checkout_session_id: checkoutSessionId })
+      .select()
+      .maybeSingle();
+
+    if (insertError && insertError.code === '23505') {
+      // Unique constraint violation - email already sent for this checkout session
+      logStep("Skipping welcome email (already sent for this checkout session)", { email, checkoutSessionId });
       return userId;
     }
-    
-    // Check database for this checkout session to handle webhook retries across instances
-    try {
-      const { data: existingSession } = await supabaseClient
-        .from("coaching_sessions")
-        .select("id, stripe_checkout_session_id")
-        .eq("stripe_checkout_session_id", checkoutSessionId)
-        .eq("email", email)
-        .maybeSingle();
-      
-      // If we find a session with this checkout ID that was already created, 
-      // and it's older than 2 minutes, assume email was already sent
-      if (existingSession) {
-        const { data: profile } = await supabaseClient
-          .from("profiles")
-          .select("pro_subscription_start")
-          .eq("email", email)
-          .maybeSingle();
-        
-        if (profile?.pro_subscription_start) {
-          const subscriptionStart = new Date(profile.pro_subscription_start);
-          const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
-          
-          if (subscriptionStart < twoMinutesAgo) {
-            logStep("Skipping welcome email (checkout session already processed)", { email, checkoutSessionId });
-            processedCheckoutSessions.add(checkoutSessionId);
-            return userId;
-          }
-        }
-      }
-    } catch (e) {
-      logStep("Non-fatal: could not check for existing checkout session", { email, checkoutSessionId, error: String(e) });
+
+    if (!inserted) {
+      logStep("Skipping welcome email (insert returned no data, likely duplicate)", { email, checkoutSessionId });
+      return userId;
     }
-    
-    // Mark this checkout session as processed
-    processedCheckoutSessions.add(checkoutSessionId);
+
     logStep("Processing welcome email for unique transaction", { email, checkoutSessionId });
   } else {
     logStep("No checkout session ID provided, proceeding with welcome email", { email });
@@ -526,7 +498,9 @@ async function handleSubscriptionUpdate(
   const isActive = subscription.status === "active" || subscription.status === "trialing";
   const periodStart = new Date(subscription.current_period_start * 1000).toISOString();
   const periodEnd = new Date(subscription.current_period_end * 1000).toISOString();
-  const subscriptionStart = new Date(subscription.start_date * 1000).toISOString();
+  const subscriptionStart = subscription.start_date 
+    ? new Date(subscription.start_date * 1000).toISOString() 
+    : new Date().toISOString();
   const cancelAtPeriodEnd = subscription.cancel_at_period_end || false;
 
   // For new subscriptions, ensure auth account exists (but DO NOT send email here).
@@ -624,7 +598,9 @@ async function handleInvoicePaid(supabaseClient: any, stripe: Stripe, invoice: S
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
     periodStart = new Date(subscription.current_period_start * 1000).toISOString();
     periodEnd = new Date(subscription.current_period_end * 1000).toISOString();
-    subscriptionStart = new Date(subscription.start_date * 1000).toISOString();
+    subscriptionStart = subscription.start_date
+      ? new Date(subscription.start_date * 1000).toISOString()
+      : new Date().toISOString();
   } catch (e) {
     logStep("Could not fetch subscription for period dates", { error: String(e) });
   }

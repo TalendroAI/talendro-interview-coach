@@ -385,6 +385,27 @@ export type Database = {
         }
         Relationships: []
       }
+      welcome_emails_sent: {
+        Row: {
+          checkout_session_id: string
+          email: string
+          id: string
+          sent_at: string | null
+        }
+        Insert: {
+          checkout_session_id: string
+          email: string
+          id?: string
+          sent_at?: string | null
+        }
+        Update: {
+          checkout_session_id?: string
+          email?: string
+          id?: string
+          sent_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
