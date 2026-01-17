@@ -496,8 +496,12 @@ async function handleSubscriptionUpdate(
   if (!email) return;
 
   const isActive = subscription.status === "active" || subscription.status === "trialing";
-  const periodStart = new Date(subscription.current_period_start * 1000).toISOString();
-  const periodEnd = new Date(subscription.current_period_end * 1000).toISOString();
+  const periodStart = subscription.current_period_start 
+    ? new Date(subscription.current_period_start * 1000).toISOString() 
+    : new Date().toISOString();
+  const periodEnd = subscription.current_period_end 
+    ? new Date(subscription.current_period_end * 1000).toISOString() 
+    : new Date().toISOString();
   const subscriptionStart = subscription.start_date 
     ? new Date(subscription.start_date * 1000).toISOString() 
     : new Date().toISOString();
@@ -596,8 +600,12 @@ async function handleInvoicePaid(supabaseClient: any, stripe: Stripe, invoice: S
 
   try {
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-    periodStart = new Date(subscription.current_period_start * 1000).toISOString();
-    periodEnd = new Date(subscription.current_period_end * 1000).toISOString();
+    periodStart = subscription.current_period_start 
+      ? new Date(subscription.current_period_start * 1000).toISOString() 
+      : new Date().toISOString();
+    periodEnd = subscription.current_period_end 
+      ? new Date(subscription.current_period_end * 1000).toISOString() 
+      : new Date().toISOString();
     subscriptionStart = subscription.start_date
       ? new Date(subscription.start_date * 1000).toISOString()
       : new Date().toISOString();
