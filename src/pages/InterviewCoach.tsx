@@ -509,64 +509,96 @@ export default function InterviewCoach() {
   };
 
   // Direct session link from purchase emails (?session_id=...)
+  // Supports two flows:
+  // 1. session_id + email: Direct session lookup via audio-session edge function
+  // 2. session_id + checkout_session_id (no email or email mismatch): Fallback to verify-payment
   useEffect(() => {
-    if (!sessionIdParam || !userEmail) return;
-
     // If resuming from pause link, let the resume flow handle it
     const resumeSessionId = searchParams.get('resume_session');
     if (resumeSessionId) return;
+
+    // Need at least session_id to proceed
+    if (!sessionIdParam) return;
 
     const loadSessionFromLink = async () => {
       setIsVerifying(true);
 
       try {
-        const { data, error } = await supabase.functions.invoke('audio-session', {
-          body: {
-            action: 'get_session',
-            sessionId: sessionIdParam,
-            email: userEmail,
-          },
-        });
+        // Try direct session lookup if we have email
+        if (userEmail) {
+          const { data, error } = await supabase.functions.invoke('audio-session', {
+            body: {
+              action: 'get_session',
+              sessionId: sessionIdParam,
+              email: userEmail,
+            },
+          });
 
-        if (error) throw error;
-        if (!data?.ok || !data?.session) {
-          throw new Error(data?.error || 'Session not found');
+          if (!error && data?.ok && data?.session) {
+            const s = data.session as {
+              id: string;
+              sessionType: SessionType;
+              status: string;
+              documents?: { resume?: string; jobDescription?: string; companyUrl?: string };
+            };
+
+            setSessionId(s.id);
+            setSessionEmail(userEmail || undefined);
+            setSessionTypeOverride(s.sessionType);
+
+            const docs = s.documents ?? {};
+            setDocuments({
+              firstName: (docs as any).firstName || '',
+              resume: docs.resume || '',
+              jobDescription: docs.jobDescription || '',
+              companyUrl: docs.companyUrl || '',
+            });
+
+            const hasAnyDocs = Boolean(
+              (docs.resume && docs.resume.trim().length > 0) ||
+                (docs.jobDescription && docs.jobDescription.trim().length > 0) ||
+                (docs.companyUrl && docs.companyUrl.trim().length > 0)
+            );
+            setIsDocumentsSaved(hasAnyDocs);
+            setIsPaymentVerified(s.status === 'active' || s.status === 'pending');
+            setIsVerifying(false);
+            return;
+          }
+          // If direct lookup failed, fall through to checkout_session fallback
+          console.log('[InterviewCoach] Direct session lookup failed, trying checkout fallback');
         }
 
-        const s = data.session as {
-          id: string;
-          sessionType: SessionType;
-          status: string;
-          documents?: { resume?: string; jobDescription?: string; companyUrl?: string };
-        };
+        // Fallback: Use verify-payment with checkout_session_id if available
+        // This handles cases where email param is missing or mismatched
+        if (checkoutSessionId) {
+          console.log('[InterviewCoach] Attempting verify-payment fallback with checkout_session_id');
+          const result = await verifyPayment(checkoutSessionId, userEmail || undefined, undefined);
+          
+          if (result.verified && result.session) {
+            setIsPaymentVerified(true);
+            setSessionId(result.session.id);
+            setSessionEmail(result.session.email || undefined);
+            setSessionTypeOverride(result.session.session_type as SessionType);
+            toast({
+              title: 'Session loaded!',
+              description: 'Your session is ready to continue.',
+            });
+            setIsVerifying(false);
+            return;
+          }
+        }
 
-        setSessionId(s.id);
-        setSessionEmail(userEmail || undefined); // Use the email from URL param that was used to load session
-        setSessionTypeOverride(s.sessionType);
-
-        const docs = s.documents ?? {};
-        setDocuments({
-          firstName: (docs as any).firstName || '',
-          resume: docs.resume || '',
-          jobDescription: docs.jobDescription || '',
-          companyUrl: docs.companyUrl || '',
-        });
-
-        // If there are already docs saved on this session, don't force the user to re-save them
-        const hasAnyDocs = Boolean(
-          (docs.resume && docs.resume.trim().length > 0) ||
-            (docs.jobDescription && docs.jobDescription.trim().length > 0) ||
-            (docs.companyUrl && docs.companyUrl.trim().length > 0)
-        );
-        setIsDocumentsSaved(hasAnyDocs);
-
-        setIsPaymentVerified(s.status === 'active' || s.status === 'pending');
+        // Both methods failed - but only if we actually tried something
+        // If no email and no checkout_session_id, the payment verification effect should handle it
+        if (userEmail || checkoutSessionId) {
+          throw new Error('Session not found');
+        }
       } catch (err) {
         console.error('Error loading session from link:', err);
         toast({
           variant: 'destructive',
           title: 'Session link invalid',
-          description: 'We couldn’t load that session. Please use your latest purchase email link.',
+          description: 'We couldn\'t load that session. Please use your latest purchase email link.',
         });
       } finally {
         setIsVerifying(false);
@@ -574,7 +606,7 @@ export default function InterviewCoach() {
     };
 
     loadSessionFromLink();
-  }, [sessionIdParam, userEmail]);
+  }, [sessionIdParam, userEmail, checkoutSessionId]);
 
   // Check for resume link from email (resume_session param)
   useEffect(() => {
@@ -634,10 +666,16 @@ export default function InterviewCoach() {
   // Verify payment on page load - Pro subscribers get auto-verified
   useEffect(() => {
     const checkPayment = async () => {
-      // Skip if resuming from email link or using a direct session_id link
+      // Skip if resuming from email link
       const resumeSessionId = searchParams.get('resume_session');
-      if (resumeSessionId || sessionIdParam) {
-        return; // Handled by the other useEffects
+      if (resumeSessionId) {
+        return; // Handled by resume effect
+      }
+      
+      // Skip if using a direct session_id link WITH either email or checkout_session_id
+      // (those cases are handled by the session link effect)
+      if (sessionIdParam && (userEmail || checkoutSessionId)) {
+        return; // Handled by session link effect
       }
       
       // Wait for auth to finish loading before checking Pro status
