@@ -563,28 +563,13 @@ export default function InterviewCoach() {
             );
             setIsDocumentsSaved(hasAnyDocs);
 
-            // Handle completed sessions - display results directly
+            // Handle completed sessions - show "Session Already Completed" view
             if (s.status === 'completed') {
-              console.log('[InterviewCoach] Session already completed, loading results');
+              console.log('[InterviewCoach] Session already completed, showing completed dialog');
               
-              // For Quick Prep, the prep_packet contains the results
-              if (s.sessionType === 'quick_prep' && s.prepPacket?.content) {
-                setResultsReport({
-                  prepPacket: s.prepPacket.content,
-                  analysisMarkdown: null,
-                  transcript: null,
-                });
-              } else if (s.sessionResults?.recommendations) {
-                // For other session types, use the session_results
-                setResultsReport({
-                  prepPacket: null,
-                  analysisMarkdown: s.sessionResults.recommendations,
-                  transcript: null,
-                });
-              }
-              
+              // Store session results for display in completed dialog
               setCompletedSessionResults(s.sessionResults);
-              setIsSessionCompleted(true);
+              setShowCompletedDialog(true);
               setIsPaymentVerified(true);
               setIsVerifying(false);
               return;
