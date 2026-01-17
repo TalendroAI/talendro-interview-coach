@@ -472,15 +472,48 @@ serve(async (req) => {
     if (checkout_session_id) {
       const checkoutSession = await stripe.checkout.sessions.retrieve(checkout_session_id);
       
+      // CRITICAL: Get customer email from Stripe as source of truth
+      // Priority: customer_details.email (what user entered at checkout) > customer_email > customer record > fallback
+      let customerEmail = checkoutSession.customer_details?.email 
+        ?? checkoutSession.customer_email 
+        ?? null;
+      
+      // If still no email, try to get it from the Stripe customer record
+      if (!customerEmail && checkoutSession.customer) {
+        try {
+          const customerId = typeof checkoutSession.customer === 'string' 
+            ? checkoutSession.customer 
+            : checkoutSession.customer.id;
+          const customer = await stripe.customers.retrieve(customerId);
+          if (customer && !customer.deleted && 'email' in customer) {
+            customerEmail = customer.email;
+          }
+        } catch (e) {
+          logStep("Failed to retrieve customer for email", { error: String(e) });
+        }
+      }
+      
+      // Last resort fallback to request email (should rarely happen)
+      if (!customerEmail) {
+        customerEmail = email;
+        logStep("WARNING: Using request email as fallback - customer email not found in Stripe", { 
+          fallbackEmail: email,
+          hasCustomer: !!checkoutSession.customer,
+          hasCustomerEmail: !!checkoutSession.customer_email,
+          hasCustomerDetails: !!checkoutSession.customer_details
+        });
+      }
+      
       logStep("Retrieved checkout session", { 
         status: checkoutSession.payment_status,
-        hasEmail: !!checkoutSession.customer_email,
+        customerEmail,
+        customerDetailsEmail: checkoutSession.customer_details?.email,
+        checkoutCustomerEmail: checkoutSession.customer_email,
         sessionType: checkoutSession.metadata?.session_type
       });
 
       if (checkoutSession.payment_status === "paid") {
         const sessionTypeFromMetadata = checkoutSession.metadata?.session_type || session_type;
-        const customerEmail = checkoutSession.customer_email || email;
         
         // FIRST: Check if session for this checkout is already processed (active or completed)
         const { data: existingSession } = await supabaseClient
