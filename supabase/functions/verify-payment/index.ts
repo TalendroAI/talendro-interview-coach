@@ -564,29 +564,56 @@ serve(async (req) => {
         // Get customer name from Stripe checkout session
         const customerName = checkoutSession.customer_details?.name || undefined;
 
-        // Send purchase confirmation email
+        // Send purchase confirmation email with database-level deduplication
         if (resend && customerEmail && sessionTypeFromMetadata) {
-          const sessionUrl = buildSessionUrl({
-            email: customerEmail,
-            sessionType: sessionTypeFromMetadata,
-            sessionId: updatedSession?.id,
-            checkoutSessionId: checkout_session_id,
-          });
+          // Use the welcome_emails_sent table to prevent duplicate emails
+          // This handles race conditions where verify-payment is called multiple times simultaneously
+          const { data: emailInserted, error: emailInsertError } = await supabaseClient
+            .from("welcome_emails_sent")
+            .insert({ email: customerEmail, checkout_session_id })
+            .select()
+            .maybeSingle();
 
-          try {
-            await sendPurchaseEmail(
-              resend,
-              customerEmail,
-              sessionTypeFromMetadata,
-              isUpgrade,
-              upgradeCredit,
-              previousPurchase,
-              customerName,
-              sessionUrl
-            );
-          } catch (emailError) {
-            // Don't fail the whole request if email fails
-            logStep("Email sending failed but continuing", { error: String(emailError) });
+          if (emailInsertError && emailInsertError.code === '23505') {
+            // Unique constraint violation - email already sent for this checkout session
+            logStep("Skipping purchase email (already sent for this checkout session)", { 
+              email: customerEmail, 
+              checkoutSessionId: checkout_session_id 
+            });
+          } else if (!emailInserted) {
+            logStep("Skipping purchase email (insert returned no data, likely duplicate)", { 
+              email: customerEmail, 
+              checkoutSessionId: checkout_session_id 
+            });
+          } else {
+            // Email not sent yet for this checkout, proceed with sending
+            logStep("Sending purchase email for unique transaction", { 
+              email: customerEmail, 
+              checkoutSessionId: checkout_session_id 
+            });
+
+            const sessionUrl = buildSessionUrl({
+              email: customerEmail,
+              sessionType: sessionTypeFromMetadata,
+              sessionId: updatedSession?.id,
+              checkoutSessionId: checkout_session_id,
+            });
+
+            try {
+              await sendPurchaseEmail(
+                resend,
+                customerEmail,
+                sessionTypeFromMetadata,
+                isUpgrade,
+                upgradeCredit,
+                previousPurchase,
+                customerName,
+                sessionUrl
+              );
+            } catch (emailError) {
+              // Don't fail the whole request if email fails
+              logStep("Email sending failed but continuing", { error: String(emailError) });
+            }
           }
         }
 
