@@ -74,7 +74,7 @@ serve(async (req) => {
     const { data: session, error: sessionError } = await supabase
       .from("coaching_sessions")
       .select(
-        "id, email, session_type, paused_at, current_question_number, status, resume_text, job_description, company_url, first_name"
+        "id, email, session_type, paused_at, current_question_number, status, resume_text, job_description, company_url, first_name, prep_packet"
       )
       .eq("id", sessionId)
       .eq("email", email)
@@ -86,6 +86,19 @@ serve(async (req) => {
 
     // === GET SESSION (docs + metadata for deep links) ===
     if (action === "get_session") {
+      // For completed sessions, also fetch session_results
+      let sessionResults = null;
+      if (session.status === "completed") {
+        const { data: results } = await supabase
+          .from("session_results")
+          .select("*")
+          .eq("session_id", sessionId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        sessionResults = results;
+      }
+
       return new Response(
         JSON.stringify({
           ok: true,
@@ -101,6 +114,8 @@ serve(async (req) => {
               jobDescription: session.job_description ?? "",
               companyUrl: session.company_url ?? "",
             },
+            prepPacket: session.prep_packet,
+            sessionResults,
           },
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }

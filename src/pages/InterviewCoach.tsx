@@ -540,6 +540,8 @@ export default function InterviewCoach() {
               sessionType: SessionType;
               status: string;
               documents?: { resume?: string; jobDescription?: string; companyUrl?: string };
+              prepPacket?: { content?: string } | null;
+              sessionResults?: { overall_score?: number; strengths?: any; improvements?: any; recommendations?: string } | null;
             };
 
             setSessionId(s.id);
@@ -560,6 +562,34 @@ export default function InterviewCoach() {
                 (docs.companyUrl && docs.companyUrl.trim().length > 0)
             );
             setIsDocumentsSaved(hasAnyDocs);
+
+            // Handle completed sessions - display results directly
+            if (s.status === 'completed') {
+              console.log('[InterviewCoach] Session already completed, loading results');
+              
+              // For Quick Prep, the prep_packet contains the results
+              if (s.sessionType === 'quick_prep' && s.prepPacket?.content) {
+                setResultsReport({
+                  prepPacket: s.prepPacket.content,
+                  analysisMarkdown: null,
+                  transcript: null,
+                });
+              } else if (s.sessionResults?.recommendations) {
+                // For other session types, use the session_results
+                setResultsReport({
+                  prepPacket: null,
+                  analysisMarkdown: s.sessionResults.recommendations,
+                  transcript: null,
+                });
+              }
+              
+              setCompletedSessionResults(s.sessionResults);
+              setIsSessionCompleted(true);
+              setIsPaymentVerified(true);
+              setIsVerifying(false);
+              return;
+            }
+
             setIsPaymentVerified(s.status === 'active' || s.status === 'pending');
             setIsVerifying(false);
             return;
