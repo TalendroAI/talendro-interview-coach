@@ -461,9 +461,11 @@ async function handleCheckoutCompleted(
   session: Stripe.Checkout.Session,
   resend: any
 ) {
+  // CRITICAL: customer_details.email is what the customer actually entered at checkout
+  // This should be the source of truth, not customer_email (which is set at session creation)
   const email =
-    session.customer_email ??
     session.customer_details?.email ??
+    session.customer_email ??
     (typeof session.customer === "string" ? await getCustomerEmail(stripe, session.customer) : null);
 
   if (!email) {
