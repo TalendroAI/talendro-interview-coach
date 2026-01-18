@@ -15,6 +15,7 @@ export interface SessionResultsViewProps {
   transcript?: string | null;
   analysisMarkdown?: string | null;
   isProSessionFlow?: boolean;
+  sessionType?: 'quick_prep' | 'full_mock' | 'premium_audio' | 'pro';
 }
 
 // Parse transcript into Q&A pairs for clean display
@@ -52,12 +53,15 @@ export function SessionResultsView({
   transcript,
   analysisMarkdown,
   isProSessionFlow = false,
+  sessionType,
 }: SessionResultsViewProps) {
   const navigate = useNavigate();
   const cardRef = useRef<HTMLDivElement>(null);
-  const [isUpgradeLoading, setIsUpgradeLoading] = useState(false);
+  const [isUpsellLoading, setIsUpsellLoading] = useState(false);
 
   const isQuickPrep = sessionLabel.toLowerCase().includes("quick prep");
+  const isFullMock = sessionLabel.toLowerCase().includes("full mock");
+  const isPremiumAudio = sessionLabel.toLowerCase().includes("premium audio");
   const hasPrepPacket = Boolean(prepPacket && prepPacket.length > 50);
   const hasTranscript = Boolean(transcript && transcript.length > 50);
   const hasAnalysis = Boolean(analysisMarkdown && analysisMarkdown.length > 50);
@@ -263,32 +267,94 @@ export function SessionResultsView({
                     <Home className="h-4 w-4" />
                     Return to Home
                   </Button>
-                  <Button 
-                    onClick={async () => {
-                      setIsUpgradeLoading(true);
-                      try {
-                        const { data, error } = await supabase.functions.invoke('create-checkout', {
-                          body: {
-                            session_type: 'pro',
-                            email: email,
-                          },
-                        });
-                        if (error) throw error;
-                        if (data?.url) {
-                          window.open(data.url, '_blank');
+                  
+                  {/* Session-specific upsell CTAs */}
+                  {isQuickPrep && (
+                    <Button 
+                      onClick={async () => {
+                        setIsUpsellLoading(true);
+                        try {
+                          const { data, error } = await supabase.functions.invoke('create-checkout', {
+                            body: {
+                              session_type: 'full_mock',
+                              email: email,
+                            },
+                          });
+                          if (error) throw error;
+                          if (data?.url) {
+                            window.open(data.url, '_blank');
+                          }
+                        } catch (err) {
+                          console.error('Error creating checkout:', err);
+                        } finally {
+                          setIsUpsellLoading(false);
                         }
-                      } catch (err) {
-                        console.error('Error creating checkout:', err);
-                      } finally {
-                        setIsUpgradeLoading(false);
-                      }
-                    }}
-                    disabled={isUpgradeLoading}
-                    className="flex-1 gap-2"
-                  >
-                    <Sparkles className="h-4 w-4" />
-                    {isUpgradeLoading ? 'Loading...' : 'Upgrade to Pro — $79/month'}
-                  </Button>
+                      }}
+                      disabled={isUpsellLoading}
+                      className="flex-1 gap-2"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      {isUpsellLoading ? 'Loading...' : 'Try Full Mock Interview — $29'}
+                    </Button>
+                  )}
+                  
+                  {isFullMock && (
+                    <Button 
+                      onClick={async () => {
+                        setIsUpsellLoading(true);
+                        try {
+                          const { data, error } = await supabase.functions.invoke('create-checkout', {
+                            body: {
+                              session_type: 'premium_audio',
+                              email: email,
+                            },
+                          });
+                          if (error) throw error;
+                          if (data?.url) {
+                            window.open(data.url, '_blank');
+                          }
+                        } catch (err) {
+                          console.error('Error creating checkout:', err);
+                        } finally {
+                          setIsUpsellLoading(false);
+                        }
+                      }}
+                      disabled={isUpsellLoading}
+                      className="flex-1 gap-2"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      {isUpsellLoading ? 'Loading...' : 'Try Premium Audio Mock — $49'}
+                    </Button>
+                  )}
+                  
+                  {isPremiumAudio && (
+                    <Button 
+                      onClick={async () => {
+                        setIsUpsellLoading(true);
+                        try {
+                          const { data, error } = await supabase.functions.invoke('create-checkout', {
+                            body: {
+                              session_type: 'pro',
+                              email: email,
+                            },
+                          });
+                          if (error) throw error;
+                          if (data?.url) {
+                            window.open(data.url, '_blank');
+                          }
+                        } catch (err) {
+                          console.error('Error creating checkout:', err);
+                        } finally {
+                          setIsUpsellLoading(false);
+                        }
+                      }}
+                      disabled={isUpsellLoading}
+                      className="flex-1 gap-2"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      {isUpsellLoading ? 'Loading...' : 'Upgrade to Pro — $79/month'}
+                    </Button>
+                  )}
                 </>
               )}
             </div>

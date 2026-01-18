@@ -1346,6 +1346,7 @@ export default function InterviewCoach() {
           transcript={resultsReport?.transcript || null}
           analysisMarkdown={resultsReport?.analysisMarkdown || null}
           isProSessionFlow={isProSessionFlow}
+          sessionType={activeType as 'quick_prep' | 'full_mock' | 'premium_audio' | 'pro'}
         />
       );
     }

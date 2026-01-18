@@ -64,11 +64,11 @@
     --border-soft: 220 20% 90%;
     --shadow-soft: 0 18px 45px hsla(222, 47%, 11%, 0.08);
     
-    /* Session Type Colors - All using brand palette */
-    --session-quick: 79 100% 48%;     /* Bright Lime */
-    --session-mock: 220 91% 57%;      /* Talendro Blue */
-    --session-audio: 183 100% 40%;    /* Vibrant Aqua */
-    --session-pro: 220 91% 57%;       /* Talendro Blue */
+    /* Session Type Colors - Unified Aqua/Teal for all session badges */
+    --session-quick: 183 100% 40%;    /* Vibrant Aqua #00C4CC */
+    --session-mock: 183 100% 40%;     /* Vibrant Aqua #00C4CC */
+    --session-audio: 183 100% 40%;    /* Vibrant Aqua #00C4CC */
+    --session-pro: 183 100% 40%;      /* Vibrant Aqua #00C4CC */
     
     /* Sidebar */
     --sidebar-background: 0 0% 100%;
