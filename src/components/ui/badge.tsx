@@ -12,7 +12,7 @@ const badgeVariants = cva(
         secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
         destructive: "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
         outline: "text-foreground",
-        quick: "bg-session-quick text-tal-navy border-session-quick shadow-sm",
+        quick: "bg-session-quick text-white border-session-quick shadow-sm",
         mock: "bg-session-mock text-white border-session-mock shadow-sm",
         audio: "bg-session-audio text-white border-session-audio shadow-sm",
         pro: "bg-session-pro text-white border-session-pro shadow-sm",
