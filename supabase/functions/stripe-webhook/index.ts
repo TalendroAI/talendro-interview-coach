@@ -552,7 +552,7 @@ async function handleSubscriptionUpdate(
       updateData.pro_session_reset_date = periodStart;
     }
     await supabaseClient.from("profiles").update(updateData).eq("id", typedProfile.id);
-    logStep("Profile updated", { email, isActive, cancelAtPeriodEnd, subscriptionStart, userId });
+    logStep("Profile updated", { email, isActive, cancelAtPeriodEnd, subscriptionStart, periodEnd, periodStart, userId });
   } else {
     // Get customer name for new profile
     const fullName = await getCustomerName(stripe, customerId);
