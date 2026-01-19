@@ -525,7 +525,6 @@ async function handleSubscriptionUpdate(
 
   if (typedProfile) {
     const shouldResetCounters = !typedProfile.pro_session_reset_date;
-    const isNewSub = !typedProfile.pro_subscription_start;
 
     const updateData: Record<string, unknown> = {
       is_pro_subscriber: isActive,
@@ -541,8 +540,9 @@ async function handleSubscriptionUpdate(
       updateData.user_id = userId;
     }
 
-    // Set subscription start date (use Stripe's real anchor)
-    if (isNewSub && isActive) {
+    // ALWAYS update subscription start date from Stripe for new/renewed subscriptions
+    // This ensures returning subscribers get fresh dates, not old ones
+    if (isActive) {
       updateData.pro_subscription_start = subscriptionStart;
     }
 
@@ -552,7 +552,7 @@ async function handleSubscriptionUpdate(
       updateData.pro_session_reset_date = periodStart;
     }
     await supabaseClient.from("profiles").update(updateData).eq("id", typedProfile.id);
-    logStep("Profile updated", { email, isActive, cancelAtPeriodEnd, userId });
+    logStep("Profile updated", { email, isActive, cancelAtPeriodEnd, subscriptionStart, userId });
   } else {
     // Get customer name for new profile
     const fullName = await getCustomerName(stripe, customerId);
