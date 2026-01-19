@@ -189,8 +189,18 @@ serve(async (req) => {
     const { action, email, session_type } = await req.json();
     logStep("Request received", { action, email, session_type });
 
+    // Validate email is provided and has correct format
     if (!email) {
       return new Response(JSON.stringify({ error: "Email is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Email format validation for defense in depth
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (typeof email !== 'string' || !emailRegex.test(email.trim()) || email.length > 255) {
+      return new Response(JSON.stringify({ error: "Invalid email format" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
